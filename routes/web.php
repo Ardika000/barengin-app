@@ -78,19 +78,20 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike'])
         ->name('forum.comments.like.toggle');
+
+    // Chat
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
+    Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
+    Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
+    Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
+    Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
 });
 
 
 Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
 })->name('trip-bareng');
-
-Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
-Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
-Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
-Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
-Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
-Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
 
 
 Route::get('/chat/exp', function(){

@@ -37,11 +37,14 @@ export default function NewChatModal({ open, onClose }) {
     const [q, setQ] = useState("");
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState([]);
+    const [error, setError] = useState(null);
     const [creating, setCreating] = useState(false);
 
     const inputRef = useRef(null);
     useEffect(() => {
         if (open) {
+            setError(null);
+            setUsers([]);
             setTimeout(() => inputRef.current?.focus(), 50);
         }
     }, [open]);
@@ -53,11 +56,20 @@ export default function NewChatModal({ open, onClose }) {
         let ignore = false;
         const t = setTimeout(async () => {
             setLoading(true);
+            setError(null);
             try {
                 const res = await axios.get("/chat/users", {
                     params: { q },
                 });
                 if (!ignore) setUsers(res.data?.data ?? []);
+            } catch (err) {
+                if (!ignore) {
+                    setUsers([]);
+                    setError(
+                        err?.response?.data?.message ||
+                        "Gagal memuat daftar user. Coba lagi.",
+                    );
+                }
             } finally {
                 if (!ignore) setLoading(false);
             }
@@ -138,7 +150,13 @@ export default function NewChatModal({ open, onClose }) {
                             </div>
                         ) : null}
 
-                        {empty ? (
+                        {!loading && error ? (
+                            <div className="py-10 text-center text-sm text-red-500">
+                                {error}
+                            </div>
+                        ) : null}
+
+                        {empty && !error ? (
                             <div className="py-10 text-center text-sm text-neutral-500">
                                 User tidak ditemukan.
                             </div>
