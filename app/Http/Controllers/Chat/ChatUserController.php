@@ -17,17 +17,17 @@ class ChatUserController extends Controller
             ->where('id', '!=', $me->id)
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($w) use ($q) {
-                    $w->where('name', 'like', "%{$q}%")
+                    $w->where('full_name', 'like', "%{$q}%")
                       ->orWhere('username', 'like', "%{$q}%")
                       ->orWhere('email', 'like', "%{$q}%");
                 });
             })
-            ->orderBy('name')
+            ->orderBy('full_name')
             ->limit(50)
             ->get()
             ->map(fn ($u) => [
                 'id' => $u->id,
-                'name' => $u->name,
+                'name' => $u->full_name,
                 'username' => $u->username ?? null,
                 'avatar' => $u->public_profile_image ?? asset('assets/default-profile.png'),
             ]);
