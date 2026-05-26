@@ -12,7 +12,6 @@ class ForumPeopleController extends Controller
     {
         if (!$auth) return [];
 
-        // followings() returns Follow rows -> pluck following_id
         $ids = $auth->followings()->pluck('following_id')->all();
         return array_fill_keys($ids, true);
     }
@@ -31,7 +30,6 @@ class ForumPeopleController extends Controller
         })->values();
     }
 
-    // GET /forum/people
     public function people(Request $request)
     {
         $auth = Auth::user();
@@ -49,7 +47,6 @@ class ForumPeopleController extends Controller
         ]);
     }
 
-    // GET /forum/users/{username}/followers
     public function followers(Request $request, string $username)
     {
         $auth = Auth::user();
@@ -59,7 +56,6 @@ class ForumPeopleController extends Controller
             ->where('username', $username)
             ->firstOrFail();
 
-        // followerUsers() returns User models ✅
         $followers = $user->followerUsers()
             ->select(['users.id', 'users.full_name', 'users.username', 'users.bio', 'users.profile_image'])
             ->whereNotNull('users.username')
@@ -72,7 +68,6 @@ class ForumPeopleController extends Controller
         ]);
     }
 
-    // GET /forum/users/{username}/following
     public function following(Request $request, string $username)
     {
         $auth = Auth::user();
@@ -82,7 +77,6 @@ class ForumPeopleController extends Controller
             ->where('username', $username)
             ->firstOrFail();
 
-        // followingUsers() returns User models ✅
         $following = $user->followingUsers()
             ->select(['users.id', 'users.full_name', 'users.username', 'users.bio', 'users.profile_image'])
             ->whereNotNull('users.username')

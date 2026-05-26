@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('location_id')->nullable()->constrained('locations')->nullOnDelete();
             $table->text('content');
             $table->boolean('allows_comment')->default(true);
             $table->string('location')->nullable();

@@ -13,7 +13,6 @@ export default function ComposerCard({ avatar, onOpen }) {
                     />
 
                     <div className="flex-1 min-w-0">
-                        {/* Plain input: no styling */}
                         <button
                             type="button"
                             onClick={onOpen}
@@ -22,7 +21,7 @@ export default function ComposerCard({ avatar, onOpen }) {
                             Apa yang baru?
                         </button>
 
-                        {/* Mobile action */}
+                        {/* mobile */}
                         <div className="mt-4 sm:hidden">
                             <Button
                                 onClick={onOpen}
@@ -36,7 +35,7 @@ export default function ComposerCard({ avatar, onOpen }) {
                         </div>
                     </div>
 
-                    {/* Desktop action */}
+                    {/* desktop */}
                     <div className="hidden sm:block">
                         <Button
                             onClick={onOpen}

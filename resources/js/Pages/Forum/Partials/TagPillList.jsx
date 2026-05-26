@@ -4,8 +4,6 @@ import TagPill from "./TagPill";
 export default function TagPillList({
     tags = [],
     onTagClick,
-
-    // NEW
     initialCount = 10,
     step = 10,
     fontSize="xs",
@@ -29,7 +27,6 @@ export default function TagPillList({
                 <TagPill key={t} tag={t} onClick={() => onTagClick?.(t)} fontSize={fontSize} cursor="pointer" />
             ))}
 
-            {/* View more / Collapse */}
             {tags.length > initialCount ? (
                 <button
                     type="button"

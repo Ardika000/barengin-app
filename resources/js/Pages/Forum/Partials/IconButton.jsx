@@ -23,7 +23,7 @@ export default function IconButton({
         >
             {children}
 
-            {/* Tooltip */}
+            {/* tooltip */}
             {label ? (
                 <span
                     className={[

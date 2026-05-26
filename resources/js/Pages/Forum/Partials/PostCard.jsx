@@ -56,13 +56,13 @@ export default function PostCard({ post, onTagClick, onLike }) {
                 </Link>
 
                 <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-start justify-between gap-3">
                         <div className="flex flex-col">
                             <Link href={`/forum/users/${post.username}`} className="font-semibold text-neutral-900">
                                 {post.author}
                             </Link>
                             {post.location ? (
-                                <div className="text-sm text-neutral-500">
+                                <div className="text-sm text-neutral-500 max-w-lg">
                                     <FiMapPin className="inline mb-0.5 mr-1" />
                                     {post.location}
                                 </div>

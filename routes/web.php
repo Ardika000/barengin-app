@@ -11,9 +11,12 @@ use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ForumProfileController;
 use App\Http\Controllers\ForumFollowController;
 use App\Http\Controllers\ForumPeopleController;
+use App\Http\Controllers\ForumLocationController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PergiBarengController;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 
 use Illuminate\Support\Facades\Route;
@@ -93,6 +96,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/forum/people', [ForumPeopleController::class, 'people']);
     Route::get('/forum/users/{username}/followers', [ForumPeopleController::class, 'followers']);
     Route::get('/forum/users/{username}/following', [ForumPeopleController::class, 'following']);
+
+    Route::get('/forum/locations/search', [ForumLocationController::class, 'search']);
+    Route::get('/forum/locations/reverse', [ForumLocationController::class, 'reverse']);
+    Route::get('/forum/locations/popular', [ForumLocationController::class, 'popular']);
 });
 
 Route ::get('/pergi-bareng',function(){
@@ -118,21 +125,51 @@ Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead
 Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
 Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
 
-
+// Chat
 Route::get('/chat/exp', function(){
     return inertia('Chat/Index2');
 })->name('chat.exp');
+
+// Leaderboard
 Route::get('/leaderboard', function () {
-    return inertia('Leaderboard/Index');
+    // Menghitung total trip per Guider dari database
+    $guiders = DB::table('users')
+        ->where('is_guider', true)
+        ->leftJoin('trips', 'users.id', '=', 'trips.guider_id')
+        ->select(
+            'users.id', 
+            'users.full_name as name', 
+            'users.profile_image', 
+            DB::raw('COUNT(trips.id) as total_trip')
+        )
+        ->groupBy('users.id', 'users.full_name', 'users.profile_image')
+        ->orderByDesc('total_trip') // Urutkan dari yang terbanyak
+        ->get();
+
+    return inertia('Leaderboard/Index', [
+        'dbGuiders' => $guiders // Lempar datanya ke React
+    ]);
 })->name('leaderboard');
-Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
-Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
-    ->whereNumber('id')
-    ->name('forum.show');
 
-
+// Trip Bareng
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
 Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
 Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+
+// Management User
+// Route::get('/management-user', function(){
+//     $users = User::all();
+
+//     return inertia('Admin/ManagementUser', ['users' => $users]);
+// })->name('management-user');
+
+Route::get('/management-user', function () {
+    return inertia('Admin/ManagementUser', ['users' => \App\Models\User::all()]);
+})->name('management-user');
+
+// test route
+Route::get('/Admin', function () {
+    return inertia('Admin/Test');
+})->name('admin'); 

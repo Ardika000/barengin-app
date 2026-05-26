@@ -490,7 +490,6 @@ export default function Profile({
     return (
         <Container className="py-10">
             <div className="max-w-5xl mx-auto">
-                {/* Header */}
                 <div>
                     <div className="flex flex-col xs:flex-row gap-4 items-center md:justify-between">
                         <div className="order-[1]">
@@ -519,7 +518,6 @@ export default function Profile({
                         </p>
                     ) : null}
 
-                    {/* ✅ clickable counts */}
                     <div className="mt-5 flex items-center gap-4 text-sm text-neutral-600 justify-center xs:justify-start">
                         <button
                             type="button"

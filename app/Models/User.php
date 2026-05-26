@@ -72,10 +72,6 @@ class User extends Authenticatable
         return asset('storage/' . $this->profile_image);
     }
 
-    public function guide_ratings(){
-        return $this->hasMany(GuideRatingTrip::class);
-    }
-
     public function trip_participants(){
         return $this->hasMany(TripParticipant::class);
     }

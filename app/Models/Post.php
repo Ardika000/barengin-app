@@ -13,6 +13,7 @@ class Post extends Model
         'allows_comment',
         'location',
         'like',
+        'location_id',
     ];
 
     public function images(): HasMany
@@ -38,5 +39,10 @@ class Post extends Model
     public function likes()
     {
         return $this->hasMany(PostLike::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
     }
 }

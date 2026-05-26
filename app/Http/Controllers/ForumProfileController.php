@@ -28,12 +28,10 @@ class ForumProfileController extends Controller
     {
         if (!$dt) return null;
 
-        // Eloquent/Carbon instance
         if ($dt instanceof \DateTimeInterface) {
             return Carbon::instance($dt)->toIso8601String();
         }
 
-        // DB raw string
         try {
             return Carbon::parse($dt)->toIso8601String();
         } catch (\Throwable $e) {
@@ -76,7 +74,6 @@ class ForumProfileController extends Controller
         $followersCount = $profileUser->followers()->count();
         $followingCount = $profileUser->followings()->count();
 
-        // Helper: transform a Post model into the shape your frontend uses
         $postToPayload = function (Post $post, array $likedByMeLookup) {
             return [
                 'id' => $post->id,
@@ -110,16 +107,13 @@ class ForumProfileController extends Controller
             ];
         };
 
-        // -------------------------
-        // TAB: replies
-        // -------------------------
+        // tab replies
         if ($tab === 'replies') {
             $repliesQuery = PostComment::query()
                 ->where('user_id', $profileUser->id)
                 ->with([
                     'user:id,full_name,username,profile_image',
 
-                    // direct post (comment on post)
                     'post' => function ($q) {
                         $q->with([
                             'user:id,full_name,username,profile_image',
@@ -128,11 +122,9 @@ class ForumProfileController extends Controller
                         ])->withCount(['comments', 'likes']);
                     },
 
-                    // parent comment (reply to comment)
                     'parent:id,post_id,user_id,comment_text,created_at',
                     'parent.user:id,full_name,username,profile_image',
 
-                    // parent post
                     'parent.post' => function ($q) {
                         $q->with([
                             'user:id,full_name,username,profile_image',
@@ -145,19 +137,16 @@ class ForumProfileController extends Controller
 
             $replies = $repliesQuery->paginate(10)->withQueryString();
 
-            // Collect post ids (direct post OR parent.post)
             $postIds = $replies->getCollection()
                 ->map(fn ($c) => $c->post?->id ?? $c->parent?->post?->id)
                 ->filter()
                 ->values();
 
-            // Collect parent comment ids (reply-to-comment only)
             $parentCommentIds = $replies->getCollection()
                 ->map(fn ($c) => $c->parent?->id)
                 ->filter()
                 ->values();
 
-            // liked_by_me for posts (auth user)
             $likedByMeLookup = [];
             if ($authUser && $postIds->count()) {
                 $likedByMePostIds = DB::table('post_likes')
@@ -169,7 +158,6 @@ class ForumProfileController extends Controller
                 $likedByMeLookup = array_fill_keys($likedByMePostIds, true);
             }
 
-            // parent comment: likes_count
             $parentLikesCountLookup = [];
             if ($parentCommentIds->count()) {
                 $rows = DB::table('post_comment_likes')
@@ -183,7 +171,6 @@ class ForumProfileController extends Controller
                 }
             }
 
-            // parent comment: liked_by_me for auth user
             $parentLikedByMeLookup = [];
             if ($authUser && $parentCommentIds->count()) {
                 $likedIds = DB::table('post_comment_likes')
@@ -213,7 +200,6 @@ class ForumProfileController extends Controller
                         'comment_text' => $comment->parent->comment_text,
                         'created_at' => $this->iso($comment->parent->created_at),
 
-                        // ✅ always computed
                         'likes_count' => $parentLikesCountLookup[$pid] ?? 0,
                         'liked_by_me' => isset($parentLikedByMeLookup[$pid]),
 
@@ -269,9 +255,7 @@ class ForumProfileController extends Controller
             ]);
         }
 
-        // -------------------------
-        // TAB: likes (post likes + comment likes, sorted by liked_at)
-        // -------------------------
+        // tab likes
         if ($tab === 'likes') {
             $postLikes = DB::table('post_likes')
                 ->where('user_id', $profileUser->id)
@@ -439,9 +423,7 @@ class ForumProfileController extends Controller
             ]);
         }
 
-        // -------------------------
-        // TAB: posts
-        // -------------------------
+        // tab posts
         $postsQuery = Post::query()
             ->with([
                 'user:id,full_name,username,profile_image',

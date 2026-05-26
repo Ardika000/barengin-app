@@ -1,13 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    FiArrowLeft,
     FiBold,
     FiHash,
     FiImage,
     FiItalic,
     FiMapPin,
-    FiSearch,
-    FiTarget,
     FiX,
 } from "react-icons/fi";
 
@@ -15,20 +12,9 @@ import IconButton from "./IconButton";
 import TagPill from "./TagPill";
 import Toggle from "@/Components/Toggle";
 import Button from "@/Components/Button";
+import LocationSearchModal from "@/Pages/Forum/Partials/LocationSearchModal";
+import useLockBodyScroll from "@/Hooks/useLockBodyScroll";
 
-/**
- * CHIP MODEL (supports spaces):
- * - Tags are NOT parsed from inline "#...".
- * - Users add tags via the suggestion box, which creates chips.
- * - Chips are always highlighted (separate UI), no caret/DOM fighting.
- * - Content text stays WYSIWYG for bold/italic only.
- *
- * On submit, we send:
- * - content_html
- * - tag_names[] (strings, can include spaces)
- */
-
-/** ---------- Media preview with remove ---------- */
 function PreviewMedia({ images, onRemove }) {
     if (!images?.length) return null;
 
@@ -79,77 +65,6 @@ function PreviewMedia({ images, onRemove }) {
     );
 }
 
-/** ---------- Location view (same modal, no overlap) ---------- */
-function LocationPickerView({ query, onChangeQuery, onBack, onSelect }) {
-    const items = useMemo(() => {
-        const data = [
-            { name: "Jakarta, Indonesia", meta: "100+ Post" },
-            { name: "Plaza Indonesia", meta: "50+ Post" },
-            { name: "Bandung, Indonesia", meta: "30+ Post" },
-            { name: "Bali, Indonesia", meta: "200+ Post" },
-        ];
-
-        const qq = (query ?? "").trim().toLowerCase();
-        if (!qq) return data;
-        return data.filter((x) => x.name.toLowerCase().includes(qq));
-    }, [query]);
-
-    return (
-        <div className="px-6 py-5 flex-1 overflow-y-auto">
-            <div className="flex items-center gap-3 mb-4">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="h-9 w-9 rounded-lg hover:bg-neutral-100 inline-flex items-center justify-center"
-                    aria-label="Back"
-                >
-                    <FiArrowLeft />
-                </button>
-
-                <div className="flex-1 text-center font-semibold">
-                    Search Location
-                </div>
-
-                <div className="w-9" />
-            </div>
-
-            <div className="flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2">
-                <FiSearch className="text-neutral-500" />
-                <input
-                    value={query}
-                    onChange={(e) => onChangeQuery?.(e.target.value)}
-                    className="w-full outline-none text-sm"
-                    placeholder="Cari Lokasi..."
-                />
-                <button
-                    type="button"
-                    className="h-9 w-9 rounded-lg hover:bg-neutral-100 inline-flex items-center justify-center"
-                    aria-label="Use current location"
-                    onClick={() => onSelect?.("Current Location")}
-                >
-                    <FiTarget />
-                </button>
-            </div>
-
-            <div className="mt-4 space-y-2">
-                {items.map((x) => (
-                    <button
-                        key={x.name}
-                        type="button"
-                        onClick={() => onSelect?.(x.name)}
-                        className="w-full text-left rounded-xl px-3 py-3 hover:bg-neutral-50 border border-neutral-100"
-                    >
-                        <div className="font-medium text-sm text-neutral-900">
-                            {x.name}
-                        </div>
-                        <div className="text-xs text-neutral-500">{x.meta}</div>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 function getPlainTextFromHtml(html) {
     if (!html) return "";
     const tmp = document.createElement("div");
@@ -161,7 +76,7 @@ function normalizeTagName(name) {
     return String(name ?? "")
         .replace(/^#/, "")
         .replace(/\s+/g, " ")
-    .toLowerCase()
+        .toLowerCase()
         .trim();
 }
 
@@ -170,23 +85,22 @@ export default function CreatePostModal({
     onClose,
     user,
     onSubmit,
-    tags = [], // [{id, tag_name}]
+    tags = [],
 }) {
+    useLockBodyScroll(open);
     const [view, setView] = useState("editor"); // "editor" | "location"
     const [disableComments, setDisableComments] = useState(false);
 
-    const [location, setLocation] = useState("");
-    const [locationQuery, setLocationQuery] = useState("");
+    const [locationLabel, setLocationLabel] = useState("");
+    const [locationPlace, setLocationPlace] = useState(null);
 
     const [images, setImages] = useState([]);
-
     const [contentHtml, setContentHtml] = useState("");
 
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
 
-    const [chipTags, setChipTags] = useState([]); // array of tag_name strings (can include spaces)
-
+    const [chipTags, setChipTags] = useState([]);
     const [tagBoxOpen, setTagBoxOpen] = useState(false);
     const [tagQuery, setTagQuery] = useState("");
 
@@ -226,9 +140,7 @@ export default function CreatePostModal({
         try {
             setIsBold(Boolean(document.queryCommandState("bold")));
             setIsItalic(Boolean(document.queryCommandState("italic")));
-        } catch {
-            // ignore
-        }
+        } catch {}
     };
 
     const syncHtmlFromDom = () => {
@@ -245,13 +157,11 @@ export default function CreatePostModal({
 
     useEffect(() => {
         if (!open) return;
-
         setTimeout(() => {
             hydrateDomFromState();
             editorRef.current?.focus();
             syncFormatState();
         }, 0);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     useEffect(() => {
@@ -260,7 +170,6 @@ export default function CreatePostModal({
         const onSel = () => syncFormatState();
         document.addEventListener("selectionchange", onSel);
         return () => document.removeEventListener("selectionchange", onSel);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, view]);
 
     useEffect(() => {
@@ -277,7 +186,6 @@ export default function CreatePostModal({
             document.removeEventListener("mousedown", handleClickOutside);
     }, [tagBoxOpen]);
 
-    // Set suggestion box to appear below input and sit on top (set once on open)
     useEffect(() => {
         if (!tagBoxOpen) return;
 
@@ -325,22 +233,6 @@ export default function CreatePostModal({
         });
     };
 
-    const goToLocation = () => {
-        syncHtmlFromDom();
-        setView("location");
-        setTagBoxOpen(false);
-    };
-
-    const backToEditor = () => {
-        setView("editor");
-        setLocationQuery("");
-        setTimeout(() => {
-            hydrateDomFromState();
-            editorRef.current?.focus();
-            syncFormatState();
-        }, 0);
-    };
-
     const addChipTag = (name) => {
         const normalized = normalizeTagName(name);
         if (!normalized) return;
@@ -355,8 +247,6 @@ export default function CreatePostModal({
 
         setTagQuery("");
         setTagBoxOpen(false);
-
-        // keep typing tags quickly
         setTimeout(() => tagInputRef.current?.focus(), 0);
     };
 
@@ -377,8 +267,9 @@ export default function CreatePostModal({
 
         setView("editor");
         setDisableComments(false);
-        setLocation("");
-        setLocationQuery("");
+        setLocationLabel("");
+        setLocationPlace(null);
+
         setImages([]);
         setContentHtml("");
         setIsBold(false);
@@ -401,14 +292,12 @@ export default function CreatePostModal({
                 className="absolute inset-0 flex items-center justify-center p-4 bg-black/40"
                 onClick={(e) => {
                     e.stopPropagation();
-                    if (e.target === e.currentTarget) {
-                        closeAndCleanup();
-                    }
+                    if (e.target === e.currentTarget) closeAndCleanup();
                 }}
             >
-                <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+                <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
+                    {/* header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 shrink-0">
                         <div className="font-semibold">
                             {view === "editor" ? "New Post" : "Location"}
                         </div>
@@ -422,81 +311,78 @@ export default function CreatePostModal({
                         </button>
                     </div>
 
-                    {/* Body */}
-                    {view === "editor" ? (
-                        <div className="px-6 py-5 flex-1 overflow-y-auto">
-                            <div className="flex gap-4">
-                                <img
-                                    src={
-                                        user?.public_profile_image ??
-                                        "/assets/default-profile.png"
-                                    }
-                                    alt="avatar"
-                                    className="h-12 w-12 rounded-full object-cover"
-                                />
+                    <div className="flex-1 min-h-0">
+                        {view === "editor" ? (
+                            <div className="px-6 py-5 h-full overflow-y-auto">
+                                <div className="flex gap-4">
+                                    <img
+                                        src={
+                                            user?.public_profile_image ??
+                                            "/assets/default-profile.png"
+                                        }
+                                        alt="avatar"
+                                        className="h-12 w-12 rounded-full object-cover"
+                                    />
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-semibold text-neutral-900">
-                                        {user?.full_name ?? "Anda"}
-                                    </div>
-
-                                    {location ? (
-                                        <div className="text-xs text-neutral-500 my-0.5">
-                                            <FiMapPin className="inline mr-1" />
-                                            {location}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-neutral-900">
+                                            {user?.full_name ?? "Anda"}
                                         </div>
-                                    ) : null}
 
-                                    {/* WYSIWYG editor (bold/italic only) */}
-                                    <div
-                                        ref={editorRef}
-                                        contentEditable
-                                        suppressContentEditableWarning
-                                        className={[
-                                            "w-full outline-none",
-                                            "text-neutral-700",
-                                            "whitespace-pre-wrap break-words",
-                                            "min-h-[32px]",
-                                            "max-h-30 md:max-h-32 overflow-y-auto",
-                                            "py-1 text-sm",
-                                        ].join(" ")}
-                                        data-placeholder="Apa yang Baru?"
-                                        onInput={() => {
-                                            syncHtmlFromDom();
-                                            syncFormatState();
-                                        }}
-                                        onKeyUp={syncFormatState}
-                                        onMouseUp={syncFormatState}
-                                        onPaste={(e) => {
-                                            e.preventDefault();
-                                            const text =
-                                                e.clipboardData.getData(
-                                                    "text/plain",
+                                        {locationLabel ? (
+                                            <div className="text-xs text-neutral-500 my-0.5">
+                                                <FiMapPin className="inline mr-1" />
+                                                {locationLabel}
+                                            </div>
+                                        ) : null}
+
+                                        <div
+                                            ref={editorRef}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            className={[
+                                                "w-full outline-none",
+                                                "text-neutral-700",
+                                                "whitespace-pre-wrap break-words",
+                                                "min-h-[32px]",
+                                                "max-h-30 md:max-h-32 overflow-y-auto",
+                                                "py-1 text-sm",
+                                            ].join(" ")}
+                                            data-placeholder="Apa yang Baru?"
+                                            onInput={() => {
+                                                syncHtmlFromDom();
+                                                syncFormatState();
+                                            }}
+                                            onKeyUp={syncFormatState}
+                                            onMouseUp={syncFormatState}
+                                            onPaste={(e) => {
+                                                e.preventDefault();
+                                                const text =
+                                                    e.clipboardData.getData(
+                                                        "text/plain",
+                                                    );
+                                                document.execCommand(
+                                                    "insertText",
+                                                    false,
+                                                    text,
                                                 );
-                                            document.execCommand(
-                                                "insertText",
-                                                false,
-                                                text,
-                                            );
-                                            syncHtmlFromDom();
-                                            syncFormatState();
-                                        }}
-                                    />
+                                                syncHtmlFromDom();
+                                                syncFormatState();
+                                            }}
+                                        />
 
-                                    <style>{`
-                                      [contenteditable][data-placeholder]:empty:before {
-                                        content: attr(data-placeholder);
-                                        color: #a3a3a3;
-                                      }
-                                    `}</style>
+                                        <style>{`
+                                          [contenteditable][data-placeholder]:empty:before {
+                                            content: attr(data-placeholder);
+                                            color: #a3a3a3;
+                                          }
+                                        `}</style>
 
-                                    <PreviewMedia
-                                        images={images}
-                                        onRemove={removeImage}
-                                    />
+                                        <PreviewMedia
+                                            images={images}
+                                            onRemove={removeImage}
+                                        />
 
-                                    {/* Tag chips + tag input (chip model) */}
-                                    <div className="">
                                         {chipTags.length ? (
                                             <div className="flex flex-wrap gap-2 mb-2">
                                                 {chipTags.map((t) => (
@@ -592,11 +478,10 @@ export default function CreatePostModal({
                                                 </button>
                                             </div>
 
-                                            {/* Suggestions (always on top) */}
                                             {tagBoxOpen ? (
                                                 <div
                                                     style={suggestionStyle}
-                                                    className=" max-w-xs rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden max-h-40 z-[99999]"
+                                                    className="max-w-xs rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden max-h-40 z-[99999]"
                                                 >
                                                     <div className="max-h-40 overflow-y-auto">
                                                         {filteredTagSuggestions.map(
@@ -649,78 +534,97 @@ export default function CreatePostModal({
                                                 </div>
                                             ) : null}
                                         </div>
-                                    </div>
 
-                                    {/* Toolbar */}
-                                    <div className="mt-4 flex items-center gap-2 text-neutral-700">
-                                        <IconButton
-                                            label="Upload Image"
-                                            onClick={handlePickImages}
-                                        >
-                                            <FiImage className="text-xl" />
-                                        </IconButton>
+                                        {/* Toolbar */}
+                                        <div className="mt-4 flex items-center gap-2 text-neutral-700">
+                                            <IconButton
+                                                label="Upload Image"
+                                                onClick={handlePickImages}
+                                            >
+                                                <FiImage className="text-xl" />
+                                            </IconButton>
 
-                                        <IconButton
-                                            label="Location"
-                                            onClick={goToLocation}
-                                        >
-                                            <FiMapPin className="text-xl" />
-                                        </IconButton>
+                                            <IconButton
+                                                label="Location"
+                                                onClick={() => {
+                                                    syncHtmlFromDom();
+                                                    setTagBoxOpen(false);
+                                                    setView("location");
+                                                }}
+                                            >
+                                                <FiMapPin className="text-xl" />
+                                            </IconButton>
 
-                                        <IconButton
-                                            label="Italic"
-                                            onClick={() => exec("italic")}
-                                            className={
-                                                isItalic
-                                                    ? "bg-neutral-900 text-white hover:bg-neutral-900"
-                                                    : ""
-                                            }
-                                        >
-                                            <FiItalic className="text-xl" />
-                                        </IconButton>
+                                            <IconButton
+                                                label="Italic"
+                                                onClick={() => exec("italic")}
+                                                className={
+                                                    isItalic
+                                                        ? "bg-neutral-900 text-white hover:bg-neutral-900"
+                                                        : ""
+                                                }
+                                            >
+                                                <FiItalic className="text-xl" />
+                                            </IconButton>
 
-                                        <IconButton
-                                            label="Bold"
-                                            onClick={() => exec("bold")}
-                                            className={
-                                                isBold
-                                                    ? "bg-neutral-900 text-white hover:bg-neutral-900"
-                                                    : ""
-                                            }
-                                        >
-                                            <FiBold className="text-xl" />
-                                        </IconButton>
+                                            <IconButton
+                                                label="Bold"
+                                                onClick={() => exec("bold")}
+                                                className={
+                                                    isBold
+                                                        ? "bg-neutral-900 text-white hover:bg-neutral-900"
+                                                        : ""
+                                                }
+                                            >
+                                                <FiBold className="text-xl" />
+                                            </IconButton>
 
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            multiple
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                                handleFiles(e.target.files);
-                                                e.target.value = "";
-                                            }}
-                                        />
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    handleFiles(e.target.files);
+                                                    e.target.value = "";
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ) : (
-                        <LocationPickerView
-                            query={locationQuery}
-                            onChangeQuery={setLocationQuery}
-                            onBack={backToEditor}
-                            onSelect={(loc) => {
-                                setLocation(loc);
-                                backToEditor();
-                            }}
-                        />
-                    )}
+                        ) : (
+                            <LocationSearchModal
+                                onBack={() => {
+                                    setView("editor");
+                                    setTimeout(() => {
+                                        hydrateDomFromState();
+                                        editorRef.current?.focus();
+                                        syncFormatState();
+                                    }, 0);
+                                }}
+                                onSelectLocation={(place) => {
+                                    setLocationPlace(place);
+                                    setLocationLabel(
+                                        place?.display_name ??
+                                            place?.name ??
+                                            "",
+                                    );
+                                    setView("editor");
+                                    setTimeout(() => {
+                                        hydrateDomFromState();
+                                        editorRef.current?.focus();
+                                        syncFormatState();
+                                    }, 0);
+                                }}
+                            />
+                        )}
+                    </div>
 
-                    {/* Footer (only in editor view) */}
+                    {/* footer */}
                     {view === "editor" ? (
-                        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between">
+                        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between shrink-0">
                             <Toggle
                                 id="disable-comments"
                                 name="disable-comments"
@@ -739,7 +643,28 @@ export default function CreatePostModal({
                                     onSubmit?.({
                                         content_html: contentHtml,
                                         content_text,
-                                        location,
+                                        location: locationLabel,
+                                        location_place: locationPlace
+                                            ? JSON.stringify({
+                                                  provider: "osm",
+                                                  id: locationPlace.id,
+                                                  display_name:
+                                                      locationPlace.display_name ??
+                                                      locationLabel,
+                                                  name:
+                                                      locationPlace.name ??
+                                                      null,
+                                                  lat:
+                                                      locationPlace.lat ?? null,
+                                                  lng:
+                                                      locationPlace.lng ?? null,
+                                                  address:
+                                                      locationPlace.address ??
+                                                      null,
+                                                  raw:
+                                                      locationPlace.raw ?? null,
+                                              })
+                                            : null,
                                         allows_comment: !disableComments,
                                         images: images.map((x) => x.file),
                                         tag_names: chipTags,

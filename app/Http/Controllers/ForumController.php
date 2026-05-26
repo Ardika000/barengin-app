@@ -16,12 +16,11 @@ class ForumController extends Controller
     {
         if (!$imgName) return '';
 
-        // already a full/absolute path like "/assets/default-image.png"
+        // already a full path like /assets/default-image.png
         if (str_starts_with($imgName, '/') || str_starts_with($imgName, 'http')) {
             return $imgName;
         }
 
-        // otherwise treat as a stored file name
         return asset('storage/posts/' . $imgName);
     }
 
@@ -61,7 +60,6 @@ class ForumController extends Controller
             ->orderBy('tag_name')
             ->get();
 
-        // Collect post ids to check likes-by-me in one query
         $postIds = collect($posts->items())->pluck('id')->values();
 
         $likedPostIds = collect();
@@ -84,14 +82,10 @@ class ForumController extends Controller
                     'content' => $post->content,
                     'allows_comment' => (bool) $post->allows_comment,
                     'location' => $post->location,
-
-                    // ✅ new like system
                     'likes_count' => (int) ($post->likes_count ?? 0),
                     'liked_by_me' => $likedPostIds->contains($post->id),
-
                     'comments_count' => (int) ($post->comments_count ?? 0),
                     'created_at' => $post->created_at,
-
                     'user' => [
                         'id' => $post->user?->id,
                         'name' => $post->user?->full_name,
@@ -132,14 +126,14 @@ class ForumController extends Controller
             ])
             ->findOrFail($id);
 
-        // comments (top-level)
+        // top level comment
         $commentsQuery = $post->comments()
             ->whereNull('parent_id')
             ->withCount(['likes as likes_count'])
             ->with([
                 'user:id,full_name,profile_image,username',
                 'replies' => function ($q) {
-                    // replies should be oldest -> newest (bottom is newest)
+                    // replies sort by oldestest
                     $q->orderBy('created_at', 'asc')
                         ->with('user:id,full_name,profile_image')
                         ->withCount(['likes as likes_count']);
@@ -158,7 +152,6 @@ class ForumController extends Controller
         $responseCount = $comments->count()
             + $comments->sum(fn ($c) => $c->replies->count());
 
-        // liked_by_me sets in bulk (comments + replies)
         $commentIds = $comments->pluck('id');
         $replyIds = $comments->flatMap(fn ($c) => $c->replies->pluck('id'));
         $allCommentIds = $commentIds->merge($replyIds)->values();
@@ -255,7 +248,6 @@ class ForumController extends Controller
             'comment_text' => ['required', 'string', 'max:2000'],
         ]);
 
-        // Optional: block if post disallows comments
         if (! $post->allows_comment) {
             abort(403, 'Comments are disabled for this post.');
         }
@@ -276,13 +268,12 @@ class ForumController extends Controller
             'comment_text' => ['required', 'string', 'max:2000'],
         ]);
 
-        $post = $comment->post; // requires comment->post() relation
+        $post = $comment->post;
 
         if (! $post || ! $post->allows_comment) {
             abort(403, 'Comments are disabled for this post.');
         }
 
-        // Force reply to be under a top-level comment
         $parentId = $comment->parent_id ? $comment->parent_id : $comment->id;
 
         PostComment::create([

@@ -26,13 +26,40 @@ function ForumIndexPage({ posts, tags, filters }) {
 
     const LOADING_DELAY_MS = 650;
     const loadTimerRef = useRef(null);
+    const isLoadMoreInFlightRef = useRef(false);
+
+    const mergeUniquePosts = (prev, next) => {
+        const seen = new Set();
+        const merged = [];
+
+        [...(prev ?? []), ...(next ?? [])].forEach((p) => {
+            const id = p?.id;
+            if (!id || seen.has(id)) return;
+            seen.add(id);
+            merged.push(p);
+        });
+
+        return merged;
+    };
 
     useEffect(() => {
+        // reset only when search/tag feed changes
         setItems(posts?.data ?? []);
         setNextUrl(posts?.next_page_url ?? null);
         setIsLoadingMore(false);
+        isLoadMoreInFlightRef.current = false;
         setQ(filters?.q ?? "");
-    }, [feedKey, posts?.data, posts?.next_page_url, filters?.q]);
+    }, [feedKey, filters?.q]);
+
+    useEffect(() => {
+        if (!posts) return;
+
+        const currentPage = Number(posts?.current_page ?? 1);
+        if (currentPage <= 1) return;
+
+        setItems((prev) => mergeUniquePosts(prev, posts?.data ?? []));
+        setNextUrl(posts?.next_page_url ?? null);
+    }, [posts]);
 
     useEffect(() => {
         return () => {
@@ -47,7 +74,6 @@ function ForumIndexPage({ posts, tags, filters }) {
         [tagNames],
     );
 
-    // optimistic like toggle in feed
     const toggleLikePost = (postId) => {
         if (!user) return;
 
@@ -125,8 +151,9 @@ function ForumIndexPage({ posts, tags, filters }) {
     };
 
     const loadMore = () => {
-        if (!nextUrl || isLoadingMore) return;
+        if (!nextUrl || isLoadingMore || isLoadMoreInFlightRef.current) return;
 
+        isLoadMoreInFlightRef.current = true;
         setIsLoadingMore(true);
 
         if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
@@ -145,10 +172,13 @@ function ForumIndexPage({ posts, tags, filters }) {
                         const newPosts = page.props.posts?.data ?? [];
                         const newNext = page.props.posts?.next_page_url ?? null;
 
-                        setItems((prev) => [...(prev ?? []), ...newPosts]);
+                        setItems((prev) => mergeUniquePosts(prev, newPosts));
                         setNextUrl(newNext);
                     },
-                    onFinish: () => setIsLoadingMore(false),
+                    onFinish: () => {
+                        isLoadMoreInFlightRef.current = false;
+                        setIsLoadingMore(false);
+                    },
                 },
             );
         }, LOADING_DELAY_MS);
@@ -169,7 +199,6 @@ function ForumIndexPage({ posts, tags, filters }) {
 
         observer.observe(el);
         return () => observer.disconnect();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nextUrl, isLoadingMore]);
 
     return (

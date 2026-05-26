@@ -40,4 +40,10 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
+
+    'nominatim' => [
+        'base_url' => env('NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org'),
+        'email' => env('NOMINATIM_EMAIL'),
+        'user_agent' => env('NOMINATIM_USER_AGENT', 'MyApp/1.0'),
+    ],
 ];

@@ -56,7 +56,6 @@ function NavIconButton({ icon, onClick, active = false, label }) {
 export default function ForumSideNav({
     onCreatePost,
     onFindPeople,
-    // optional: if you want "Find People" to stay highlighted while modal is open
     isFindPeopleOpen = false,
     isCreatePostOpen = false,
 }) {
@@ -65,7 +64,6 @@ export default function ForumSideNav({
     const activeKey = useMemo(() => {
         const u = url ?? "";
 
-        // Keep "search" highlighted while modal is open (optional but nice UX)
         if (isFindPeopleOpen) return "search";
         if (isCreatePostOpen) return "create";
 
@@ -73,7 +71,6 @@ export default function ForumSideNav({
             return "profile";
         }
 
-        // Post show pages and forum root should still be "home"
         if (u.startsWith("/forum")) {
             return "home";
         }
@@ -83,7 +80,7 @@ export default function ForumSideNav({
 
     return (
         <>
-            {/* Desktop left rail */}
+            {/* desktop left menu */}
             <div className="hidden lg:block fixed left-0 top-0 h-full w-28 bg-white border-r border-neutral-200">
                 <div className="flex flex-col items-center gap-4 py-6 justify-center h-full">
                     <NavIconLink
@@ -116,7 +113,7 @@ export default function ForumSideNav({
                 </div>
             </div>
 
-            {/* Mobile bottom nav */}
+            {/* mobile bottom nav */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
                 <div className="px-4 py-3 flex items-center justify-around">
                     <NavIconLink
@@ -126,7 +123,6 @@ export default function ForumSideNav({
                         active={activeKey === "home"}
                     />
 
-                    {/* Make this a button too so it can be "active" */}
                     <NavIconButton
                         icon={<FiSearch />}
                         label="Find People"
