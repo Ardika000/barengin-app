@@ -1,0 +1,763 @@
+From e4e060f61634a04f39ecdc79e6fc7b353a98e3be Mon Sep 17 00:00:00 2001
+From: "copilot-swe-agent[bot]" <198982749+Copilot@users.noreply.github.com>
+Date: Tue, 26 May 2026 09:38:02 +0000
+Subject: [PATCH 3/3] fix: synchronize trip booking counts and order flow
+
+Agent-Logs-Url: https://github.com/Tinyasli/barengin-app/sessions/77a007e0-0713-4a7e-98a5-49a18d84665e
+
+Co-authored-by: Tinyasli <198030151+Tinyasli@users.noreply.github.com>
+---
+ app/Http/Controllers/TripsController.php      | 350 ++++++++++++++++--
+ resources/js/Pages/TripBareng/Checkout.jsx    |  96 ++++-
+ resources/js/Pages/TripBareng/Detail.jsx      |  46 +--
+ resources/js/Pages/TripBareng/Success.jsx     |  13 +-
+ .../js/Pages/TripBareng/WaitingPayment.jsx    |  11 +
+ routes/web.php                                |   1 +
+ 6 files changed, 450 insertions(+), 67 deletions(-)
+
+diff --git a/app/Http/Controllers/TripsController.php b/app/Http/Controllers/TripsController.php
+index 5fbb1a1..dc33b78 100644
+--- a/app/Http/Controllers/TripsController.php
++++ b/app/Http/Controllers/TripsController.php
+@@ -6,10 +6,164 @@
+ use Illuminate\Http\Request;
+ use Inertia\Inertia;
+ use Carbon\Carbon;
++use Illuminate\Support\Facades\Auth;
+ use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++use Illuminate\Support\Str;
+ 
+ class TripsController extends Controller
+ {
++    private const SERVICE_FEE = 5000;
++    private const INSURANCE_FEE = 5000;
++
++    private function confirmedOrderStatuses(): array
++    {
++        return ['paid', 'confirmed'];
++    }
++
++    private function getJoinedCountForTrip(int $tripId): int
++    {
++        $joinedByOrders = (int) DB::table('trip_orders')
++            ->where('trip_id', $tripId)
++            ->whereIn('order_status', $this->confirmedOrderStatuses())
++            ->sum('quantity');
++
++        if ($joinedByOrders > 0) {
++            return $joinedByOrders;
++        }
++
++        if (Schema::hasColumn('trip_participants', 'trip_order_id')) {
++            return (int) DB::table('trip_participants')
++                ->join('trip_orders', 'trip_participants.trip_order_id', '=', 'trip_orders.id')
++                ->where('trip_orders.trip_id', $tripId)
++                ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses())
++                ->count();
++        }
++
++        if (Schema::hasColumn('trip_participants', 'trip_id')) {
++            return (int) DB::table('trip_participants')
++                ->where('trip_id', $tripId)
++                ->count();
++        }
++
++        return 0;
++    }
++
++    private function getParticipantAvatars(int $tripId): array
++    {
++        $mapUserToAvatar = function ($fullName, $profileImage) {
++            $fullName = trim((string) ($fullName ?? ''));
++            $firstName = $fullName !== '' ? explode(' ', $fullName)[0] : 'Peserta';
++
++            return [
++                'first_name' => $firstName,
++                'profile_image' => $profileImage
++                    ? (str_starts_with($profileImage, 'http://') || str_starts_with($profileImage, 'https://')
++                        ? $profileImage
++                        : asset('storage/' . $profileImage))
++                    : asset('assets/default-profile.png'),
++            ];
++        };
++
++        if (!Schema::hasColumn('trip_participants', 'user_id')) {
++            $orderUsers = DB::table('trip_orders')
++                ->join('users', 'trip_orders.user_id', '=', 'users.id')
++                ->where('trip_orders.trip_id', $tripId)
++                ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses())
++                ->select('users.full_name', 'users.profile_image', 'trip_orders.quantity')
++                ->orderByDesc('trip_orders.created_at')
++                ->get();
++
++            $fallbackAvatars = [];
++            foreach ($orderUsers as $orderUser) {
++                for ($i = 0; $i < (int) $orderUser->quantity; $i++) {
++                    $fallbackAvatars[] = $mapUserToAvatar($orderUser->full_name, $orderUser->profile_image);
++                }
++            }
++
++            return $fallbackAvatars;
++        }
++
++        $participantsQuery = DB::table('trip_participants')
++            ->join('users', 'trip_participants.user_id', '=', 'users.id')
++            ->select('users.full_name', 'users.profile_image');
++
++        if (Schema::hasColumn('trip_participants', 'trip_order_id')) {
++            $participantsQuery
++                ->join('trip_orders', 'trip_participants.trip_order_id', '=', 'trip_orders.id')
++                ->where('trip_orders.trip_id', $tripId)
++                ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses());
++        } elseif (Schema::hasColumn('trip_participants', 'trip_id')) {
++            $participantsQuery->where('trip_participants.trip_id', $tripId);
++        } else {
++            return [];
++        }
++
++        $avatars = $participantsQuery
++            ->orderByDesc('trip_participants.created_at')
++            ->get()
++            ->map(fn ($participant) => $mapUserToAvatar($participant->full_name, $participant->profile_image))
++            ->values()
++            ->all();
++
++        if (!empty($avatars)) {
++            return $avatars;
++        }
++
++        $orderUsers = DB::table('trip_orders')
++            ->join('users', 'trip_orders.user_id', '=', 'users.id')
++            ->where('trip_orders.trip_id', $tripId)
++            ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses())
++            ->select('users.full_name', 'users.profile_image', 'trip_orders.quantity')
++            ->orderByDesc('trip_orders.created_at')
++            ->get();
++
++        $fallbackAvatars = [];
++        foreach ($orderUsers as $orderUser) {
++            for ($i = 0; $i < (int) $orderUser->quantity; $i++) {
++                $fallbackAvatars[] = $mapUserToAvatar($orderUser->full_name, $orderUser->profile_image);
++            }
++        }
++
++        return $fallbackAvatars;
++    }
++
++    private function getTripForOrder(int $tripId, ?int $orderId = null)
++    {
++        $orderQuery = DB::table('trip_orders')
++            ->leftJoin('transactions', 'trip_orders.transaction_id', '=', 'transactions.id')
++            ->leftJoin('trips', 'trip_orders.trip_id', '=', 'trips.id')
++            ->select(
++                'trip_orders.id',
++                'trip_orders.trip_id',
++                'trip_orders.quantity',
++                'trip_orders.total',
++                'trip_orders.transaction_id',
++                'trip_orders.order_status',
++                'transactions.payment_method',
++                'transactions.va_number',
++                'transactions.expired_at',
++                'transactions.total_amount',
++                'trips.name as trip_name',
++                'trips.start_date',
++                'trips.end_date',
++                'trips.image'
++            )
++            ->where('trip_orders.trip_id', $tripId);
++
++        if ($orderId) {
++            $orderQuery->where('trip_orders.id', $orderId);
++        }
++
++        if (Auth::check()) {
++            $orderQuery->where('trip_orders.user_id', Auth::id());
++        } elseif ($orderId) {
++            return null;
++        }
++
++        return $orderQuery->orderByDesc('trip_orders.created_at')->first();
++    }
++
+     public function index()
+     {
+         $tripsPaginated = DB::table('trips')
+@@ -23,11 +177,9 @@ public function index()
+             $endDate = Carbon::parse($trip->end_date);
+             $duration = $startDate->diffInDays($endDate) . ' Days';
+ 
+-            // [PERBAIKAN]: Hitung partisipan murni sesuai tabel DB (tanpa angka acak)
+-            $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
++            $joined = $this->getJoinedCountForTrip((int) $trip->id);
+             
+-            // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
+-            $remaining = $trip->people_amount - $joined;
++            $remaining = max(0, $trip->people_amount - $joined);
+ 
+             $guiderRating = DB::table('user__ratings')
+                 ->where('rated_user_id', $trip->host_id)
+@@ -44,8 +196,9 @@ public function index()
+                 'title' => $trip->name,
+                 'location' => 'Indonesia', 
+                 'date' => $startDate->format('d M y') . ' - ' . $endDate->format('d M y') . ' (' . $duration . ')',
+-                'capacity' => $joined . '/' . $trip->people_amount . ' orang',
+-                'remaining_seats' => $remaining > 0 ? $remaining : 0, 
++                'joined_count' => $joined,
++                'capacity' => $trip->people_amount,
++                'remaining_seats' => $remaining,
+                 'rating' => (float) $trip->rating, 
+                 'reviews' => rand(10, 150), // Ini review trip (bukan guide), bisa biarkan random dulu kalau belum ada tabelnya
+                 'price' => (float) $trip->price,
+@@ -78,8 +231,8 @@ public function show($id)
+ 
+         if (!$trip) abort(404);
+ 
+-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
+-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
++        $joined = $this->getJoinedCountForTrip((int) $trip->id);
++        $participantAvatars = $this->getParticipantAvatars((int) $trip->id);
+ 
+         // 2. Ambil Rata-Rata Rating Guide
+         $guiderRating = DB::table('user__ratings')
+@@ -128,7 +281,9 @@ public function show($id)
+             'location' => 'Indonesia',
+             'duration' => $startDate->diffInDays($endDate) . ' Hari',
+             'date_range' => $startDate->format('d F Y') . ' hingga ' . $endDate->format('d F Y'),
+-            'joined_count' => $joined, // <--- Sekarang pakai $joined asli dari DB
++            'joined_count' => $joined,
++            'participant_count' => $joined,
++            'participant_avatars' => $participantAvatars,
+             'capacity' => $trip->people_amount,
+             'price' => (float) $trip->price,
+             'description' => $trip->description, 
+@@ -152,16 +307,18 @@ public function checkout($id)
+         $trip = DB::table('trips')->where('id', $id)->first();
+         if (!$trip) abort(404);
+ 
+-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
+-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
++        $joined = $this->getJoinedCountForTrip((int) $trip->id);
++        $remainingQuota = max(0, $trip->people_amount - $joined);
+ 
+         $trip_check_out = [
+             'id' => $trip->id,
+             'title' => $trip->name,
+             'price' => (float) $trip->price,
+-            'joined_count' => $joined, // <--- Pakai data asli
++            'joined_count' => $joined,
+             'capacity' => $trip->people_amount,
+-            'remaining_quota' => $trip->people_amount - $joined, // <--- Hitungan sisa kursi akurat
++            'remaining_quota' => $remainingQuota,
++            'service_fee' => self::SERVICE_FEE,
++            'insurance_fee' => self::INSURANCE_FEE,
+             'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+         ];
+ 
+@@ -170,17 +327,146 @@ public function checkout($id)
+         ]);
+     }
+ 
+-    public function payment($id)
++    public function store(Request $request, $id)
++    {
++        if (!Auth::check()) {
++            return redirect()->route('login');
++        }
++
++        $trip = DB::table('trips')->where('id', $id)->first();
++        if (!$trip) {
++            abort(404);
++        }
++
++        $validated = $request->validate([
++            'quantity' => ['required', 'integer', 'min:1'],
++            'paymentMethod' => ['required', 'string', 'max:100'],
++            'participants' => ['required', 'array', 'min:1'],
++            'participants.*.name' => ['required', 'string', 'max:255'],
++            'participants.*.passport' => ['nullable', 'string', 'max:20'],
++            'participants.*.phone' => ['required', 'string', 'max:20'],
++            'participants.*.nik' => ['nullable', 'string', 'max:30'],
++        ]);
++
++        $quantity = (int) $validated['quantity'];
++        $participants = $validated['participants'];
++
++        if (count($participants) !== $quantity) {
++            return back()->withErrors([
++                'participants' => 'Jumlah data partisipan harus sama dengan quantity yang dipilih.',
++            ]);
++        }
++
++        $joinedCount = $this->getJoinedCountForTrip((int) $trip->id);
++        $remainingQuota = max(0, $trip->people_amount - $joinedCount);
++
++        if ($quantity > $remainingQuota) {
++            return back()->withErrors([
++                'quantity' => 'Slot tersisa tidak mencukupi untuk quantity yang dipilih.',
++            ]);
++        }
++
++        $subtotal = (float) $trip->price * $quantity;
++        $total = $subtotal + self::SERVICE_FEE + self::INSURANCE_FEE;
++
++        $orderId = DB::transaction(function () use ($trip, $quantity, $total, $validated, $participants) {
++            $transactionId = (string) Str::uuid();
++
++            DB::table('transactions')->insert([
++                'id' => $transactionId,
++                'user_id' => Auth::id(),
++                'total_amount' => $total,
++                'type' => 'trip',
++                'payment_method' => $validated['paymentMethod'],
++                'va_number' => str_pad((string) random_int(1, 999999999999), 12, '0', STR_PAD_LEFT),
++                'expired_at' => now()->addHours(24),
++                'created_at' => now(),
++                'updated_at' => now(),
++            ]);
++
++            $orderId = DB::table('trip_orders')->insertGetId([
++                'transaction_id' => $transactionId,
++                'trip_id' => $trip->id,
++                'user_id' => Auth::id(),
++                'quantity' => $quantity,
++                'total' => $total,
++                'order_status' => 'paid',
++                'created_at' => now(),
++                'updated_at' => now(),
++            ]);
++
++            DB::table('trip_order_fees')->insert([
++                [
++                    'trip_order_id' => $orderId,
++                    'fee_name' => 'Biaya Layanan',
++                    'amount' => self::SERVICE_FEE,
++                    'created_at' => now(),
++                    'updated_at' => now(),
++                ],
++                [
++                    'trip_order_id' => $orderId,
++                    'fee_name' => 'Biaya Asuransi Trip',
++                    'amount' => self::INSURANCE_FEE,
++                    'created_at' => now(),
++                    'updated_at' => now(),
++                ],
++            ]);
++
++            $participantColumns = Schema::getColumnListing('trip_participants');
++
++            foreach ($participants as $participant) {
++                $insertData = [
++                    'full_name' => $participant['name'],
++                    'paspor' => $participant['passport'] ?? null,
++                    'phone_number' => $participant['phone'],
++                    'nik' => $participant['nik'] ?? null,
++                    'created_at' => now(),
++                    'updated_at' => now(),
++                ];
++
++                if (in_array('trip_order_id', $participantColumns, true)) {
++                    $insertData['trip_order_id'] = $orderId;
++                }
++
++                if (in_array('trip_id', $participantColumns, true)) {
++                    $insertData['trip_id'] = $trip->id;
++                }
++
++                if (in_array('user_id', $participantColumns, true)) {
++                    $insertData['user_id'] = Auth::id();
++                }
++
++                DB::table('trip_participants')->insert($insertData);
++            }
++
++            return $orderId;
++        });
++
++        return redirect()->route('trip-bareng.payment', ['id' => $trip->id, 'order' => $orderId]);
++    }
++
++    public function payment(Request $request, $id)
+     {
+         $trip = DB::table('trips')->where('id', $id)->first();
+         if (!$trip) abort(404);
+ 
++        $order = $this->getTripForOrder((int) $id, $request->integer('order'));
++        $feesTotal = 0;
++
++        if ($order) {
++            $feesTotal = (float) DB::table('trip_order_fees')
++                ->where('trip_order_id', $order->id)
++                ->sum('amount');
++        }
++
+         $paymentData = [
+             'trip_id' => $id,
+-            'total_amount' => (float) $trip->price + 10000, 
+-            'due_date' => Carbon::now()->addHours(24)->format('d F Y, H:i'),
+-            'bank_name' => 'BCA Virtual Account',
+-            'va_number' => '123 456 789 123',
++            'order_id' => $order->id ?? null,
++            'total_amount' => $order ? (float) ($order->total_amount ?? $order->total) : ((float) $trip->price + self::SERVICE_FEE + self::INSURANCE_FEE),
++            'due_date' => $order && $order->expired_at ? Carbon::parse($order->expired_at)->format('d F Y, H:i') : Carbon::now()->addHours(24)->format('d F Y, H:i'),
++            'bank_name' => $order && $order->payment_method ? strtoupper($order->payment_method) : 'BCA Virtual Account',
++            'va_number' => $order->va_number ?? '123 456 789 123',
++            'fees_total' => $feesTotal,
+         ];
+ 
+         return Inertia::render('TripBareng/WaitingPayment', [
+@@ -188,25 +474,33 @@ public function payment($id)
+         ]);
+     }
+ 
+-    public function success($id)
++    public function success(Request $request, $id)
+     {
+         $trip = DB::table('trips')->where('id', $id)->first();
+         if (!$trip) abort(404);
+ 
+-        $startDate = Carbon::parse($trip->start_date);
+-        $endDate = Carbon::parse($trip->end_date);
++        $order = $this->getTripForOrder((int) $id, $request->integer('order'));
++        $quantity = (int) ($order->quantity ?? 1);
++        $transactionId = $order->transaction_id ?? ('OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT));
++        $tripTitle = $order->trip_name ?? $trip->name;
++        $tripImage = $order->image ?? ($trip->image ?? '/assets/trips/bromo.jpg');
+ 
+-        $order = [
+-            'transaction_id' => 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
+-            'trip_title' => $trip->name,
++        $startDate = Carbon::parse($order->start_date ?? $trip->start_date);
++        $endDate = Carbon::parse($order->end_date ?? $trip->end_date);
++        $joined = $this->getJoinedCountForTrip((int) $id);
++
++        $successData = [
++            'transaction_id' => $transactionId,
++            'trip_title' => $tripTitle,
+             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
+-            'quantity' => 1,
+-            'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+-            'friends_waiting' => rand(3, 15),
++            'quantity' => $quantity,
++            'image' => $tripImage,
++            'friends_waiting' => max(0, $joined - $quantity),
++            'slot_message' => "Kamu berhasil memesan {$quantity} slot",
+         ];
+ 
+         return Inertia::render('TripBareng/Success', [
+-            'order' => $order,
++            'order' => $successData,
+         ]);
+     }
+ }
+diff --git a/resources/js/Pages/TripBareng/Checkout.jsx b/resources/js/Pages/TripBareng/Checkout.jsx
+index 8eaf186..6cd5ed4 100644
+--- a/resources/js/Pages/TripBareng/Checkout.jsx
++++ b/resources/js/Pages/TripBareng/Checkout.jsx
+@@ -1,5 +1,5 @@
+ import React, { useState, useEffect } from "react";
+-import { Head, Link } from "@inertiajs/react";
++import { Head, Link, router, usePage } from "@inertiajs/react";
+ import Container from "@/Components/Container";
+ import Input from "@/Components/Input";
+ import Button from "@/Components/Button";
+@@ -11,8 +11,12 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
+ import { BsCheckCircleFill } from "react-icons/bs";
+ 
+ export default function Checkout({ trip }) {
+-    const [quantity, setQuantity] = useState(2);
++    const initialQuantity = trip.remaining_quota > 0 ? 1 : 0;
++    const [quantity, setQuantity] = useState(initialQuantity);
+     const [paymentMethod, setPaymentMethod] = useState("bca_va");
++    const [isSubmitting, setIsSubmitting] = useState(false);
++    const [formError, setFormError] = useState("");
++    const { errors } = usePage().props;
+ 
+     // Dynamic participants form state
+     const [participants, setParticipants] = useState([]);
+@@ -23,12 +27,12 @@ export default function Checkout({ trip }) {
+             if (prev.length < quantity) {
+                 return [
+                     ...prev,
+-                    ...Array(quantity - prev.length).fill({
++                    ...Array.from({ length: quantity - prev.length }, () => ({
+                         name: "",
+                         passport: "",
+                         phone: "",
+                         nik: "",
+-                    }),
++                    })),
+                 ];
+             }
+             return prev.slice(0, quantity);
+@@ -43,10 +47,41 @@ export default function Checkout({ trip }) {
+ 
+     // Calculations
+     const subtotal = trip.price * quantity;
+-    const serviceFee = 5000;
+-    const insuranceFee = 5000;
++    const serviceFee = trip.service_fee ?? 5000;
++    const insuranceFee = trip.insurance_fee ?? 5000;
+     const total = subtotal + serviceFee + insuranceFee;
+ 
++    const handleParticipantChange = (index, field, value) => {
++        setParticipants((prev) =>
++            prev.map((item, idx) =>
++                idx === index ? { ...item, [field]: value } : item,
++            ),
++        );
++    };
++
++    const handleSubmit = () => {
++        if (quantity < 1) {
++            setFormError("Kuota trip sudah habis.");
++            return;
++        }
++
++        setFormError("");
++        setIsSubmitting(true);
++
++        router.post(
++            `/trip-bareng/${trip.id}/checkout`,
++            {
++                quantity,
++                paymentMethod,
++                participants,
++            },
++            {
++                onError: () => setIsSubmitting(false),
++                onFinish: () => setIsSubmitting(false),
++            },
++        );
++    };
++
+     // Mock Payment Methods
+     const paymentMethods = [
+         {
+@@ -218,16 +253,40 @@ export default function Checkout({ trip }) {
+                                     <Input
+                                         label="Nama Lengkap"
+                                         placeholder="Masukkan nama lengkap anda sesuai ktp"
++                                        value={p.name}
++                                        onChange={(e) =>
++                                            handleParticipantChange(
++                                                idx,
++                                                "name",
++                                                e.target.value,
++                                            )
++                                        }
+                                     />
+                                     <Input
+                                         label="No. Paspor (optional)"
+                                         placeholder="Nomor paspor resmi anda"
++                                        value={p.passport}
++                                        onChange={(e) =>
++                                            handleParticipantChange(
++                                                idx,
++                                                "passport",
++                                                e.target.value,
++                                            )
++                                        }
+                                     />
+ 
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                         <Input
+                                             label="Nomor Telepon"
+                                             placeholder="No Telpon"
++                                            value={p.phone}
++                                            onChange={(e) =>
++                                                handleParticipantChange(
++                                                    idx,
++                                                    "phone",
++                                                    e.target.value,
++                                                )
++                                            }
+                                             leftAddon={
+                                                 <span className="text-neutral-700 font-medium">
+                                                     +62
+@@ -237,6 +296,14 @@ export default function Checkout({ trip }) {
+                                         <Input
+                                             label="NIK (Optional)"
+                                             placeholder="NIK"
++                                            value={p.nik}
++                                            onChange={(e) =>
++                                                handleParticipantChange(
++                                                    idx,
++                                                    "nik",
++                                                    e.target.value,
++                                                )
++                                            }
+                                         />
+                                     </div>
+                                 </div>
+@@ -298,7 +365,10 @@ export default function Checkout({ trip }) {
+ 
+                             <div className="space-y-4 text-sm text-neutral-600 border-b border-neutral-100 pb-6 mb-6">
+                                 <div className="flex justify-between items-center">
+-                                    <span>Subtotal</span>
++                                    <span>
++                                        Subtotal ({quantity} x Rp{" "}
++                                        {trip.price.toLocaleString("id-ID")})
++                                    </span>
+                                     <span className="font-semibold text-neutral-900">
+                                         Rp {subtotal.toLocaleString("id-ID")}
+                                     </span>
+@@ -336,14 +406,20 @@ export default function Checkout({ trip }) {
+                                 </p>
+                             </div>
+ 
++                            {(errors?.quantity || errors?.participants || formError) && (
++                                <p className="mb-4 text-sm text-red-500">
++                                    {formError || errors?.quantity || errors?.participants}
++                                </p>
++                            )}
++
+                             <Button
+-                                isButtonLink
+-                                href={`/trip-bareng/${trip.id}/payment`}
++                                onClick={handleSubmit}
+                                 type="primary"
+                                 size="md"
++                                disabled={isSubmitting || quantity < 1}
+                                 className="w-full font-bold"
+                             >
+-                                Bayar Sekarang
++                                {isSubmitting ? "Memproses..." : "Bayar Sekarang"}
+                             </Button>
+                         </div>
+                     </div>
+diff --git a/resources/js/Pages/TripBareng/Detail.jsx b/resources/js/Pages/TripBareng/Detail.jsx
+index dabadab..fac52ca 100644
+--- a/resources/js/Pages/TripBareng/Detail.jsx
++++ b/resources/js/Pages/TripBareng/Detail.jsx
+@@ -19,6 +19,8 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
+ 
+ export default function Detail({ trip }) {
+     const currentTrip = trip; // Asumsikan data trip sudah valid dari backend
++    const participantAvatars = currentTrip.participant_avatars || [];
++    const participantCount = currentTrip.participant_count || participantAvatars.length;
+ 
+     return (
+         <div className="min-h-screen bg-white pb-32">
+@@ -70,31 +72,29 @@ export default function Detail({ trip }) {
+                             <span>{currentTrip.duration}</span>
+                         </div>
+ 
+-                        {/* Avatar Group & Confirmed Count */}
+-                        <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
+-                            <div className="flex -space-x-3">
+-                                {[1, 2, 3].map((i) => (
+-                                    <img
+-                                        key={i}
+-                                        src={`https://i.pravatar.cc/100?img=${i + 10}`}
+-                                        className="w-8 h-8 rounded-full border-2 border-transparent object-cover"
+-                                        alt="User"
+-                                    />
+-                                ))}
+-                                <div className="w-8 h-8 rounded-full border-2 border-transparent bg-blue-100 text-primary-700 flex items-center justify-center text-xs font-bold z-10">
+-                                    +6
++                        {participantCount > 0 && (
++                            <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
++                                <div className="flex -space-x-3">
++                                    {participantAvatars.map((participant, idx) => (
++                                        <img
++                                            key={`${participant.first_name}-${idx}`}
++                                            src={participant.profile_image}
++                                            className="w-8 h-8 rounded-full border-2 border-transparent object-cover"
++                                            alt={participant.first_name}
++                                        />
++                                    ))}
++                                </div>
++                                <div className="text-xs leading-tight">
++                                    <p className="font-semibold text-white">
++                                        {participantCount} teman sedang menunggu di grup
++                                    </p>
++                                    <p className="text-white/80 font-medium">
++                                        {currentTrip.joined_count}/
++                                        {currentTrip.capacity} telah bergabung
++                                    </p>
+                                 </div>
+                             </div>
+-                            <div className="text-xs leading-tight">
+-                                <p className="font-semibold text-white">
+-                                    Wisatawan Terkonfirmasi
+-                                </p>
+-                                <p className="text-white/80 font-medium">
+-                                    {currentTrip.joined_count}/
+-                                    {currentTrip.capacity} telah bergabung
+-                                </p>
+-                            </div>
+-                        </div>
++                        )}
+                     </div>
+                 </div>
+ 
+diff --git a/resources/js/Pages/TripBareng/Success.jsx b/resources/js/Pages/TripBareng/Success.jsx
+index 13b28ae..b2c46ad 100644
+--- a/resources/js/Pages/TripBareng/Success.jsx
++++ b/resources/js/Pages/TripBareng/Success.jsx
+@@ -21,7 +21,7 @@ export default function Success({ order }) {
+ 
+                 {/* 2. Judul */}
+                 <h1 className="text-3xl font-bold text-neutral-900 mb-2 text-center">Pembayaran Berhasil</h1>
+-                <p className="text-lg text-neutral-600 mb-10 text-center">Yeay, Pembayaran Kamu berhasil</p>
++                <p className="text-lg text-neutral-600 mb-10 text-center">{order.slot_message}</p>
+ 
+                 {/* 3. Kartu Transaksi */}
+                 <div className="w-full max-w-[500px] relative mb-8">
+@@ -59,11 +59,12 @@ export default function Success({ order }) {
+                         </div>
+                     </div>
+ 
+-                    {/* 4. Floating Badge (7 Teman Baru Menunggu) */}
+-                    <div className="absolute -bottom-5 right-2 md:-right-8 bg-[#6ED78D] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-green-200 z-10 font-semibold text-sm">
+-                        <FaUserFriends className="text-lg" />
+-                        {order.friends_waiting} Teman Baru Menunggu
+-                    </div>
++                    {order.friends_waiting > 0 && (
++                        <div className="absolute -bottom-5 right-2 md:-right-8 bg-[#6ED78D] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-green-200 z-10 font-semibold text-sm">
++                            <FaUserFriends className="text-lg" />
++                            {order.friends_waiting} Teman Baru Menunggu
++                        </div>
++                    )}
+                 </div>
+ 
+                 {/* 5. Tombol Aksi */}
+diff --git a/resources/js/Pages/TripBareng/WaitingPayment.jsx b/resources/js/Pages/TripBareng/WaitingPayment.jsx
+index 31d0f5c..eb51660 100644
+--- a/resources/js/Pages/TripBareng/WaitingPayment.jsx
++++ b/resources/js/Pages/TripBareng/WaitingPayment.jsx
+@@ -110,6 +110,17 @@ export default function WaitingPayment({ paymentData }) {
+                         </div>
+                     </div>
+ 
++                    {paymentData.order_id && (
++                        <div className="mt-6 flex justify-end">
++                            <Link
++                                href={`/trip-bareng/${paymentData.trip_id}/success?order=${paymentData.order_id}`}
++                                className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-primary-700 text-white font-semibold hover:opacity-90 transition"
++                            >
++                                Saya Sudah Bayar
++                            </Link>
++                        </div>
++                    )}
++
+                 </div>
+             </Container>
+         </div>
+diff --git a/routes/web.php b/routes/web.php
+index b320a86..c7bb7d0 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -155,6 +155,7 @@
+ Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+ Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
+ Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
++Route::post('/trip-bareng/{id}/checkout', [TripsController::class, 'store'])->middleware('auth')->name('trip-bareng.store');
+ Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
+ Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+ 
+-- 
+2.48.1.windows.1
+

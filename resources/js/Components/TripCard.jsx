@@ -16,6 +16,7 @@ export default function TripCard({ trip }) {
         location,
         date,
         capacity,
+        joined_count,
         remaining_seats, // Data baru dari Controller
         rating,
         price,
@@ -27,6 +28,9 @@ export default function TripCard({ trip }) {
         image,
         liked,
     } = trip;
+
+    const joinedCountSafe = typeof joined_count === "number" ? joined_count : 0;
+    const capacitySafe = typeof capacity === "number" ? capacity : 0;
 
     return (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition">
@@ -47,7 +51,7 @@ export default function TripCard({ trip }) {
                     />
                 </button>
 
-                {/* [PERBAIKAN 1]: SISA KURSI DINAMIS */}
+                {/* SISA KURSI DINAMIS */}
                 <div className="absolute left-3 bottom-3 bg-neutral-800/80 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium z-10">
                     <BsLightningFill className="text-yellow-400" />
                     <span>sisa {remaining_seats} kursi lagi</span>
@@ -71,10 +75,7 @@ export default function TripCard({ trip }) {
                 <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 divide-x divide-dashed divide-gray-300">
                     <div className="flex flex-col gap-1.5 pl-1">
                         <div className="flex items-center gap-1 text-neutral-500 font-medium">
-                            <MdDateRange
-                                size={16}
-                                className="text-neutral-400"
-                            />
+                            <MdDateRange size={16} className="text-neutral-400" />
                             Tanggal Trip
                         </div>
                         <p className="text-neutral-800 font-semibold leading-tight pr-2">
@@ -84,14 +85,11 @@ export default function TripCard({ trip }) {
 
                     <div className="flex flex-col gap-1.5 pl-3">
                         <div className="flex items-center gap-1 text-neutral-500 font-medium">
-                            <MdPeopleAlt
-                                size={16}
-                                className="text-primary-500"
-                            />
+                            <MdPeopleAlt size={16} className="text-primary-500" />
                             Kapasitas
                         </div>
                         <p className="text-neutral-800 font-semibold">
-                            {capacity}
+                            {joinedCountSafe}/{capacitySafe} orang
                         </p>
                     </div>
 
@@ -100,10 +98,7 @@ export default function TripCard({ trip }) {
                             <FaStar size={14} className="text-yellow-400" />
                             Rating Trip
                         </div>
-                        {/* [PERBAIKAN 2]: RATING TRIP DINAMIS */}
-                        <p className="text-neutral-800 font-semibold">
-                            {rating}
-                        </p>
+                        <p className="text-neutral-800 font-semibold">{rating}</p>
                     </div>
                 </div>
 
@@ -142,9 +137,7 @@ export default function TripCard({ trip }) {
                                 </span>
 
                                 {/* yang ini biasanya kepanjangan, jadi kasih truncate */}
-                                <span className="truncate">
-                                    ({guide_reviews} ulasan)
-                                </span>
+                                <span className="truncate">({guide_reviews} ulasan)</span>
                             </div>
                         </div>
                     </div>
@@ -177,11 +170,6 @@ export default function TripCard({ trip }) {
                     >
                         Ikut Trip
                     </Button>
-                    {/* <Link 
-                        href={`/trip-bareng/${trip.id}`}
-                        className="bg-[#0071C1] hover:bg-blue-700 text-white font-semibold rounded-lg px-5 py-2.5 text-sm transition-colors"
-                        >
-                        </Link> */}
                 </div>
             </div>
         </div>

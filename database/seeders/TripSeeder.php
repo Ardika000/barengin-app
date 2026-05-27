@@ -142,15 +142,16 @@ class TripSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            
 
             // Transaksi Dummy
-            $transactionId = Str::uuid()->toString();
-            DB::table('transactions')->insert([
-                'id' => $transactionId, 'user_id' => $customerId, 'total_amount' => $price, 'type' => 'trip', 'payment_method' => 'BCA Virtual Account', 'va_number' => '123456789', 'expired_at' => now()->addHours(24), 'created_at' => now()
-            ]);
-            DB::table('trip_orders')->insert([
-                'transaction_id' => $transactionId, 'trip_id' => $tripId, 'user_id' => $customerId, 'quantity' => 1, 'total' => $price, 'order_status' => 'paid', 'created_at' => now()
-            ]);
+            // $transactionId = Str::uuid()->toString();
+            // DB::table('transactions')->insert([
+            //     'id' => $transactionId, 'user_id' => $customerId, 'total_amount' => $price, 'type' => 'trip', 'payment_method' => 'BCA Virtual Account', 'va_number' => '123456789', 'expired_at' => now()->addHours(24), 'created_at' => now()
+            // ]);
+            // DB::table('trip_orders')->insert([
+            //     'transaction_id' => $transactionId, 'trip_id' => $tripId, 'user_id' => $customerId, 'quantity' => 1, 'total' => $price, 'order_status' => 'paid', 'created_at' => now()
+            // ]);
         }
     }
 }
