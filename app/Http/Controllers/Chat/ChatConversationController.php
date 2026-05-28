@@ -45,9 +45,6 @@ class ChatConversationController extends Controller
             $conversationId = $conversation->id;
         }
 
-        return response()->json([
-            'conversation_id' => $conversationId,
-            'redirect' => url("/chat/{$conversationId}"),
-        ]);
+        return redirect()->route('chat.show', ['conversation' => $conversationId]);
     }
 }

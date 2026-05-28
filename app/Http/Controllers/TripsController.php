@@ -136,6 +136,7 @@ class TripsController extends Controller
             'price' => (float) $trip->price,
             'description' => $trip->description,
             'host' => [
+                'id' => $trip->guider_id,
                 'name' => $trip->guide_name,
                 'role' => 'Pemilik',
                 'badge' => 'Expert Guide - ★ ' . $ratingText,
