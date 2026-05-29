@@ -95,10 +95,10 @@ class PergiBarengSeeder extends Seeder
             ],
             [
                 'name' => 'Jakarta ke Krakatau - Petualangan Ekstrim',
-                'description' => 'Petualangan seru ke Krakatau! Naik boat, snorkeling, dan lihat keindahan alam Krakatau yang menakjubkan. Hanya untuk yang berani!',
+                'description' => 'Petualangan seru ke Krakatau! Naik mobil, snorkeling, dan lihat keindahan alam Krakatau yang menakjubkan. Hanya untuk yang berani!',
                 'departure_loc' => 'Pelabuhan Bakauheni',
                 'destination_loc' => 'Krakatau, Selat Sunda',
-                'transportation' => 'Speedboat',
+                'transportation' => 'Sewa Mobil',
                 'people_amount' => 8,
                 'time_appointment' => Carbon::now()->addDays(7)->setTime(5, 0),
                 'img_name' => 'bus-8.jpg',
