@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Head } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
@@ -9,85 +9,74 @@ import {
     FaSuitcase,
     FaBagShopping,
 } from "react-icons/fa6";
-
 import { FaCrown } from "react-icons/fa";
 
-export default function Leaderboard() {
+// Helper: Ambil inisial nama
+const getInitials = (name) => {
+    if (!name) return "U";
+    const words = name.split(" ");
+    if (words.length > 1) return (words[0][0] + words[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+};
+
+// Helper: Warna background acak dari ID
+const getRandomBg = (id) => {
+    const colors = [
+        "bg-blue-100 text-blue-600",
+        "bg-green-100 text-green-600",
+        "bg-red-100 text-red-600",
+        "bg-purple-100 text-purple-600",
+        "bg-orange-100 text-orange-600",
+    ];
+    return colors[(id || 0) % colors.length];
+};
+
+export default function Leaderboard({ dbGuiders = [] }) {
     // State untuk melacak tab yang sedang aktif ("trip" atau "jastip")
     const [activeTab, setActiveTab] = useState("trip");
 
     // ==========================================
-    // DUMMY DATA: OPEN TRIP
+    // DATA DARI DATABASE: OPEN TRIP
     // ==========================================
-    const tripTopThree = [
-        {
-            id: 2,
-            rank: 2,
-            name: "Indah G",
-            rating: 4.9,
-            count: 140,
-            avatar: "/assets/default-profile.png",
-        },
-        {
-            id: 1,
-            rank: 1,
-            name: "Sarah J",
-            rating: 5.0,
-            count: 142,
-            avatar: "/assets/default-profile.png",
-        },
-        {
-            id: 3,
-            rank: 3,
-            name: "Linda V",
-            rating: 4.9,
-            count: 125,
-            avatar: "/assets/default-profile.png",
-        },
-    ];
+    const tripData = useMemo(() => {
+        if (!dbGuiders || dbGuiders.length === 0)
+            return { topThree: [], otherRanks: [] };
 
-    const tripOtherRanks = [
-        {
-            rank: "# 04",
-            initials: "JD",
-            name: "John Doe",
-            count: 121,
-            rating: 4.9,
-            bg: "bg-blue-100 text-blue-600",
-        },
-        {
-            rank: "# 05",
-            initials: "SA",
-            name: "Selena Anderson",
-            count: 111,
-            rating: 4.9,
-            bg: "bg-gray-100 text-gray-600",
-        },
-        {
-            rank: "# 06",
-            initials: "EV",
-            name: "Elena Vance",
-            count: 89,
-            rating: 4.8,
-            bg: "bg-red-100 text-red-600",
-        },
-        {
-            rank: "# 07",
-            initials: "JD",
-            name: "John Doe",
-            count: 87,
-            rating: 4.8,
-            bg: "bg-blue-100 text-blue-600",
-        },
-        {
-            rank: "# 08",
-            initials: "MW",
-            name: "Marcus Wright",
-            count: 50,
-            rating: 4.8,
-            bg: "bg-purple-100 text-purple-600",
-        },
-    ];
+        // Format raw data dari database
+        const formatted = dbGuiders.map((guider, index) => {
+            // Rating acak (pseudo-random) karena di seeder user belum ada kolom rating
+            const pseudoRating = (4.5 + (guider.id % 6) * 0.1).toFixed(1);
+
+            return {
+                id: guider.id,
+                rank: index + 1, // Ranking urut
+                name: guider.name,
+                count: guider.total_trip,
+                rating: pseudoRating,
+                avatar: guider.profile_image ?? "/assets/default-profile.png",
+                initials: getInitials(guider.name),
+                bg: getRandomBg(guider.id),
+            };
+        });
+
+        // Pisahkan Top 3 untuk Podium
+        const top3Raw = formatted.slice(0, 3);
+
+        // Susun ulang urutan podium biar yang juara 1 di tengah (2 - 1 - 3)
+
+        const topThree = [];
+        if (top3Raw[1]) topThree.push(top3Raw[1]); // Rank 2
+        if (top3Raw[0]) topThree.push(top3Raw[0]); // Rank 1
+        if (top3Raw[2]) topThree.push(top3Raw[2]); // Rank 3
+
+        // Sisanya untuk Tabel (Mulai dari rank 4 dst)
+        const otherRanks = formatted.slice(3).map((item) => ({
+            ...item,
+            rank: `# ${String(item.rank).padStart(2, "0")}`, // Format jadi "# 04"
+        }));
+
+        return { topThree, otherRanks };
+    }, [dbGuiders]);
 
     // ==========================================
     // DUMMY DATA: JASTIP
@@ -164,9 +153,9 @@ export default function Leaderboard() {
 
     // Variabel penentu data mana yang akan dirender berdasarkan tab aktif
     const currentTopThree =
-        activeTab === "trip" ? tripTopThree : jastipTopThree;
+        activeTab === "trip" ? tripData.topThree : jastipTopThree;
     const currentOtherRanks =
-        activeTab === "trip" ? tripOtherRanks : jastipOtherRanks;
+        activeTab === "trip" ? tripData.otherRanks : jastipOtherRanks;
 
     const columnTwoTitle = activeTab === "trip" ? "GUIDER" : "JASTIPER";
     const columnThreeTitle =
@@ -230,57 +219,59 @@ export default function Leaderboard() {
             </Container>
             {/* 3. Top 3 Podium Section */}
             <Container className="pt-18 pb-0">
-            <div className="flex justify-center items-end gap-4 md:gap-20 mb-16">
-                {currentTopThree.map((user) => (
-                    <div
-                        key={user.id}
-                        className={`relative bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center p-6 w-40 md:w-56 transition-all duration-500
-                                ${user.rank === 1 ? "order-2 -translate-y-6 md:-translate-y-10 z-10" : user.rank === 2 ? "order-1" : "order-3"}
-                                `}
-                    >
-                        {/* Avatar & Crown */}
-                        <div className="relative -mt-16 mb-4">
-                            {user.rank === 1 && (
-                                <FaCrown className="absolute -top-10 left-1/2 -translate-x-1/2 text-yellow-400 text-5xl z-20 drop-shadow-md" />
-                            )}
-                            <div
-                                className={`rounded-full overflow-hidden border-4 border-white shadow-md ${user.rank === 1 ? "w-24 h-24 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"}`}
-                            >
-                                <img
-                                    src={user.avatar}
-                                    alt={user.name}
-                                    className="w-full h-full object-cover"
-                                />
+                <div className="flex justify-center items-end gap-4 md:gap-20 mb-16">
+                    {currentTopThree.map((user) => (
+                        <div
+                            key={user.id}
+                            className={`relative bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center p-6 w-48 md:w-64${user.rank === 1 ? "order-2 -translate-y-6 md:-translate-y-10 z-10" : user.rank === 2 ? "order-1" : "order-3"}`}
+                        >
+                            {/* Avatar & Crown */}
+                            <div className="relative -mt-16 mb-4">
+                                {user.rank === 1 && (
+                                    <FaCrown className="absolute -top-10 left-1/2 -translate-x-1/2 text-yellow-400 text-5xl z-20 drop-shadow-md" />
+                                )}
+                                <div
+                                    className={`rounded-full overflow-hidden border-4 border-white shadow-md bg-neutral-100 ${user.rank === 1 ? "w-24 h-24 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"}`}
+                                >
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.target.src =
+                                                "/assets/default-profile.png";
+                                        }}
+                                    />
+                                </div>
                             </div>
+
+                            {/* Rank Info */}
+                            <h2 className="text-[#0077D3] font-black text-2xl md:text-3xl mb-1">
+                                #{user.rank}
+                            </h2>
+                            {/* Ukuran teks diturunkan jadi text-sm (HP) dan md:text-base (Laptop) */}
+                            <h3 className="font-bold text-neutral-900 text-sm md:text-base text-center mb-3 px-2 line-clamp-1">
+                                {user.name}
+                            </h3>
+
+                            <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-semibold text-neutral-700 mb-5 w-full">
+                                <span className="flex items-center gap-1">
+                                    <FaStar className="text-orange-400 text-lg mb-0.5" />{" "}
+                                    {user.rating}
+                                </span>
+                                <span className="flex items-center gap-1.5 whitespace-nowrap">
+                                    <IconItem className="text-[#0077D3]" />{" "}
+                                    {user.count} {itemLabel}
+                                </span>
+                            </div>
+
+                            <Button type="primary" size="sm" className="w-full">
+                                Ikuti
+                            </Button>
                         </div>
-
-                        {/* Rank Info */}
-                        <h2 className="text-[#0077D3] font-black text-2xl md:text-3xl mb-1">
-                            #{user.rank}
-                        </h2>
-                        <h3 className="font-bold text-neutral-900 text-base md:text-lg text-center mb-3">
-                            {user.name}
-                        </h3>
-
-                        <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-neutral-700 mb-5">
-                            <span className="flex items-center gap-1">
-                                <FaStar className="text-orange-400 text-lg mb-0.5" />{" "}
-                                {user.rating}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <IconItem className="text-[#0077D3]" />{" "}
-                                {user.count} {itemLabel}
-                            </span>
-                        </div>
-
-                        <Button type="primary" size="sm" className="w-full">
-                            Ikuti
-                        </Button>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
             </Container>
-
             {/* 4. Rank List Table Section */}
             <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden mb-8">
                 <div className="overflow-x-auto">
@@ -330,7 +321,6 @@ export default function Leaderboard() {
                                         </span>
                                     </td>
                                     <td className="py-4 px-6 text-center">
-                                        {/* Menggunakan komponen Button milikmu (Solid untuk Ikuti, Outline untuk Mengikuti) */}
                                         <Button
                                             type="primary"
                                             variant={
@@ -369,5 +359,4 @@ export default function Leaderboard() {
     );
 }
 
-// Integrasikan ke MainLayout yang kamu kasih
 Leaderboard.layout = (page) => <MainLayout>{page}</MainLayout>;

@@ -24,7 +24,7 @@ class TripFactory extends Factory
             'end_date' => $this->faker->date(),
             'rating' => $this->faker->randomFloat(2, 1, 5),
             'price' => $this->faker->randomFloat(2, 100000, 10000000),
-            "image" => "https://images.unsplash.com/photo-1506016766781-8153ad6c1eec?q=80&w=600&auto=format&fit=crop"
+            "image" => "/assets/default-image.png"
         ];
     }
 }

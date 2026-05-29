@@ -15,6 +15,8 @@ use App\Http\Controllers\ForumLocationController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PergiBarengController;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 
 use Illuminate\Support\Facades\Route;
@@ -130,7 +132,23 @@ Route::get('/chat/exp', function(){
 
 // Leaderboard
 Route::get('/leaderboard', function () {
-    return inertia('Leaderboard/Index');
+    // Menghitung total trip per Guider dari database
+    $guiders = DB::table('users')
+        ->where('is_guider', true)
+        ->leftJoin('trips', 'users.id', '=', 'trips.guider_id')
+        ->select(
+            'users.id', 
+            'users.full_name as name', 
+            'users.profile_image', 
+            DB::raw('COUNT(trips.id) as total_trip')
+        )
+        ->groupBy('users.id', 'users.full_name', 'users.profile_image')
+        ->orderByDesc('total_trip') // Urutkan dari yang terbanyak
+        ->get();
+
+    return inertia('Leaderboard/Index', [
+        'dbGuiders' => $guiders // Lempar datanya ke React
+    ]);
 })->name('leaderboard');
 
 // Trip Bareng
@@ -140,6 +158,16 @@ Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->
 Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
 Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
 
+// Management User
+// Route::get('/management-user', function(){
+//     $users = User::all();
+
+//     return inertia('Admin/ManagementUser', ['users' => $users]);
+// })->name('management-user');
+
+Route::get('/management-user', function () {
+    return inertia('Admin/ManagementUser', ['users' => \App\Models\User::all()]);
+})->name('management-user');
 
 // test route
 Route::get('/Admin', function () {

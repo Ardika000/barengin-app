@@ -16,14 +16,16 @@ return new class extends Migration
             $table->foreignId('pergi_bareng_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->string('full_name');
             $table->string('paspor', 12)->nullable();
-            $table->string('phone_number', 15);
+            $table->string('phone_number', 15)->change();
             $table->string('nik', 16);
+            $table->date('birth_date')->nullable();
+            $table->tinyInteger('age')->nullable();
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Run the migrations.
      */
     public function down(): void
     {
