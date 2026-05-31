@@ -22,6 +22,7 @@ return new class extends Migration
             $table->decimal('rating', 3, 2)->nullable();
             $table->decimal('price', 15,2);
             $table->string('image')->nullable();
+            $table->string('location');
             $table->timestamps();
         });
     }

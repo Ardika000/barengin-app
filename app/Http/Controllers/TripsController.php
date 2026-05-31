@@ -32,12 +32,12 @@ class TripsController extends Controller
             // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
             $remaining = $trip->people_amount - $joined;
 
-            $guiderRating = DB::table('user__ratings')
+            $guiderRating = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
                 ->where('type', 'pergi_bareng')
                 ->avg('rating_amount');
 
-            $guiderReviews = DB::table('user__ratings')
+            $guiderReviews = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
                 ->where('type', 'pergi_bareng')
                 ->count();
@@ -85,7 +85,7 @@ class TripsController extends Controller
         $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
 
         // 2. Ambil Rata-Rata Rating Guide
-        $guiderRating = DB::table('user__ratings')
+        $guiderRating = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
             ->where('type', 'pergi_bareng')
             ->avg('rating_amount');

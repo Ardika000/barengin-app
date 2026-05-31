@@ -83,6 +83,7 @@ class TripSeeder extends Seeder
                 'image' => '/assets/trips/bromo.jpg',
                 'created_at' => now(),
                 'updated_at' => now(),
+                'location' => "Indonesia"
             ]);
 
             // B. Pivot Trip_Facilities (2 sampai 4 fasilitas acak)
@@ -132,8 +133,8 @@ class TripSeeder extends Seeder
                 ]);
             }
 
-            // D. Tabel user__ratings
-            DB::table('user__ratings')->insert([
+            // D. Tabel user_ratings
+            DB::table('user_ratings')->insert([
                 'user_id' => $customerId, 
                 'rated_user_id' => $guiderId, 
                 'type' => 'pergi_bareng',
