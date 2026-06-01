@@ -77,7 +77,6 @@ export default function Success({ order }) {
                     {/* Tombol Primary (Biru) dengan icon chat */}
                     <Button 
                         isButtonLink
-                        href="/chat"
                         type="primary" 
                         size="md" 
                         rounded={true}

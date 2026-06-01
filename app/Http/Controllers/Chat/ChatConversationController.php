@@ -98,6 +98,6 @@ class ChatConversationController extends Controller
         foreach ($toAttach as $uid) {
             $conv->participants()->attach($uid, ['last_read_at' => now()]);
         }
-        return redirect()->route('chat.show', ['conversation' => $conversationId]);
+        return redirect("/chat/{$conversationId}?tab=groups");
     }
 }
