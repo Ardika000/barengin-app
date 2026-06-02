@@ -38,8 +38,8 @@ class PergiBarengController extends Controller
             ],
 
             'organizer' => [
-                'name' => $trip->initiator?->name ?? 'Penyelenggara',
-                'avatar' => $trip->initiator?->profile_photo_url ?? '/assets/default-avatar.png',
+                'name' => $trip->initiator?->full_name ?? 'Penyelenggara',
+                'avatar' => $trip->initiator?->public_profile_image ?? asset('assets/default-profile.png'),
                 'rating' => number_format($avgRating, 1), 
                 'reviews' => (int)$totalReviews,
                 'verified' => true,
@@ -59,6 +59,12 @@ class PergiBarengController extends Controller
                     'verified' => $p->user_id ? true : false
                 ];
             }),
+            'financing_estimates' => $trip->financing_estimate
+            ? $trip->financing_estimate->map(fn ($fe) => [
+                'id' => $fe->id,
+                'name' => $fe->name,
+            ])->values()
+            : [],
         ];
     }
     
@@ -105,8 +111,8 @@ class PergiBarengController extends Controller
                 'capacity' => $joined . '/' . $trip->people_amount . ' Orang',
                 'remainingSeats' => max(0, $trip->people_amount - $joined),
                 'user' => [
-                    'name' => $trip->initiator?->name ?? 'Penyelenggara',
-                    'avatar' => $trip->initiator?->profile_photo_url ?? '/assets/default-avatar.png',
+                    'name' => $trip->initiator?->full_name ?? 'Penyelenggara',
+                    'avatar' => $trip->initiator?->public_profile_image ?? asset('assets/default-profile.png'),
                     'rating' => number_format($avgRating, 1),
                     'reviews' => (int)$totalReviews,
                     'verified' => true,
@@ -137,7 +143,8 @@ class PergiBarengController extends Controller
         // Load semua relasi yang dibutuhkan termasuk user_ratings dari initiator
         $trip = PergiBareng::with([
             'initiator.user_ratings', 
-            'pergi_bareng_participants.user'
+            'pergi_bareng_participants.user',
+            'financing_estimate'
         ])->findOrFail($id);
         
         return Inertia::render('PergiBareng/Show', [

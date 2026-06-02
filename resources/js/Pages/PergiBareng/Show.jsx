@@ -220,8 +220,15 @@ export default function Show({ trip }) {
                                 <div className="p-5">
                                     <h4 className="font-bold text-sm mb-3">Estimasi Pembiayaan</h4>
                                     <div className="space-y-2 text-sm text-neutral-600 mb-4">
-                                        <div className="flex items-center gap-2"><FaCar /> Pembayaran Tol</div>
-                                        <div className="flex items-center gap-2"><FaCar /> Pembayaran Bensin</div>
+                                        {trip.financing_estimates?.length > 0 ? (
+                                            <ul className="list-disc list-inside space-y-1">
+                                            {trip.financing_estimates.map((item) => (
+                                                <li key={item.id}>{item.name}</li>
+                                            ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-xs text-neutral-400">Belum ada estimasi pembiayaan.</p>
+                                        )}
                                     </div>
                                     <div className="bg-warning-50 text-warning-700 p-3 rounded-lg text-xs flex items-start gap-2 mb-4 border border-warning-100">
                                         <FaInfoCircle className="mt-0.5 shrink-0 flex-shrink-0" />
