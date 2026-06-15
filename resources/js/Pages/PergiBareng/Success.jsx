@@ -1,11 +1,14 @@
 import React from "react";
-import { Head } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import { FaCheck, FaCalendarAlt } from "react-icons/fa";
-
+import { BsChatDotsFill } from "react-icons/bs";
 export default function Success({ trip }) {
+    const handleOpenPergiBarengGroupChat = () => {
+        router.post(`/chat/pergi-bareng/${trip.id}/group`);
+    }
     return (
         <MainLayout>
             <Head title="Berhasil Bergabung" />
@@ -44,7 +47,8 @@ export default function Success({ trip }) {
 
                 {/* Tombol Aksi */}
                 <div className="w-full max-w-md space-y-3">
-                    <Button isButtonLink href="/chat" type="primary" className="w-full justify-center">
+                    <Button isButtonLink={false} type="primary" className="w-full font-bold flex items-center justify-center gap-2 text-white" onClick={handleOpenPergiBarengGroupChat}>
+                        <BsChatDotsFill className="text-lg" />
                         Masuk ke Grup Chat
                     </Button>
                     <Button isButtonLink href={`/pergi-bareng/${trip.id}`} variant="outline" className="w-full justify-center text-neutral-600 border-neutral-300 hover:bg-neutral-50">

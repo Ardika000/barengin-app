@@ -42,8 +42,8 @@ class ChatController extends Controller
 
         $conversation->load([
             'participants:id,full_name,profile_image',
-            'trip:id,title',
-            'pergi_bareng:id,title',
+            'trip:id,name',
+            'pergi_bareng:id,name',
         ]);
 
         $peer = $conversation->participants->firstWhere('id', '!=', $user->id);
@@ -182,8 +182,8 @@ class ChatController extends Controller
         return $user->conversations()
             ->with([
                 'participants:id,full_name,profile_image',
-                'trip:id,title',
-                'pergi_bareng:id,title'
+                'trip:id,name',
+                'pergi_bareng:id,name'
             ])
             ->get()
             ->map(function ($c) use ($user) {

@@ -18,8 +18,12 @@ class PergiBarengSeeder extends Seeder
         $users = User::where('id', '>=', 1)->take(5)->get();
 
         if ($users->isEmpty()) {
-            // Jika tidak ada user, buat dummy user
-            $users = User::factory(5)->create();
+            if(method_exists(User::class, 'factory')){
+                $users = User::factory(5)->create();
+            }else{
+                $this->command?->warn('Users table kosong dan UserFactory tidak ditemukan. Jalankan UsersSeeder dulu.');
+                return;
+            }
         }
 
         $trips = [
@@ -132,6 +136,6 @@ class PergiBarengSeeder extends Seeder
             PergiBareng::create($trip);
         }
 
-        $this->command->info('PergiBareng seeder telah berhasil di-generate dengan 10 data!');
+        $this->command?->info('PergiBareng seeder telah berhasil di-generate dengan 10 data!');
     }
 }

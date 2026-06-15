@@ -38,8 +38,9 @@ class PergiBarengController extends Controller
             ],
 
             'organizer' => [
-                'name' => $trip->initiator?->name ?? 'Penyelenggara',
-                'avatar' => $trip->initiator?->profile_photo_url ?? '/assets/default-avatar.png',
+                'id' => $trip->initiator?->id,
+                'name' => $trip->initiator?->full_name ?? 'Penyelenggara',
+                'avatar' => $trip->initiator?->public_profile_image ?? asset('assets/default-profile.png'),
                 'rating' => number_format($avgRating, 1), 
                 'reviews' => (int)$totalReviews,
                 'verified' => true,
@@ -59,6 +60,12 @@ class PergiBarengController extends Controller
                     'verified' => $p->user_id ? true : false
                 ];
             }),
+            'financing_estimates' => $trip->financing_estimate
+            ? $trip->financing_estimate->map(fn ($fe) => [
+                'id' => $fe->id,
+                'name' => $fe->name,
+            ])->values()
+            : [],
         ];
     }
     
@@ -105,8 +112,9 @@ class PergiBarengController extends Controller
                 'capacity' => $joined . '/' . $trip->people_amount . ' Orang',
                 'remainingSeats' => max(0, $trip->people_amount - $joined),
                 'user' => [
-                    'name' => $trip->initiator?->name ?? 'Penyelenggara',
-                    'avatar' => $trip->initiator?->profile_photo_url ?? '/assets/default-avatar.png',
+                    'id' => $trip->initiator?->id,
+                    'name' => $trip->initiator?->full_name ?? 'Penyelenggara',
+                    'avatar' => $trip->initiator?->public_profile_image ?? asset('assets/default-profile.png'),
                     'rating' => number_format($avgRating, 1),
                     'reviews' => (int)$totalReviews,
                     'verified' => true,
@@ -137,7 +145,8 @@ class PergiBarengController extends Controller
         // Load semua relasi yang dibutuhkan termasuk user_ratings dari initiator
         $trip = PergiBareng::with([
             'initiator.user_ratings', 
-            'pergi_bareng_participants.user'
+            'pergi_bareng_participants.user',
+            'financing_estimate'
         ])->findOrFail($id);
         
         return Inertia::render('PergiBareng/Show', [
@@ -167,12 +176,11 @@ class PergiBarengController extends Controller
             'participants.*.nama' => 'required|string|max:100', 
             'participants.*.tanggal_lahir' => 'required|date|before:today', 
             'participants.*.paspor' => 'nullable|string|max:12',
-            // --- VALIDASI TELEPON DIBUAT LEBIH SIMPEL DAN ANTI-GAGAL ---
             'participants.*.telepon' => [
                 'required', 
                 'string', 
-                'min:9',  // Minimal 9 karakter (tanpa +62)
-                'max:14'  // Maksimal 14 karakter (tanpa +62)
+                'min:9',
+                'max:14'
             ],
             'participants.*.nik' => [
                 'required', 
@@ -181,7 +189,7 @@ class PergiBarengController extends Controller
         ], [
             'participants.*.tanggal_lahir.required' => 'Tanggal lahir wajib diisi',
             'participants.*.tanggal_lahir.date' => 'Format tanggal tidak valid',
-            // --- PESAN ERROR DISESUAIKAN ---
+            // --- PESAN ERROR ---
             'participants.*.telepon.required' => 'Nomor telepon wajib diisi.',
             'participants.*.telepon.min' => 'Nomor telepon terlalu pendek (minimal 9 angka).',
             'participants.*.telepon.max' => 'Nomor telepon terlalu panjang (maksimal 14 angka).',
@@ -190,11 +198,12 @@ class PergiBarengController extends Controller
         ]);
 
         foreach ($validated['participants'] as $participant) {
-            // Fungsi ini yang akan mengamankan dan merapikan nomornya
+            // mengamankan dan merapikan nomor
             $phone = $this->normalizePhone($participant['telepon']);
             
             PergiBarengParticipant::create([
                 'pergi_bareng_id' => $trip->id,
+                'user_id' => Auth::id(),
                 'full_name' => $participant['nama'], 
                 'birth_date' => $participant['tanggal_lahir'], 
                 'paspor' => $participant['paspor'] ?? null,

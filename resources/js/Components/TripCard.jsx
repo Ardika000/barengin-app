@@ -6,7 +6,7 @@ import { FaStar } from "react-icons/fa";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import { BsChatDots } from "react-icons/bs";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 
 import Button from "@/Components/Button";
 
@@ -31,6 +31,16 @@ export default function TripCard({ trip }) {
 
     const joinedCountSafe = typeof joined_count === "number" ? joined_count : 0;
     const capacitySafe = typeof capacity === "number" ? capacity : 0;
+    const handleOpenChat = () => {
+            const otherUserId = trip?.guide_id;
+    
+            if (!otherUserId) {
+                alert("Host user id belum tersedia. Pastikan backend mengirim trip.host.id");
+                return;
+            }
+    
+            router.post("/chat/personal", { user_id: otherUserId });
+        };
 
     return (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition">
@@ -168,6 +178,7 @@ export default function TripCard({ trip }) {
                         size="xs"
                         variant="outline"
                         className="px-4 py-2.5 flex gap-1 items-center shrink-0"
+                        onClick={handleOpenChat}
                     >
                         <BsChatDots size={14} />
                         Chat Pemandu

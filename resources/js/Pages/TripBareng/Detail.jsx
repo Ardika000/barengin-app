@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
-import { Head, Link } from "@inertiajs/react";
-
+import { Head, Link, router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import LocationMap from "@/Components/LocationMap";
@@ -87,6 +86,17 @@ export default function Detail({ trip }) {
             ? `Lokasi ${currentTrip.title}`
             : "Lokasi Trip";
     }, [currentTrip]);
+
+    const handleOpenChat = () => {
+        const otherUserId = currentTrip?.host?.id;
+
+        if (!otherUserId) {
+            alert("Host user id belum tersedia. Pastikan backend mengirim trip.host.id");
+            return;
+        }
+
+        router.post("/chat/personal", { user_id: otherUserId });
+    };
 
     return (
         <div className="min-h-screen bg-white pb-32">
@@ -294,7 +304,7 @@ export default function Detail({ trip }) {
                                     </div>
                                 </div>
                             </div>
-                            <button className="w-10 h-10 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 transition-colors shadow-sm">
+                            <button type="button" onClick={handleOpenChat} className="w-10 h-10 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 transition-colors shadow-sm">
                                 <BsChatText className="text-lg" />
                             </button>
                         </div>

@@ -21,7 +21,7 @@ function UserRow({ user, onClick }) {
             />
             <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-neutral-700">
-                    {user.full_name}
+                    {user.name}
                 </div>
                 {user.username ? (
                     <div className="truncate text-xs text-neutral-500">
@@ -71,19 +71,23 @@ export default function NewChatModal({ open, onClose }) {
 
     const empty = useMemo(() => !loading && (users?.length ?? 0) === 0, [loading, users]);
 
-    const startChat = async (userId) => {
+    const startChat = (userId) => {
         if (creating) return;
         setCreating(true);
-        try {
-            const res = await axios.post("/chat/personal", { user_id: userId });
-            const url = res.data?.redirect ?? `/chat/${res.data?.conversation_id}`;
-            onClose?.();
-            router.get(url);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setCreating(false);
-        }
+        router.post(
+            "/chat/personal",
+            { user_id: userId },
+            {
+                onFinish: () => {
+                    setCreating(false);
+                    onClose?.();
+                },
+                onError: (errors) => {
+                    console.error(errors);
+                    setCreating(false);
+                },
+            },
+        );
     };
 
     if (!open) return null;

@@ -16,7 +16,7 @@ class PergiBareng extends Model
     }
 
     public function initiator(){
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'initiator_id');
     }
 
     public function pergi_bareng_participants(){

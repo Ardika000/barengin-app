@@ -122,6 +122,8 @@ Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessa
 Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
 Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
 Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
+Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
+Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
 
 // Chat
 Route::get('/chat/exp', function(){
@@ -138,7 +140,7 @@ Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
 Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'processPayment'])->name('trip-bareng.payment');
-Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
 
 
 // test route

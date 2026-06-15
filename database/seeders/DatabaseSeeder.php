@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             TripSeeder::class,
             TripFacilitySeeder::class,
             PergiBarengSeeder::class,
+            FinancingEstimateSeeder::class
         ]);
     }
 }
