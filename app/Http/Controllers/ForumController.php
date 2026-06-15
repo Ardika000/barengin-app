@@ -16,7 +16,6 @@ class ForumController extends Controller
     {
         if (!$imgName) return '';
 
-        // already a full path like /assets/default-image.png
         if (str_starts_with($imgName, '/') || str_starts_with($imgName, 'http')) {
             return $imgName;
         }

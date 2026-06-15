@@ -56,7 +56,7 @@ class PergiBarengController extends Controller
                     'name' => $p->full_name,
                     'age' => $age, // <-- Cukup kirim angkanya saja atau '?'
                     'rating' => 5.0, 
-                    'avatar' => $p->user ? ($p->user->profile_photo_url ?? '/assets/default-image.png') : '/assets/default-image.png',
+                    'avatar' => $p->user ? ($p->user->public_profile_image ?? '/assets/default-profile.png') : '/assets/default-profile.png',
                     'verified' => $p->user_id ? true : false
                 ];
             }),

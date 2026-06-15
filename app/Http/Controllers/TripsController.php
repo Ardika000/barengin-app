@@ -54,7 +54,7 @@ class TripsController extends Controller
                 'price' => (float) $trip->price,
                 'guide_id' => $trip->guider_id, 
                 'guide' => $trip->guide_name,
-                'guide_avatar' => $trip->profile_image ?? '/assets/default-image.png',
+                'guide_avatar' => $trip->profile_image ?? '/assets/default-profile.png',
                 'guide_rating' => $guiderRating ? number_format($guiderRating, 1) : '0',
                 'guide_reviews' => $guiderReviews,
                 'guide_badge' => 'Expert Guide',
@@ -142,7 +142,7 @@ class TripsController extends Controller
                 'name' => $trip->guide_name,
                 'role' => 'Pemilik',
                 'badge' => 'Expert Guide - ★ ' . $ratingText,
-                'avatar' => $trip->profile_image ?? '/assets/default-image.png'
+                'avatar' => $trip->profile_image ?? '/assets/default-profile.png'
             ],
             'itinerary'   => $itinerary,
             'facilities'  => $facilities,

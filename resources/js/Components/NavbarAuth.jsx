@@ -33,7 +33,7 @@ export default function NavbarAuth() {
         user?.avatar_url ||
         user?.profile_photo_url ||
         user?.avatar ||
-        "/assets/default-image.png";
+        "/assets/default-profile.png";
 
     const closeAll = () => {
         setIsDesktopDropdownOpen(false);
