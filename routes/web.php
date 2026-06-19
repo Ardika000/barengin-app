@@ -15,8 +15,6 @@ use App\Http\Controllers\ForumLocationController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PergiBarengController;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
 
 
 use Illuminate\Support\Facades\Route;
@@ -124,6 +122,8 @@ Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessa
 Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
 Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
 Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
+Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
+Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
 
 // Chat
 Route::get('/chat/exp', function(){
@@ -132,31 +132,15 @@ Route::get('/chat/exp', function(){
 
 // Leaderboard
 Route::get('/leaderboard', function () {
-    // Menghitung total trip per Guider dari database
-    $guiders = DB::table('users')
-        ->where('is_guider', true)
-        ->leftJoin('trips', 'users.id', '=', 'trips.guider_id')
-        ->select(
-            'users.id', 
-            'users.full_name as name', 
-            'users.profile_image', 
-            DB::raw('COUNT(trips.id) as total_trip')
-        )
-        ->groupBy('users.id', 'users.full_name', 'users.profile_image')
-        ->orderByDesc('total_trip') // Urutkan dari yang terbanyak
-        ->get();
-
-    return inertia('Leaderboard/Index', [
-        'dbGuiders' => $guiders // Lempar datanya ke React
-    ]);
+    return inertia('Leaderboard/Index');
 })->name('leaderboard');
 
 // Trip Bareng
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
-Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
-Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'processPayment'])->name('trip-bareng.payment');
+Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
 
 // Management User
 // Route::get('/management-user', function(){
@@ -215,3 +199,9 @@ Route::prefix('Admin')->group(function () {
         })->name('messages');
 
 });
+
+// test route
+Route::get('/Admin', function () {
+    return inertia('Admin/Test');
+})->name('admin'); 
+

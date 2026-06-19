@@ -1,0 +1,668 @@
+From 06f8ecf7ec9fd6d4a5e49a745ddcfb17417f92fb Mon Sep 17 00:00:00 2001
+From: "Freddd." <putuedo33@gmail.com>
+Date: Sat, 16 May 2026 08:23:07 +0700
+Subject: [PATCH 1/3] add: admin management user and update leaderboard
+
+---
+ database/factories/TripFactory.php          |   2 +-
+ resources/js/Components/AdminSidebar.jsx    |   3 +-
+ resources/js/Pages/Admin/ManagementUser.jsx | 274 ++++++++++++++++++++
+ resources/js/Pages/Leaderboard/Index.jsx    | 233 ++++++++---------
+ routes/web.php                              |  30 ++-
+ 5 files changed, 416 insertions(+), 126 deletions(-)
+ create mode 100644 resources/js/Pages/Admin/ManagementUser.jsx
+
+diff --git a/database/factories/TripFactory.php b/database/factories/TripFactory.php
+index 36baf7a..9e009f9 100644
+--- a/database/factories/TripFactory.php
++++ b/database/factories/TripFactory.php
+@@ -24,7 +24,7 @@ public function definition(): array
+             'end_date' => $this->faker->date(),
+             'rating' => $this->faker->randomFloat(2, 1, 5),
+             'price' => $this->faker->randomFloat(2, 100000, 10000000),
+-            "image" => "https://images.unsplash.com/photo-1506016766781-8153ad6c1eec?q=80&w=600&auto=format&fit=crop"
++            "image" => "/assets/default-image.png"
+         ];
+     }
+ }
+diff --git a/resources/js/Components/AdminSidebar.jsx b/resources/js/Components/AdminSidebar.jsx
+index e2a4b25..74e9c9f 100644
+--- a/resources/js/Components/AdminSidebar.jsx
++++ b/resources/js/Components/AdminSidebar.jsx
+@@ -47,8 +47,7 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen
+             group: "ADMIN",
+             short: "ADM",
+             items: [
+-                { name: "Beranda Admin", icon: <FiHome />, href: "/admin" },
+-                { name: "Manajemen User", icon: <FiUsers />, href: "/admin/users" },
++                { name: "Manajemen User", icon: <FiUsers />, href: "/management-user" }, 
+                 { name: "Pesan", icon: <FiMessageSquare />, href: "/admin/messages" },
+             ],
+         },
+diff --git a/resources/js/Pages/Admin/ManagementUser.jsx b/resources/js/Pages/Admin/ManagementUser.jsx
+new file mode 100644
+index 0000000..a4690ff
+--- /dev/null
++++ b/resources/js/Pages/Admin/ManagementUser.jsx
+@@ -0,0 +1,274 @@
++import React, { useState, useMemo, useEffect } from "react";
++import { Head } from "@inertiajs/react";
++import AdminLayout from "@/Layouts/AdminLayout";
++import Pagination from "@/Components/Pagination";
++
++import { FiSearch, FiTrash2, FiEdit2 } from "react-icons/fi";
++import { FaCircleCheck } from "react-icons/fa6";
++
++// Fungsi untuk bikin Inisial Nama (Misal: "Budi Penumpang" jadi "BP")
++const getInitials = (name) => {
++    if (!name) return "U";
++    const words = name.split(" ");
++    if (words.length > 1) {
++        return (words[0][0] + words[1][0]).toUpperCase();
++    }
++    return name.substring(0, 2).toUpperCase();
++};
++
++// Fungsi untuk bikin warna acak buat background inisial
++const getRandomBg = (id) => {
++    const colors = [
++        "bg-blue-100 text-blue-600",
++        "bg-green-100 text-green-600",
++        "bg-red-100 text-red-600",
++        "bg-purple-100 text-purple-600",
++        "bg-orange-100 text-orange-600",
++        "bg-pink-100 text-pink-600",
++    ];
++    // Pastikan id adalah angka, fallback ke 0 kalau undefiend
++    const safeId = parseInt(id) || 0; 
++    return colors[safeId % colors.length]; 
++};
++
++export default function ManagementUser({ users = [] }) { 
++    // Menerima data dari Controller (web.php)
++
++    const [searchQuery, setSearchQuery] = useState("");
++    const [filterRole, setFilterRole] = useState("");
++    const [currentPage, setCurrentPage] = useState(1);
++    const itemsPerPage = 5;
++
++    useEffect(() => {
++        setCurrentPage(1);
++    }, [searchQuery, filterRole]);
++
++    // ==========================================
++    // PENYESUAIAN STRUKTUR DATA DATABASE
++    // ==========================================
++    const formattedUsers = useMemo(() => {
++        if (!users || users.length === 0) return [];
++
++        return users.map(user => {
++            // Menerjemahkan kolom boolean (is_admin, dll) menjadi array string untuk badge
++            const userRoles = [];
++            if (user.is_admin) userRoles.push("Admin");
++            if (user.is_guider) userRoles.push("Guider");
++            if (user.is_jastiper) userRoles.push("Jastiper");
++            
++            // Kalau false semua, kita kasih label default "User Biasa"
++            if (userRoles.length === 0) userRoles.push("User Biasa");
++
++            return {
++                id: user.id,
++                name: user.full_name, // Menggunakan full_name dari seeder
++                email: user.email,
++                // Mengecek status verifikasi dari kolom email_verified_at (berdasarkan file Factory)
++                verified: user.email_verified_at !== null && user.email_verified_at !== undefined, 
++                initials: getInitials(user.full_name),
++                bg: getRandomBg(user.id),
++                roles: userRoles
++            };
++        });
++    }, [users]);
++
++    // Logika Filter & Pencarian
++    const filteredUsers = useMemo(() => {
++        return formattedUsers.filter((user) => {
++            const matchSearch =
++                (user.name && user.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
++                (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()));
++            const matchRole = filterRole ? user.roles.includes(filterRole) : true;
++            return matchSearch && matchRole;
++        });
++    }, [searchQuery, filterRole, formattedUsers]);
++
++    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
++    const paginatedUsers = filteredUsers.slice(
++        (currentPage - 1) * itemsPerPage,
++        currentPage * itemsPerPage
++    );
++
++    const renderRoleBadge = (role, idx) => {
++        let colorClasses = "";
++        if (role === "Jastiper") colorClasses = "bg-green-100 text-green-700";
++        else if (role === "Guider") colorClasses = "bg-orange-100 text-orange-700";
++        else if (role === "Admin") colorClasses = "bg-blue-100 text-[#0077D3]";
++        else colorClasses = "bg-gray-100 text-gray-600"; // Untuk "User Biasa"
++
++        return (
++            <span key={idx} className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${colorClasses}`}>
++                {role}
++            </span>
++        );
++    };
++
++    return (
++        <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden flex flex-col h-full min-h-[500px]">
++            <Head title="Manajemen User" />
++
++            <div className="p-4 sm:p-6 border-b border-neutral-100">
++                <div className="mb-4 sm:mb-6">
++                    <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-1">Manajemen User</h2>
++                    <p className="text-neutral-500 text-xs sm:text-sm">
++                        Tempat dimana admin mengatur semua user dalam Barengin.
++                    </p>
++                </div>
++
++                <div className="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
++                    <div className="relative w-full md:w-96">
++                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
++                        <input
++                            type="text"
++                            placeholder="Cari nama atau email..."
++                            value={searchQuery}
++                            onChange={(e) => setSearchQuery(e.target.value)}
++                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all"
++                        />
++                    </div>
++
++                    <div className="relative w-full md:w-48">
++                        <select
++                            value={filterRole}
++                            onChange={(e) => setFilterRole(e.target.value)}
++                            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm focus:ring-2 focus:ring-[#0077D3] outline-none cursor-pointer appearance-none transition-all"
++                        >
++                            <option value="">Semua</option>
++                            <option value="Jastiper">Jastiper</option>
++                            <option value="Guider">Guider</option>
++                            <option value="Admin">Admin</option>
++                            <option value="User Biasa">User Biasa</option>
++                        </select>
++                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
++                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
++                        </div>
++                    </div>
++                </div>
++            </div>
++
++            <div className="flex-1 overflow-y-auto custom-scrollbar">
++                {/* TAMPILAN DESKTOP */}
++                <div className="hidden md:block overflow-x-auto">
++                    <table className="w-full text-left border-collapse min-w-[800px]">
++                        <thead>
++                            <tr className="bg-[#F4F7FB] border-y border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
++                                <th className="py-4 px-6">NAME</th>
++                                <th className="py-4 px-6">EMAIL</th>
++                                <th className="py-4 px-6">ROLES</th>
++                                <th className="py-4 px-6 text-center">ACTION</th>
++                            </tr>
++                        </thead>
++                        <tbody className="divide-y divide-neutral-100">
++                            {paginatedUsers.length > 0 ? (
++                                paginatedUsers.map((user) => (
++                                    <tr key={user.id} className="hover:bg-neutral-50/50 transition duration-150">
++                                        <td className="py-4 px-6">
++                                            <div className="flex items-center gap-3">
++                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${user.bg}`}>
++                                                    {user.initials}
++                                                </div>
++                                                <div className="flex items-center gap-1.5">
++                                                    <span className="font-bold text-neutral-900 text-sm">
++                                                        {user.name}
++                                                    </span>
++                                                    {user.verified && (
++                                                        <FaCircleCheck className="text-[#0077D3] text-sm" />
++                                                    )}
++                                                </div>
++                                            </div>
++                                        </td>
++                                        <td className="py-4 px-6 text-neutral-600 text-sm">
++                                            {user.email}
++                                        </td>
++                                        <td className="py-4 px-6">
++                                            <div className="flex flex-wrap gap-2">
++                                                {user.roles.map((role, idx) => renderRoleBadge(role, idx))}
++                                            </div>
++                                        </td>
++                                        <td className="py-4 px-6 text-center">
++                                            <div className="flex items-center justify-center gap-2">
++                                                <button className="p-2 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors" title="Hapus User">
++                                                    <FiTrash2 size={16} />
++                                                </button>
++                                                <button className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors" title="Edit User">
++                                                    <FiEdit2 size={16} />
++                                                </button>
++                                            </div>
++                                        </td>
++                                    </tr>
++                                ))
++                            ) : (
++                                <tr>
++                                    <td colSpan="4" className="py-12 text-center text-neutral-500">
++                                        Data user tidak ditemukan.
++                                    </td>
++                                </tr>
++                            )}
++                        </tbody>
++                    </table>
++                </div>
++
++                {/* TAMPILAN MOBILE */}
++                <div className="md:hidden flex flex-col divide-y divide-neutral-100">
++                    {paginatedUsers.length > 0 ? (
++                        paginatedUsers.map((user) => (
++                            <div key={user.id} className="p-4 bg-white hover:bg-neutral-50 transition-colors">
++                                <div className="flex items-center gap-3 mb-3">
++                                    <div className={`w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${user.bg}`}>
++                                        {user.initials}
++                                    </div>
++                                    <div className="flex-1 min-w-0">
++                                        <div className="flex items-center gap-1.5">
++                                            <span className="font-bold text-neutral-900 text-base truncate">
++                                                {user.name}
++                                            </span>
++                                            {user.verified && (
++                                                <FaCircleCheck className="text-[#0077D3] text-sm flex-shrink-0" />
++                                            )}
++                                        </div>
++                                        <p className="text-neutral-500 text-xs truncate mt-0.5">
++                                            {user.email}
++                                        </p>
++                                    </div>
++                                </div>
++
++                                <div className="flex items-center justify-between mt-2">
++                                    <div className="flex flex-wrap gap-1.5 flex-1 pr-4">
++                                        {user.roles.map((role, idx) => renderRoleBadge(role, idx))}
++                                    </div>
++                                    <div className="flex items-center gap-2 flex-shrink-0">
++                                        <button className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors">
++                                            <FiEdit2 size={16} />
++                                        </button>
++                                        <button className="p-2 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors">
++                                            <FiTrash2 size={16} />
++                                        </button>
++                                    </div>
++                                </div>
++                            </div>
++                        ))
++                    ) : (
++                        <div className="py-12 text-center text-neutral-500 text-sm">
++                            Data user tidak ditemukan.
++                        </div>
++                    )}
++                </div>
++            </div>
++
++            <div className="bg-[#F4F7FB] p-4 border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-4">
++                <div className="text-xs text-neutral-500 font-medium text-center md:text-left">
++                    Showing {paginatedUsers.length} of {filteredUsers.length} entries
++                </div>
++
++                <Pagination 
++                    currentPage={currentPage}
++                    totalPages={totalPages}
++                    onPageChange={setCurrentPage}
++                    className="mt-0" 
++                />
++            </div>
++        </div>
++    );
++}
++
++ManagementUser.layout = (page) => <AdminLayout title="Dasbor - Admin" subtitle="Selamat datang, Admin!">{page}</AdminLayout>;
+\ No newline at end of file
+diff --git a/resources/js/Pages/Leaderboard/Index.jsx b/resources/js/Pages/Leaderboard/Index.jsx
+index 5939939..7120b2b 100644
+--- a/resources/js/Pages/Leaderboard/Index.jsx
++++ b/resources/js/Pages/Leaderboard/Index.jsx
+@@ -1,4 +1,4 @@
+-import React, { useState } from "react";
++import React, { useState, useMemo } from "react";
+ import { Head } from "@inertiajs/react";
+ import MainLayout from "@/Layouts/MainLayout";
+ import Container from "@/Components/Container";
+@@ -9,85 +9,74 @@ import {
+     FaSuitcase,
+     FaBagShopping,
+ } from "react-icons/fa6";
+-
+ import { FaCrown } from "react-icons/fa";
+ 
+-export default function Leaderboard() {
++// Helper: Ambil inisial nama
++const getInitials = (name) => {
++    if (!name) return "U";
++    const words = name.split(" ");
++    if (words.length > 1) return (words[0][0] + words[1][0]).toUpperCase();
++    return name.substring(0, 2).toUpperCase();
++};
++
++// Helper: Warna background acak dari ID
++const getRandomBg = (id) => {
++    const colors = [
++        "bg-blue-100 text-blue-600",
++        "bg-green-100 text-green-600",
++        "bg-red-100 text-red-600",
++        "bg-purple-100 text-purple-600",
++        "bg-orange-100 text-orange-600",
++    ];
++    return colors[(id || 0) % colors.length];
++};
++
++export default function Leaderboard({ dbGuiders = [] }) {
+     // State untuk melacak tab yang sedang aktif ("trip" atau "jastip")
+     const [activeTab, setActiveTab] = useState("trip");
+ 
+     // ==========================================
+-    // DUMMY DATA: OPEN TRIP
++    // DATA DARI DATABASE: OPEN TRIP
+     // ==========================================
+-    const tripTopThree = [
+-        {
+-            id: 2,
+-            rank: 2,
+-            name: "Indah G",
+-            rating: 4.9,
+-            count: 140,
+-            avatar: "/assets/default-profile.png",
+-        },
+-        {
+-            id: 1,
+-            rank: 1,
+-            name: "Sarah J",
+-            rating: 5.0,
+-            count: 142,
+-            avatar: "/assets/default-profile.png",
+-        },
+-        {
+-            id: 3,
+-            rank: 3,
+-            name: "Linda V",
+-            rating: 4.9,
+-            count: 125,
+-            avatar: "/assets/default-profile.png",
+-        },
+-    ];
++    const tripData = useMemo(() => {
++        if (!dbGuiders || dbGuiders.length === 0)
++            return { topThree: [], otherRanks: [] };
+ 
+-    const tripOtherRanks = [
+-        {
+-            rank: "# 04",
+-            initials: "JD",
+-            name: "John Doe",
+-            count: 121,
+-            rating: 4.9,
+-            bg: "bg-blue-100 text-blue-600",
+-        },
+-        {
+-            rank: "# 05",
+-            initials: "SA",
+-            name: "Selena Anderson",
+-            count: 111,
+-            rating: 4.9,
+-            bg: "bg-gray-100 text-gray-600",
+-        },
+-        {
+-            rank: "# 06",
+-            initials: "EV",
+-            name: "Elena Vance",
+-            count: 89,
+-            rating: 4.8,
+-            bg: "bg-red-100 text-red-600",
+-        },
+-        {
+-            rank: "# 07",
+-            initials: "JD",
+-            name: "John Doe",
+-            count: 87,
+-            rating: 4.8,
+-            bg: "bg-blue-100 text-blue-600",
+-        },
+-        {
+-            rank: "# 08",
+-            initials: "MW",
+-            name: "Marcus Wright",
+-            count: 50,
+-            rating: 4.8,
+-            bg: "bg-purple-100 text-purple-600",
+-        },
+-    ];
++        // Format raw data dari database
++        const formatted = dbGuiders.map((guider, index) => {
++            // Rating acak (pseudo-random) karena di seeder user belum ada kolom rating
++            const pseudoRating = (4.5 + (guider.id % 6) * 0.1).toFixed(1);
++
++            return {
++                id: guider.id,
++                rank: index + 1, // Ranking urut
++                name: guider.name,
++                count: guider.total_trip,
++                rating: pseudoRating,
++                avatar: guider.profile_image ?? "/assets/default-profile.png",
++                initials: getInitials(guider.name),
++                bg: getRandomBg(guider.id),
++            };
++        });
++
++        // Pisahkan Top 3 untuk Podium
++        const top3Raw = formatted.slice(0, 3);
++
++        // Susun ulang urutan podium biar yang juara 1 di tengah (2 - 1 - 3)
++
++        const topThree = [];
++        if (top3Raw[1]) topThree.push(top3Raw[1]); // Rank 2
++        if (top3Raw[0]) topThree.push(top3Raw[0]); // Rank 1
++        if (top3Raw[2]) topThree.push(top3Raw[2]); // Rank 3
++
++        // Sisanya untuk Tabel (Mulai dari rank 4 dst)
++        const otherRanks = formatted.slice(3).map((item) => ({
++            ...item,
++            rank: `# ${String(item.rank).padStart(2, "0")}`, // Format jadi "# 04"
++        }));
++
++        return { topThree, otherRanks };
++    }, [dbGuiders]);
+ 
+     // ==========================================
+     // DUMMY DATA: JASTIP
+@@ -164,9 +153,9 @@ export default function Leaderboard() {
+ 
+     // Variabel penentu data mana yang akan dirender berdasarkan tab aktif
+     const currentTopThree =
+-        activeTab === "trip" ? tripTopThree : jastipTopThree;
++        activeTab === "trip" ? tripData.topThree : jastipTopThree;
+     const currentOtherRanks =
+-        activeTab === "trip" ? tripOtherRanks : jastipOtherRanks;
++        activeTab === "trip" ? tripData.otherRanks : jastipOtherRanks;
+ 
+     const columnTwoTitle = activeTab === "trip" ? "GUIDER" : "JASTIPER";
+     const columnThreeTitle =
+@@ -230,57 +219,59 @@ export default function Leaderboard() {
+             </Container>
+             {/* 3. Top 3 Podium Section */}
+             <Container className="pt-18 pb-0">
+-            <div className="flex justify-center items-end gap-4 md:gap-20 mb-16">
+-                {currentTopThree.map((user) => (
+-                    <div
+-                        key={user.id}
+-                        className={`relative bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center p-6 w-40 md:w-56 transition-all duration-500
+-                                ${user.rank === 1 ? "order-2 -translate-y-6 md:-translate-y-10 z-10" : user.rank === 2 ? "order-1" : "order-3"}
+-                                `}
+-                    >
+-                        {/* Avatar & Crown */}
+-                        <div className="relative -mt-16 mb-4">
+-                            {user.rank === 1 && (
+-                                <FaCrown className="absolute -top-10 left-1/2 -translate-x-1/2 text-yellow-400 text-5xl z-20 drop-shadow-md" />
+-                            )}
+-                            <div
+-                                className={`rounded-full overflow-hidden border-4 border-white shadow-md ${user.rank === 1 ? "w-24 h-24 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"}`}
+-                            >
+-                                <img
+-                                    src={user.avatar}
+-                                    alt={user.name}
+-                                    className="w-full h-full object-cover"
+-                                />
++                <div className="flex justify-center items-end gap-4 md:gap-20 mb-16">
++                    {currentTopThree.map((user) => (
++                        <div
++                            key={user.id}
++                            className={`relative bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center p-6 w-48 md:w-64${user.rank === 1 ? "order-2 -translate-y-6 md:-translate-y-10 z-10" : user.rank === 2 ? "order-1" : "order-3"}`}
++                        >
++                            {/* Avatar & Crown */}
++                            <div className="relative -mt-16 mb-4">
++                                {user.rank === 1 && (
++                                    <FaCrown className="absolute -top-10 left-1/2 -translate-x-1/2 text-yellow-400 text-5xl z-20 drop-shadow-md" />
++                                )}
++                                <div
++                                    className={`rounded-full overflow-hidden border-4 border-white shadow-md bg-neutral-100 ${user.rank === 1 ? "w-24 h-24 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"}`}
++                                >
++                                    <img
++                                        src={user.avatar}
++                                        alt={user.name}
++                                        className="w-full h-full object-cover"
++                                        onError={(e) => {
++                                            e.target.src =
++                                                "/assets/default-profile.png";
++                                        }}
++                                    />
++                                </div>
+                             </div>
+-                        </div>
+ 
+-                        {/* Rank Info */}
+-                        <h2 className="text-[#0077D3] font-black text-2xl md:text-3xl mb-1">
+-                            #{user.rank}
+-                        </h2>
+-                        <h3 className="font-bold text-neutral-900 text-base md:text-lg text-center mb-3">
+-                            {user.name}
+-                        </h3>
++                            {/* Rank Info */}
++                            <h2 className="text-[#0077D3] font-black text-2xl md:text-3xl mb-1">
++                                #{user.rank}
++                            </h2>
++                            {/* Ukuran teks diturunkan jadi text-sm (HP) dan md:text-base (Laptop) */}
++                            <h3 className="font-bold text-neutral-900 text-sm md:text-base text-center mb-3 px-2 line-clamp-1">
++                                {user.name}
++                            </h3>
+ 
+-                        <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-neutral-700 mb-5">
+-                            <span className="flex items-center gap-1">
+-                                <FaStar className="text-orange-400 text-lg mb-0.5" />{" "}
+-                                {user.rating}
+-                            </span>
+-                            <span className="flex items-center gap-1.5">
+-                                <IconItem className="text-[#0077D3]" />{" "}
+-                                {user.count} {itemLabel}
+-                            </span>
+-                        </div>
++                            <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-semibold text-neutral-700 mb-5 w-full">
++                                <span className="flex items-center gap-1">
++                                    <FaStar className="text-orange-400 text-lg mb-0.5" />{" "}
++                                    {user.rating}
++                                </span>
++                                <span className="flex items-center gap-1.5 whitespace-nowrap">
++                                    <IconItem className="text-[#0077D3]" />{" "}
++                                    {user.count} {itemLabel}
++                                </span>
++                            </div>
+ 
+-                        <Button type="primary" size="sm" className="w-full">
+-                            Ikuti
+-                        </Button>
+-                    </div>
+-                ))}
+-            </div>
++                            <Button type="primary" size="sm" className="w-full">
++                                Ikuti
++                            </Button>
++                        </div>
++                    ))}
++                </div>
+             </Container>
+-
+             {/* 4. Rank List Table Section */}
+             <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden mb-8">
+                 <div className="overflow-x-auto">
+@@ -330,7 +321,6 @@ export default function Leaderboard() {
+                                         </span>
+                                     </td>
+                                     <td className="py-4 px-6 text-center">
+-                                        {/* Menggunakan komponen Button milikmu (Solid untuk Ikuti, Outline untuk Mengikuti) */}
+                                         <Button
+                                             type="primary"
+                                             variant={
+@@ -369,5 +359,4 @@ export default function Leaderboard() {
+     );
+ }
+ 
+-// Integrasikan ke MainLayout yang kamu kasih
+ Leaderboard.layout = (page) => <MainLayout>{page}</MainLayout>;
+diff --git a/routes/web.php b/routes/web.php
+index aa8a295..b320a86 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -15,6 +15,8 @@
+ use App\Http\Controllers\TripsController;
+ use App\Http\Controllers\PostController;
+ use App\Http\Controllers\PergiBarengController;
++use Inertia\Inertia;
++use Illuminate\Support\Facades\DB;
+ 
+ 
+ use Illuminate\Support\Facades\Route;
+@@ -130,7 +132,23 @@
+ 
+ // Leaderboard
+ Route::get('/leaderboard', function () {
+-    return inertia('Leaderboard/Index');
++    // Menghitung total trip per Guider dari database
++    $guiders = DB::table('users')
++        ->where('is_guider', true)
++        ->leftJoin('trips', 'users.id', '=', 'trips.guider_id')
++        ->select(
++            'users.id', 
++            'users.full_name as name', 
++            'users.profile_image', 
++            DB::raw('COUNT(trips.id) as total_trip')
++        )
++        ->groupBy('users.id', 'users.full_name', 'users.profile_image')
++        ->orderByDesc('total_trip') // Urutkan dari yang terbanyak
++        ->get();
++
++    return inertia('Leaderboard/Index', [
++        'dbGuiders' => $guiders // Lempar datanya ke React
++    ]);
+ })->name('leaderboard');
+ 
+ // Trip Bareng
+@@ -140,6 +158,16 @@
+ Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
+ Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+ 
++// Management User
++// Route::get('/management-user', function(){
++//     $users = User::all();
++
++//     return inertia('Admin/ManagementUser', ['users' => $users]);
++// })->name('management-user');
++
++Route::get('/management-user', function () {
++    return inertia('Admin/ManagementUser', ['users' => \App\Models\User::all()]);
++})->name('management-user');
+ 
+ // test route
+ Route::get('/Admin', function () {
+-- 
+2.48.1.windows.1
+

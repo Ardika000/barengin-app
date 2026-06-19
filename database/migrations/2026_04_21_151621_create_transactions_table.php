@@ -18,7 +18,6 @@ return new class extends Migration
             $table->decimal('total_amount', 15, 2);
             $table->enum('type', ['jastip', 'trip']);
             $table->string('payment_method');
-            $table->string('va_number', 25);
             $table->dateTime('expired_at');
             $table->timestamps();
         });

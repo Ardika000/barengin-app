@@ -9,31 +9,31 @@ class Trip extends Model
 {
     use HasFactory;
     protected $fillable = ['name', 'description', 'people_amount', 'start_date', 'end_date', 'rating', 'price'];
-    protected function casts(){
-        return[
+    protected function casts()
+    {
+        return [
             'rating' => 'decimal:2',
             'price' => 'decimal:2'
         ];
     }
 
-    public function detail_trips(){
+    public function detail_trips()
+    {
         return $this->hasMany(TripActivity::class);
     }
 
-    public function facilities(){
-        return $this->belongsToMany(Facilitiy::class, 'trip_facilities');
+    public function facilities()
+    {
+        return $this->belongsToMany(TripFacility::class, 'trip_facilities', 'trip_id', 'facility_id');
     }
 
-    public function guide_rating_trips(){
-        return $this->hasMany(GuideRatingTrip::class);
-    }
-
-    public function trip_orders(){
+    public function trip_orders()
+    {
         return $this->hasMany(TripOrder::class);
     }
 
-    public function conversations(){
+    public function conversations()
+    {
         return $this->hasOne(Conversation::class);
     }
-
 }

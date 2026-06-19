@@ -43,7 +43,22 @@ export default function ChatShow({
     const headerAvatar = getConversationAvatar(conversation);
     const peer = getConversationPeer(conversation);
 
-    const [tab, setTab] = useState("personal");
+    const [tab, setTab] = useState(() => {
+        const fromUrl = new URLSearchParams(window.location.search).get("tab");
+        if (fromUrl === "groups" || fromUrl === "personal") return fromUrl;
+        return conversation?.is_group ? "groups" : "personal";
+    });
+
+    useEffect(() => {
+        const fromUrl = new URLSearchParams(window.location.search).get("tab");
+        if (fromUrl === "groups" || fromUrl === "personal") {
+            setTab(fromUrl);
+            return;
+        }
+
+        setTab(conversation?.is_group ? "groups" : "personal");
+    }, [conversation?.id, conversation?.is_group]);
+
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
     const [openNewChat, setOpenNewChat] = useState(false);

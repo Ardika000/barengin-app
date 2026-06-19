@@ -8,6 +8,7 @@ class PergiBarengParticipant extends Model
 {
     protected $fillable = [
         'pergi_bareng_id',
+        'user_id',
         'full_name',
         'birth_date', 
         'paspor',
@@ -16,7 +17,7 @@ class PergiBarengParticipant extends Model
     ];
 
     public function user(){
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function pergi_bareng(){

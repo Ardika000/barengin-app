@@ -18,7 +18,9 @@ class DatabaseSeeder extends Seeder
             PostTagSeeder::class,
             ChatSeeder::class,
             TripSeeder::class,
+            TripFacilitySeeder::class,
             PergiBarengSeeder::class,
+            FinancingEstimateSeeder::class
         ]);
     }
 }
