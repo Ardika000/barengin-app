@@ -15,12 +15,32 @@ class TripsController extends Controller
 {
     public function index(Request $request)
     {
-        $tripsPaginated = DB::table('trips')
+        $tujuan    = trim((string) $request->query('tujuan', ''));
+        $startDate = $request->query('start_date');
+        $endDate   = $request->query('end_date');
+
+        $query = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
-            ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
+            ->whereDate('trips.end_date', '>=', now()); // sembunyikan trip yang sudah lewat
+
+        if ($tujuan !== '') {
+            $query->where(function ($q) use ($tujuan) {
+                $q->where('trips.location', 'like', "%{$tujuan}%")
+                    ->orWhere('trips.name', 'like', "%{$tujuan}%");
+            });
+        }
+        if ($startDate) {
+            $query->whereDate('trips.start_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('trips.end_date', '<=', $endDate);
+        }
+
+        $tripsPaginated = $query
             ->orderBy('trips.created_at', 'desc')
-            ->paginate(9);
+            ->paginate(9)
+            ->withQueryString();
 
         $likedTripIds = $request->user()
             ? DB::table('favorites')
@@ -83,6 +103,11 @@ class TripsController extends Controller
         return Inertia::render('TripBareng/Index', [
             'trips' => $tripsPaginated,
             'all_trips' => $all_trips,
+            'filters' => [
+                'tujuan'     => $tujuan,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+            ],
         ]);
     }
 

@@ -82,12 +82,30 @@ class PergiBarengController extends Controller
     
     public function index(Request $request)
     {
-        // 1. Tangkap parameter 'sort' dari React
-        $sortBy = $request->query('sort', 'schedule');
+        // 1. Tangkap parameter 'sort' & pencarian dari React
+        $sortBy  = $request->query('sort', 'schedule');
+        $dari    = trim((string) $request->query('dari', ''));
+        $ke      = trim((string) $request->query('ke', ''));
+        $tanggal = $request->query('tanggal');
+        $waktu   = $request->query('waktu');
+        $jumlah  = (int) $request->query('jumlah', 0);
 
         // 2. Siapkan query dasar beserta relasinya
-        $query = PergiBareng::with(['initiator.user_ratings', 'pergi_bareng_participants'])
+        $query = PergiBareng::with(['initiator.received_ratings', 'pergi_bareng_participants'])
             ->where('time_appointment', '>=', now()); // sembunyikan yang sudah lewat
+
+        if ($dari !== '') {
+            $query->where('departure_loc', 'like', "%{$dari}%");
+        }
+        if ($ke !== '') {
+            $query->where('destination_loc', 'like', "%{$ke}%");
+        }
+        if ($tanggal) {
+            $query->whereDate('time_appointment', $tanggal);
+        }
+        if ($waktu) {
+            $query->whereTime('time_appointment', '>=', $waktu);
+        }
 
         // --- LOGIKA SORTING DATABASE ---
         if ($sortBy === 'schedule') {
@@ -146,6 +164,13 @@ class PergiBarengController extends Controller
             ];
         });
 
+        // Filter berdasarkan jumlah kursi tersisa (dihitung setelah format)
+        if ($jumlah > 0) {
+            $formattedTrips = $formattedTrips->filter(
+                fn ($trip) => $trip['remainingSeats'] >= $jumlah
+            )->values();
+        }
+
         // --- LOGIKA SORTING COLLECTION ---
         if ($sortBy === 'seats') {
             $formattedTrips = $formattedTrips->sortByDesc('remainingSeats')->values();
@@ -157,7 +182,15 @@ class PergiBarengController extends Controller
 
         // 4. Kirim data ke halaman Index.jsx
         return Inertia::render('PergiBareng/Index', [
-            'trips' => $formattedTrips
+            'trips' => $formattedTrips,
+            'filters' => [
+                'dari'    => $dari,
+                'ke'      => $ke,
+                'tanggal' => $tanggal,
+                'waktu'   => $waktu,
+                'jumlah'  => $jumlah ?: '',
+                'sort'    => $sortBy,
+            ],
         ]);
     }
 

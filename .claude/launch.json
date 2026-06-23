@@ -24,6 +24,18 @@
         "C:\\Users\\edwin\\OneDrive - Bina Nusantara\\PPTI - CAWU 5\\Computer Security\\project"
       ],
       "port": 8770
+    },
+    {
+      "name": "news-site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8099",
+        "--directory",
+        "C:\\laragon\\www\\news"
+      ],
+      "port": 8099
     }
   ]
 }

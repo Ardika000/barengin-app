@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>barengin — site map (from Figma)</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1f2329; --muted:#6b7178;
+    --pgbar:#1f2329; --pgbar-fg:#ffffff; --pgbody:#ffffff; --pgbody-fg:#1f2329; --pgborder:#333333;
+    --line:#8a9099;
+    --tbd:#e2e5e9; --thbg:#f3f4f6; --code:#3a4047; --codebg:#f0f1f3;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1a1c1f; --fg:#e6e8eb; --muted:#9aa0a8;
+      --pgbar:#e6e8eb; --pgbar-fg:#1a1c1f; --pgbody:#23262a; --pgbody-fg:#e6e8eb; --pgborder:#4a4f55;
+      --line:#828892;
+      --tbd:#33373c; --thbg:#23262a; --code:#c4c9cf; --codebg:#23262a;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.6;
+    -webkit-font-smoothing:antialiased;padding:32px 24px 72px}
+  main{max-width:920px;margin:0 auto}
+  h1{font-size:22px;font-weight:500;margin:0 0 4px}
+  h2{font-size:18px;font-weight:500;margin:40px 0 6px}
+  h3{font-size:15px;font-weight:500;margin:24px 0 4px}
+  p.meta,p.note{color:var(--muted);margin:0 0 8px;font-size:14px}
+  a{color:inherit}
+  svg{width:100%;height:auto;display:block;margin:10px 0}
+  .bd{fill:var(--pgbody);stroke:var(--pgborder);stroke-width:1}
+  .hd{fill:var(--pgbar)}
+  .nu{fill:var(--pgbar-fg);font-size:11px;font-weight:500;text-anchor:end}
+  .nm{fill:var(--pgbody-fg);font-size:12px;text-anchor:middle}
+  .sm{fill:var(--muted);font-size:11px;text-anchor:middle}
+  .ln{stroke:var(--line);stroke-width:1.2;fill:none}
+  .dl{stroke:var(--line);stroke-width:1.2;fill:none;stroke-dasharray:4 3}
+  .dia{fill:var(--pgbody);stroke:var(--pgbody-fg);stroke-width:1.3}
+  .dn{fill:var(--pgbody-fg);font-size:11px;font-weight:500;text-anchor:middle}
+  .lg{fill:var(--muted);font-size:11px}
+  .shade{fill:var(--muted);opacity:0.09}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--tbd);vertical-align:top}
+  th{background:var(--thbg);font-weight:500}
+  code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;
+    background:var(--codebg);color:var(--code);padding:1px 5px;border-radius:4px}
+  .nid{color:var(--muted);font-size:11px;white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+  <h1>barengin — site map</h1>
+  <p class="meta">Built from the Figma file <code>7OLS - Barengin</code> (<code>ssqD2f6kuxHRvf6GZqBDN1</code>, 114 frames). Jesse James Garrett visual-vocabulary style: numbered page boxes, page stacks (<code>x.0–x.x</code>), decision diamonds, dashed = conditional path. Editable per-section diagrams live in <a href="barengin-sitemap.drawio">barengin-sitemap.drawio</a>.</p>
+
+  <h2>Home-page view</h2>
+  <p class="note">Entry &amp; authentication, then Home branching to global navigation sections 2.0–8.0 (each continued in its own section sheet).</p>
+  <svg viewBox="0 0 680 540" role="img" xmlns="http://www.w3.org/2000/svg"><title>Site map home page view</title><desc>Login and Register feed a New user decision; new users go through Onboarding to Home, returning users go straight to Home; Home branches to sections 2.0 through 8.0.</desc>
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <polyline class="ln" points="125,98 125,108 200,108 200,114" marker-end="url(#ar)"/>
+  <polyline class="ln" points="295,98 295,108 200,108"/>
+  <line class="ln" x1="262" y1="150" x2="298" y2="150" marker-end="url(#ar)"/><text class="lg" x="280" y="144" text-anchor="middle">yes · new</text>
+  <polyline class="ln" points="200,186 200,210 340,210 340,230" marker-end="url(#ar)"/><text class="lg" x="250" y="205" text-anchor="middle">no · returning</text>
+  <polyline class="ln" points="385,178 385,210 342,210"/>
+  <line class="dl" x1="200" y1="71" x2="432" y2="71" marker-end="url(#ar)"/><text class="lg" x="316" y="65" text-anchor="middle">forgot password?</text>
+  <line class="ln" x1="530" y1="98" x2="530" y2="118" marker-end="url(#ar)"/>
+  <polyline class="dl" points="620,145 644,145 644,28 125,28 125,42" marker-end="url(#ar)"/><text class="lg" x="380" y="24" text-anchor="middle">after reset · sign in</text>
+  <line class="ln" x1="340" y1="284" x2="340" y2="312"/>
+  <line class="ln" x1="105" y1="312" x2="573" y2="312"/>
+  <line class="ln" x1="105" y1="312" x2="105" y2="330" marker-end="url(#ar)"/>
+  <line class="ln" x1="261" y1="312" x2="261" y2="330" marker-end="url(#ar)"/>
+  <line class="ln" x1="417" y1="312" x2="417" y2="330" marker-end="url(#ar)"/>
+  <line class="ln" x1="573" y1="312" x2="573" y2="330" marker-end="url(#ar)"/>
+  <line class="ln" x1="340" y1="312" x2="340" y2="396"/>
+  <line class="ln" x1="170" y1="396" x2="510" y2="396"/>
+  <line class="ln" x1="170" y1="396" x2="170" y2="414" marker-end="url(#ar)"/>
+  <line class="ln" x1="340" y1="396" x2="340" y2="414" marker-end="url(#ar)"/>
+  <line class="ln" x1="510" y1="396" x2="510" y2="414" marker-end="url(#ar)"/>
+  <rect class="bd" x="50" y="44" width="150" height="54"/><rect class="hd" x="50" y="44" width="150" height="18"/><text class="nu" x="192" y="57">0.1</text><text class="nm" x="125" y="84">Login</text>
+  <rect class="bd" x="220" y="44" width="150" height="54"/><rect class="hd" x="220" y="44" width="150" height="18"/><text class="nu" x="362" y="57">0.2</text><text class="nm" x="295" y="84">Register</text>
+  <rect class="bd" x="440" y="44" width="180" height="54"/><rect class="hd" x="440" y="44" width="180" height="18"/><text class="nu" x="612" y="57">0.3</text><text class="nm" x="530" y="84">Forgot password</text>
+  <rect class="bd" x="440" y="118" width="180" height="54"/><rect class="hd" x="440" y="118" width="180" height="18"/><text class="nu" x="612" y="131">0.4</text><text class="nm" x="530" y="158">Reset password</text>
+  <polygon class="dia" points="200,114 262,150 200,186 138,150"/><text class="dn" x="200" y="154">New user?</text>
+  <rect class="bd" x="300" y="124" width="170" height="54"/><rect class="hd" x="300" y="124" width="170" height="18"/><text class="nu" x="462" y="137">1.5</text><text class="nm" x="385" y="151">Onboarding</text><text class="sm" x="385" y="166">(isi detil informasi)</text>
+  <rect class="bd" x="265" y="230" width="150" height="54"/><rect class="hd" x="265" y="230" width="150" height="18"/><text class="nu" x="407" y="243">1.0</text><text class="nm" x="340" y="270">Home Page</text>
+  <rect class="bd" x="40" y="330" width="130" height="54"/><rect class="hd" x="40" y="330" width="130" height="18"/><text class="nu" x="162" y="343">2.0</text><text class="nm" x="105" y="370">Trip Bareng</text>
+  <rect class="bd" x="196" y="330" width="130" height="54"/><rect class="hd" x="196" y="330" width="130" height="18"/><text class="nu" x="318" y="343">3.0</text><text class="nm" x="261" y="370">Pergi Bareng</text>
+  <rect class="bd" x="352" y="330" width="130" height="54"/><rect class="hd" x="352" y="330" width="130" height="18"/><text class="nu" x="474" y="343">4.0</text><text class="nm" x="417" y="370">Jastip</text>
+  <rect class="bd" x="508" y="330" width="130" height="54"/><rect class="hd" x="508" y="330" width="130" height="18"/><text class="nu" x="630" y="343">5.0</text><text class="nm" x="573" y="370">Forum</text>
+  <rect class="bd" x="105" y="414" width="130" height="54"/><rect class="hd" x="105" y="414" width="130" height="18"/><text class="nu" x="227" y="427">6.0</text><text class="nm" x="170" y="454">Chat</text>
+  <rect class="bd" x="275" y="414" width="130" height="54"/><rect class="hd" x="275" y="414" width="130" height="18"/><text class="nu" x="397" y="427">7.0</text><text class="nm" x="340" y="454">Leaderboard</text>
+  <rect class="bd" x="445" y="414" width="130" height="54"/><rect class="hd" x="445" y="414" width="130" height="18"/><text class="nu" x="567" y="427">8.0</text><text class="nm" x="510" y="454">Profile</text>
+  <text class="lg" x="40" y="496">Legend: bold number = page · stacked box (x.0–x.x) = dynamic listing · diamond = decision · dashed = conditional path.</text>
+  </svg>
+
+  <h2>Trip Bareng · section 2.x</h2>
+  <p class="note">Worked example of a section sheet. The other sections (3.x–9.x) are listed below and drawn in the editable .drawio.</p>
+  <svg viewBox="0 0 680 530" role="img" xmlns="http://www.w3.org/2000/svg"><title>Trip Bareng section</title><desc>Browse group with landing and detail stacks, a logged-in decision, checkout, waiting payment and success, with conditional group chat and review.</desc>
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect class="shade" x="55" y="36" width="190" height="178" rx="2"/><text class="lg" x="150" y="30" text-anchor="middle">Browse &amp; discover</text>
+  <line class="ln" x1="150" y1="102" x2="150" y2="142" marker-end="url(#ar2)"/><text class="lg" x="160" y="126">select trip</text>
+  <line class="ln" x1="150" y1="196" x2="150" y2="216" marker-end="url(#ar2)"/><text class="lg" x="160" y="209">tap "Join / Book"</text>
+  <line class="dl" x1="212" y1="250" x2="428" y2="250" marker-end="url(#ar2)"/><text class="lg" x="320" y="244" text-anchor="middle">no · guest</text>
+  <line class="ln" x1="150" y1="284" x2="150" y2="302" marker-end="url(#ar2)"/><text class="lg" x="160" y="297">yes</text>
+  <line class="ln" x1="150" y1="356" x2="150" y2="378" marker-end="url(#ar2)"/><text class="lg" x="160" y="370">pay (Midtrans)</text>
+  <line class="ln" x1="150" y1="432" x2="150" y2="454" marker-end="url(#ar2)"/><text class="lg" x="160" y="446">paid</text>
+  <line class="dl" x1="227" y1="167" x2="428" y2="167" marker-end="url(#ar2)"/><text class="lg" x="327" y="161" text-anchor="middle">open group</text>
+  <line class="dl" x1="227" y1="481" x2="428" y2="481" marker-end="url(#ar2)"/><text class="lg" x="327" y="475" text-anchor="middle">leave review (optional)</text>
+  <rect class="bd" x="80" y="51" width="150" height="54"/><rect class="bd" x="78" y="54" width="150" height="54"/>
+  <rect class="bd" x="75" y="57" width="150" height="54"/><rect class="hd" x="75" y="57" width="150" height="18"/><text class="nu" x="217" y="70">2.0–2.x</text><text class="nm" x="150" y="91">Landing</text><text class="sm" x="150" y="104">(list · search)</text>
+  <rect class="bd" x="80" y="142" width="150" height="54"/><rect class="bd" x="78" y="145" width="150" height="54"/>
+  <rect class="bd" x="75" y="148" width="150" height="54"/><rect class="hd" x="75" y="148" width="150" height="18"/><text class="nu" x="217" y="161">2.1.x</text><text class="nm" x="150" y="180">Detail Trip</text>
+  <polygon class="dia" points="150,216 212,250 150,284 88,250"/><text class="dn" x="150" y="254">Logged in?</text>
+  <rect class="bd" x="75" y="302" width="150" height="54"/><rect class="hd" x="75" y="302" width="150" height="18"/><text class="nu" x="217" y="315">2.1.1</text><text class="nm" x="150" y="334">Check Out</text>
+  <rect class="bd" x="80" y="372" width="150" height="54"/><rect class="bd" x="78" y="375" width="150" height="54"/>
+  <rect class="bd" x="75" y="378" width="150" height="54"/><rect class="hd" x="75" y="378" width="150" height="18"/><text class="nu" x="217" y="391">2.1.1.1</text><text class="nm" x="150" y="408">Waiting payment</text><text class="sm" x="150" y="421">(BCA VA · QRIS)</text>
+  <rect class="bd" x="75" y="454" width="150" height="54"/><rect class="hd" x="75" y="454" width="150" height="18"/><text class="nu" x="217" y="467">2.1.1.2</text><text class="nm" x="150" y="486">Pembayaran Berhasil</text>
+  <rect class="bd" x="430" y="140" width="160" height="54"/><rect class="hd" x="430" y="140" width="160" height="18"/><text class="nu" x="582" y="153">2.1.3</text><text class="nm" x="510" y="172">Trip group chat</text><text class="sm" x="510" y="185">(→ Chat 6.0)</text>
+  <rect class="bd" x="430" y="224" width="160" height="54"/><rect class="hd" x="430" y="224" width="160" height="18"/><text class="nu" x="582" y="237">0.1–0.2</text><text class="nm" x="510" y="256">Login / Register</text><text class="sm" x="510" y="269">(see home view)</text>
+  <rect class="bd" x="430" y="454" width="160" height="54"/><rect class="hd" x="430" y="454" width="160" height="18"/><text class="nu" x="582" y="467">2.1.2</text><text class="nm" x="510" y="473">Ulasan</text><text class="sm" x="510" y="486">(review overlay)</text>
+  </svg>
+
+  <h2>Screen inventory (from Figma)</h2>
+  <p class="note">Every page in the design, grouped by section number, with its Figma node ID. Filled / alternate states are noted in parentheses.</p>
+
+  <h3>0.x · Entry, auth &amp; guest</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>0.1</td><td>Login Page (+ filled)</td><td class="nid">81:115 · 1363:11705</td></tr>
+    <tr><td>0.2</td><td>Register Page (+ filled)</td><td class="nid">74:32 · 1342:11553</td></tr>
+    <tr><td>0.3</td><td>Forgot Password (+ filled)</td><td class="nid">81:379 · 1363:11848</td></tr>
+    <tr><td>0.4</td><td>Reset Password (+ filled)</td><td class="nid">100:57 · 1363:11911</td></tr>
+    <tr><td>1.5</td><td>Isi Detil Informasi (onboarding, + filled)</td><td class="nid">93:184 · 1363:11808</td></tr>
+    <tr><td>—</td><td>Home / Trip / Pergi / Jastip — Unauthorize (guest)</td><td class="nid">1375:8539 · 1375:9023 · 1375:9703 · 1375:10445</td></tr>
+  </tbody></table>
+
+  <h3>1.0 · Home</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>1.0</td><td>Home Page (2 versions)</td><td class="nid">18:14 · 1916:29167</td></tr>
+  </tbody></table>
+
+  <h3>2.x · Trip Bareng</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>2.0–2.x</td><td>Trip Bareng (landing / list)</td><td class="nid">83:33</td></tr>
+    <tr><td>2.1.x</td><td>Detail Trip</td><td class="nid">83:48</td></tr>
+    <tr><td>2.1.1</td><td>Check Out Trip (2 versions)</td><td class="nid">332:2325 · 1849:11143</td></tr>
+    <tr><td>2.1.1.1</td><td>Waiting Payment — BCA Virtual Account</td><td class="nid">500:2938</td></tr>
+    <tr><td>2.1.1.2</td><td>Trip Pembayaran Berhasil</td><td class="nid">425:5753</td></tr>
+    <tr><td>2.1.2</td><td>Ulasan overlay (review)</td><td class="nid">1342:9095 · 1342:9136</td></tr>
+  </tbody></table>
+
+  <h3>3.x · Pergi Bareng</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>3.0–3.x</td><td>Pergi Bareng (landing / list)</td><td class="nid">56:143</td></tr>
+    <tr><td>3.1.x</td><td>Detail Pergi Bareng</td><td class="nid">927:6487</td></tr>
+    <tr><td>3.1.1</td><td>Check Out Pergi Bareng (2 versions)</td><td class="nid">1342:8191 · 1371:12630</td></tr>
+    <tr><td>3.1.1.1</td><td>Pergi Bareng Berhasil</td><td class="nid">1342:8072</td></tr>
+    <tr><td>3.1.2</td><td>Ulasan overlay (review)</td><td class="nid">1342:8962 · 1342:9044</td></tr>
+  </tbody></table>
+
+  <h3>4.x · Jastip</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>4.0–4.x</td><td>Jastip (landing / list)</td><td class="nid">56:147</td></tr>
+    <tr><td>4.1.x</td><td>Detail Jastip (2 versions)</td><td class="nid">244:934 · 280:1675</td></tr>
+    <tr><td>4.1.1.1</td><td>Waiting Payment — BCA Virtual Account</td><td class="nid">390:5503</td></tr>
+    <tr><td>4.1.1.1</td><td>Waiting Payment — QRIS</td><td class="nid">479:2854</td></tr>
+    <tr><td>4.1.1.2</td><td>Pembayaran Berhasil</td><td class="nid">390:5549</td></tr>
+  </tbody></table>
+
+  <h3>5.x · Forum</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>5.0</td><td>Forum (feed)</td><td class="nid">83:63</td></tr>
+    <tr><td>5.1.x</td><td>Forum — Open Content (post detail)</td><td class="nid">1375:11486</td></tr>
+    <tr><td>5.2.x</td><td>Forum profile — post / likes / replies</td><td class="nid">502:3134 · 705:3308 · 709:3150</td></tr>
+    <tr><td>5.0.1</td><td>Create Post box</td><td class="nid">294:1879</td></tr>
+    <tr><td>5.0.2</td><td>Comment overlay</td><td class="nid">1386:12665 · 1386:12735</td></tr>
+    <tr><td>5.0.3</td><td>Search People modal</td><td class="nid">997:4466</td></tr>
+    <tr><td>5.0.4</td><td>Location Search Post</td><td class="nid">294:2088</td></tr>
+  </tbody></table>
+
+  <h3>6.x · Chat</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>6.1</td><td>Chat Page — Personal</td><td class="nid">946:4408</td></tr>
+    <tr><td>6.2</td><td>Chat Page — Group (from trip / pergi)</td><td class="nid">964:4756</td></tr>
+  </tbody></table>
+
+  <h3>7.x · Leaderboard</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>7.1</td><td>Leaderboard — Open Trip (+ new)</td><td class="nid">1220:6030 · 1431:12583</td></tr>
+    <tr><td>7.2</td><td>Leaderboard — Jastip (+ new)</td><td class="nid">1078:4786 · 1436:13505</td></tr>
+  </tbody></table>
+
+  <h3>8.x · Profile</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>8.1</td><td>User Profil — Transaksi Anda</td><td class="nid">250:1415</td></tr>
+    <tr><td>8.1.1</td><td>Transaction detail overlay</td><td class="nid">526:4060</td></tr>
+    <tr><td>8.2</td><td>User Profil — Trip Kesukaan</td><td class="nid">83:78</td></tr>
+    <tr><td>8.3</td><td>User Profil — Jastip Kesukaan</td><td class="nid">246:1609</td></tr>
+    <tr><td>8.4</td><td>User Profil — Pergi Bareng</td><td class="nid">1058:4331</td></tr>
+    <tr><td>8.5</td><td>Edit Profile — unfill / filled</td><td class="nid">1342:8468 · 1342:8733</td></tr>
+  </tbody></table>
+
+  <h3>9.x · Admin dashboard</h3>
+  <table><thead><tr><th>No.</th><th>Screen</th><th>Figma node</th></tr></thead><tbody>
+    <tr><td>9.0</td><td>Dashboard Admin — Beranda</td><td class="nid">1082:5251</td></tr>
+    <tr><td>9.1</td><td>Management User (+ Verify / Unverify edit)</td><td class="nid">1082:5409 · 1193:5569 · 1247:6282</td></tr>
+    <tr><td>9.2</td><td>Management — Message</td><td class="nid">1082:5567 · 1247:6457</td></tr>
+    <tr><td>9.3</td><td>Management Trip · Add New · Fill Form</td><td class="nid">873:4275 · 995:6576 · 1369:8355</td></tr>
+    <tr><td>9.4</td><td>Management Pergi Bareng · Add New</td><td class="nid">450:2911 · 1170:6627</td></tr>
+    <tr><td>9.5</td><td>Management Jastip · Add New · Add draft</td><td class="nid">1085:4960 · 1393:11663 · 1417:12578</td></tr>
+    <tr><td>9.6</td><td>Analytics — Trip · Pergi Bareng · Jastip</td><td class="nid">1689:11392 · 1076:5158 · 1217:6509</td></tr>
+    <tr><td>9.x</td><td>Popups — Delete · Verify User</td><td class="nid">1229:6110 · 1229:6138</td></tr>
+  </tbody></table>
+
+  <p class="note" style="margin-top:32px">Editable diagrams for every section (0.x–9.x, plus a Legend and Combined overview) are in <a href="barengin-sitemap.drawio">barengin-sitemap.drawio</a> — open with the VS Code Draw.io extension or app.diagrams.net.</p>
+</main>
+</body>
+</html>
