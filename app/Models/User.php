@@ -143,8 +143,14 @@ class User extends Authenticatable
         return $this->hasMany(PergiBarengRequest::class);
     }
 
+    // Ulasan yang DIBUAT oleh user (sebagai pemberi nilai)
     public function user_ratings(){
         return $this->hasMany(UserRating::class);
+    }
+
+    // Ulasan yang DITERIMA user (sebagai pihak yang dinilai)
+    public function received_ratings(){
+        return $this->hasMany(UserRating::class, 'rated_user_id');
     }
 
     public function typeRating($type){
@@ -153,5 +159,22 @@ class User extends Authenticatable
 
     public function allRating(){
         return $this->user_ratings()->avg('rating_amount');
+    }
+
+    // Rata-rata & jumlah ulasan yang DITERIMA user (untuk ditampilkan)
+    public function receivedRatingAvg($type = null){
+        $query = $this->received_ratings();
+        if ($type) {
+            $query->where('type', $type);
+        }
+        return $query->avg('rating_amount');
+    }
+
+    public function receivedRatingCount($type = null){
+        $query = $this->received_ratings();
+        if ($type) {
+            $query->where('type', $type);
+        }
+        return $query->count();
     }
 }

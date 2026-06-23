@@ -51,7 +51,7 @@ export default function NavbarGuest() {
                         menuWidthClass="w-60"
                         withDividers
                     />
-                    <NavLink href="/jastip">Jastip</NavLink>
+                    {/* <NavLink href="/jastip">Jastip</NavLink> */}
                     <NavLink href="/forum">Forum</NavLink>
                     <NavLink href="/leaderboard">Leaderboard</NavLink>
                 </nav>

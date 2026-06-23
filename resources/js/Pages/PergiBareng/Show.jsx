@@ -7,13 +7,46 @@ import Button from "@/Components/Button";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { 
-    FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle, 
-    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar
+import {
+    FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
+    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart
 } from "react-icons/fa";
+import { BsChatDots } from "react-icons/bs";
 
 export default function Show({ trip }) {
-    const [position, setPosition] = useState([-6.1751, 106.8272]); 
+    const [position, setPosition] = useState([-6.1751, 106.8272]);
+    const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
+
+    const handleToggleLike = () => {
+        setIsLiked((v) => !v);
+        router.post(
+            "/favorites/toggle",
+            { type: "pergi_bareng", id: trip.id },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setIsLiked((v) => !v),
+            },
+        );
+    };
+
+    const [following, setFollowing] = useState(
+        Boolean(trip.organizer?.is_following),
+    );
+
+    const handleToggleFollow = () => {
+        if (!trip.organizer?.username) return;
+        setFollowing((v) => !v);
+        router.post(
+            `/forum/users/${trip.organizer.username}/follow`,
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setFollowing((v) => !v),
+            },
+        );
+    };
 
     useEffect(() => {
         if (!trip?.details?.titik_kumpul) return; 
@@ -88,17 +121,36 @@ export default function Show({ trip }) {
                                             <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} ulasan)
                                         </div>
                                     </div>
-                                    <Button variant="outline" size="sm"onClick={handleChatOrganizer}>Chat Penyelenggara</Button>
+                                    <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleChatOrganizer}>
+                                        <BsChatDots className="text-sm" />
+                                        Chat Penyelenggara
+                                    </Button>
                                 </div>
                             </div>
                             
                             {/* Gambar Bus */}
-                            <div className="w-full md:w-1/3 bg-neutral-100 min-h-[250px] md:min-h-[200px]">
-                                <img 
-                                    src={trip.img_name ? `/storage/${trip.img_name}` : '/assets/terminal-cibubur.jpg'} 
-                                    alt="Bus" 
-                                    className="w-full h-full object-cover" 
+                            <div className="relative w-full md:w-1/3 bg-neutral-100 min-h-[250px] md:min-h-[200px]">
+                                <img
+                                    src={trip.img_name ? `/storage/${trip.img_name}` : '/assets/pergi-bareng/PergiBarengHeader.avif'}
+                                    alt={trip.title}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.src = '/assets/pergi-bareng/PergiBarengHeader.avif';
+                                    }}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={handleToggleLike}
+                                    aria-pressed={isLiked}
+                                    aria-label={isLiked ? "Batal sukai" : "Sukai"}
+                                    className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow transition-transform hover:scale-105"
+                                >
+                                    {isLiked ? (
+                                        <FaHeart className="h-5 w-5 text-red-500" />
+                                    ) : (
+                                        <FaRegHeart className="h-5 w-5 text-neutral-500" />
+                                    )}
+                                </button>
                             </div>
                         </div>
 
@@ -156,7 +208,16 @@ export default function Show({ trip }) {
                                             <FaStar className="text-warning-500"/> {trip.organizer.rating}
                                         </div>
                                     </div>
-                                    <Button size="xs" variant="outline" className="ml-2">Follow</Button>
+                                    {!trip.organizer?.is_self && (
+                                        <Button
+                                            size="xs"
+                                            variant={following ? "solid" : "outline"}
+                                            className="ml-2"
+                                            onClick={handleToggleFollow}
+                                        >
+                                            {following ? "Mengikuti" : "Follow"}
+                                        </Button>
+                                    )}
                                 </div>
                                 
                                 {/* Participants */}

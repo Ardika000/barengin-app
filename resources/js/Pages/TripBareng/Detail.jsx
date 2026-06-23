@@ -26,15 +26,32 @@ import {
     FaCamera,
     FaArrowRight,
     FaRegHeart,
+    FaHeart,
     FaChevronLeft,
     FaTicketAlt,
     FaUserTie,
+    FaCheckCircle,
 } from "react-icons/fa";
 import { BsChatText } from "react-icons/bs";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 
 export default function Detail({ trip }) {
     const currentTrip = trip;
+
+    const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
+
+    const handleToggleLike = () => {
+        setIsLiked((v) => !v);
+        router.post(
+            "/favorites/toggle",
+            { type: "trip", id: trip.id },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setIsLiked((v) => !v),
+            },
+        );
+    };
 
     const IconMap = {
         FaCarSide:    FaCarSide,
@@ -149,6 +166,13 @@ export default function Detail({ trip }) {
                         <FaChevronLeft className="text-sm -ml-0.5" />
                     </Link>
 
+                    {currentTrip.already_joined && (
+                        <div className="absolute top-6 right-6 md:top-8 md:right-8 z-10 flex items-center gap-2 rounded-full bg-success-600/95 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm">
+                            <FaCheckCircle className="text-base" />
+                            Anda sudah didalam grup trip ini!
+                        </div>
+                    )}
+
                     <div className="absolute bottom-0 left-0 w-full p-6 md:p-10 text-white">
                         <h1 className="text-4xl md:text-5xl font-bold mb-3">
                             {currentTrip.title}
@@ -160,21 +184,27 @@ export default function Detail({ trip }) {
                             <span>{currentTrip.duration}</span>
                         </div>
 
-                        {/* Avatar Group — dinamis berdasarkan joined_count */}
+                        {/* Avatar Group — peserta asli yang sudah bergabung */}
                         {currentTrip.joined_count > 0 && (
                             <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
                                 <div className="flex -space-x-3">
-                                    {Array.from({ length: Math.min(currentTrip.joined_count, 3) }).map((_, i) => (
-                                        <img
-                                            key={i}
-                                            src={`https://i.pravatar.cc/100?img=${i + 10}`}
-                                            className="w-8 h-8 rounded-full border-2 border-white/40 object-cover"
-                                            alt="User"
-                                        />
-                                    ))}
-                                    {currentTrip.joined_count > 3 && (
+                                    {(currentTrip.participants ?? [])
+                                        .slice(0, 4)
+                                        .map((p, i) => (
+                                            <img
+                                                key={i}
+                                                src={p.avatar}
+                                                title={p.name}
+                                                className="w-8 h-8 rounded-full border-2 border-white/40 object-cover bg-neutral-200"
+                                                alt={p.name}
+                                                onError={(e) => {
+                                                    e.target.src = "/assets/default-profile.png";
+                                                }}
+                                            />
+                                        ))}
+                                    {currentTrip.joined_count > 4 && (
                                         <div className="w-8 h-8 rounded-full border-2 border-white/40 bg-blue-100 text-primary-700 flex items-center justify-center text-xs font-bold z-10">
-                                            +{currentTrip.joined_count - 3}
+                                            +{currentTrip.joined_count - 4}
                                         </div>
                                     )}
                                 </div>
@@ -182,6 +212,9 @@ export default function Detail({ trip }) {
                                     <p className="font-semibold text-white">Wisatawan Terkonfirmasi</p>
                                     <p className="text-white/80 font-medium">
                                         {currentTrip.joined_count}/{currentTrip.capacity} telah bergabung
+                                        {currentTrip.remaining_seats > 0 && (
+                                            <> · sisa {currentTrip.remaining_seats} kursi</>
+                                        )}
                                     </p>
                                 </div>
                             </div>
@@ -398,8 +431,22 @@ export default function Detail({ trip }) {
                             >
                                 Booking Sekarang <FaArrowRight className="text-sm" />
                             </Button>
-                            <button className="w-11 h-11 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-500 hover:text-red-500 hover:border-red-500 hover:bg-red-50 transition-colors bg-white shrink-0">
-                                <FaRegHeart className="text-[17px]" />
+                            <button
+                                type="button"
+                                onClick={handleToggleLike}
+                                aria-pressed={isLiked}
+                                aria-label={isLiked ? "Batal sukai trip" : "Sukai trip"}
+                                className={`w-11 h-11 rounded-full border flex items-center justify-center transition-colors bg-white shrink-0 ${
+                                    isLiked
+                                        ? "border-red-500 text-red-500 bg-red-50"
+                                        : "border-neutral-300 text-neutral-500 hover:text-red-500 hover:border-red-500 hover:bg-red-50"
+                                }`}
+                            >
+                                {isLiked ? (
+                                    <FaHeart className="text-[17px]" />
+                                ) : (
+                                    <FaRegHeart className="text-[17px]" />
+                                )}
                             </button>
                         </div>
                     </div>

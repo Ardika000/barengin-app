@@ -12,9 +12,16 @@ export default function MainLayout({ children }) {
 
     const hideLayout =
         url.startsWith("/reset-password") ||
-        ["/login", "/register", "/onboarding", "/forgot-password"].includes(url);
+        ["/login", "/register", "/onboarding", "/forgot-password"].includes(
+            url,
+        );
 
-    const hideFooter = url.startsWith("/forum") || url.startsWith("/post") || url.startsWith("/trip-bareng/") || url.startsWith("/jastip/");
+    const hideFooter =
+        url.startsWith("/profile-history") ||
+        url.startsWith("/forum") ||
+        url.startsWith("/post") ||
+        url.startsWith("/trip-bareng/") ||
+        url.startsWith("/jastip/");
 
     return (
         <>

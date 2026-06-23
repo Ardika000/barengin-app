@@ -29,11 +29,11 @@ export default function NavbarAuth() {
         { label: "Pergi Bareng", href: "/pergi-bareng", icon: FaCarSide },
     ];
 
-    const avatarUrl =
+    const avatarUrl = user?.public_profile_image ||
         user?.avatar_url ||
         user?.profile_photo_url ||
         user?.avatar ||
-        "/assets/default-avatar.png";
+        "/assets/default-profile.png";
 
     const closeAll = () => {
         setIsDesktopDropdownOpen(false);
@@ -79,7 +79,7 @@ export default function NavbarAuth() {
                         withDividers
                     />
 
-                    <NavLink href="/jastip">Jastip</NavLink>
+                    {/* <NavLink href="/jastip">Jastip</NavLink> */}
                     <NavLink href="/forum">Forum</NavLink>
                     <NavLink href="/leaderboard">Leaderboard</NavLink>
                 </nav>
@@ -106,7 +106,7 @@ export default function NavbarAuth() {
                             },
                             {
                                 label: "Profile History",
-                                href: "/profile/history",
+                                href: "/profile-history",
                                 icon: HiOutlineDocumentText,
                             },
                             {
@@ -209,7 +209,7 @@ export default function NavbarAuth() {
                             </Link>
 
                             <Link
-                                href="/profile/history"
+                                href="/profile-history"
                                 onClick={closeAll}
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >

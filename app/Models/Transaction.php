@@ -11,7 +11,7 @@ class Transaction extends Model
     protected $primaryKey = 'id';
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['user_id', 'total_amount', 'type', 'payment_method', 'va_number', 'expired_at'];
+    protected $fillable = ['user_id', 'total_amount', 'type', 'payment_method', 'snap_token', 'va_number', 'expired_at'];
 
     protected function casts(){
         return [

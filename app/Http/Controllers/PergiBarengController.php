@@ -17,8 +17,16 @@ class PergiBarengController extends Controller
     {
         $parsedDate = $trip->time_appointment;
 
-        $avgRating = $trip->initiator?->allRating() ?? 0;
-        $totalReviews = $trip->initiator?->user_ratings?->count() ?? 0;
+        $avgRating = $trip->initiator?->receivedRatingAvg('pergi_bareng') ?? 0;
+        $totalReviews = $trip->initiator?->receivedRatingCount('pergi_bareng') ?? 0;
+
+        $authId = request()->user()?->id;
+        $isFollowing = $authId && $trip->initiator
+            ? DB::table('follows')
+                ->where('follower_id', $authId)
+                ->where('following_id', $trip->initiator->id)
+                ->exists()
+            : false;
 
         return [
             'id' => $trip->id,
@@ -39,11 +47,14 @@ class PergiBarengController extends Controller
 
             'organizer' => [
                 'id' => $trip->initiator?->id,
+                'username' => $trip->initiator?->username,
                 'name' => $trip->initiator?->full_name ?? 'Penyelenggara',
                 'avatar' => $trip->initiator?->public_profile_image ?? asset('assets/default-profile.png'),
-                'rating' => number_format($avgRating, 1), 
+                'rating' => number_format($avgRating, 1),
                 'reviews' => (int)$totalReviews,
                 'verified' => true,
+                'is_following' => $isFollowing,
+                'is_self' => $authId === $trip->initiator?->id,
             ],
             'participants' => $trip->pergi_bareng_participants->map(function ($p) {
                 // Hitung umur
@@ -56,7 +67,7 @@ class PergiBarengController extends Controller
                     'name' => $p->full_name,
                     'age' => $age, // <-- Cukup kirim angkanya saja atau '?'
                     'rating' => 5.0, 
-                    'avatar' => $p->user ? ($p->user->profile_photo_url ?? '/assets/default-avatar.png') : '/assets/default-avatar.png',
+                    'avatar' => $p->user ? ($p->user->public_profile_image ?? '/assets/default-profile.png') : '/assets/default-profile.png',
                     'verified' => $p->user_id ? true : false
                 ];
             }),
@@ -75,7 +86,8 @@ class PergiBarengController extends Controller
         $sortBy = $request->query('sort', 'schedule');
 
         // 2. Siapkan query dasar beserta relasinya
-        $query = PergiBareng::with(['initiator.user_ratings', 'pergi_bareng_participants']);
+        $query = PergiBareng::with(['initiator.user_ratings', 'pergi_bareng_participants'])
+            ->where('time_appointment', '>=', now()); // sembunyikan yang sudah lewat
 
         // --- LOGIKA SORTING DATABASE ---
         if ($sortBy === 'schedule') {
@@ -88,12 +100,20 @@ class PergiBarengController extends Controller
 
         $trips = $query->get();
 
+        $likedIds = $request->user()
+            ? DB::table('favorites')
+                ->where('user_id', $request->user()->id)
+                ->where('favoritable_type', 'pergi_bareng')
+                ->pluck('favoritable_id')
+                ->flip()
+            : collect();
+
         // 3. Format data agar sesuai dengan props yang diminta oleh PergiBarengCard.jsx di React
-        $formattedTrips = $trips->map(function ($trip) {
+        $formattedTrips = $trips->map(function ($trip) use ($likedIds) {
             $parsedDate = $trip->time_appointment;
             
-            $avgRating = $trip->initiator?->allRating() ?? 0;
-            $totalReviews = $trip->initiator?->user_ratings?->count() ?? 0;
+            $avgRating = $trip->initiator?->receivedRatingAvg('pergi_bareng') ?? 0;
+            $totalReviews = $trip->initiator?->receivedRatingCount('pergi_bareng') ?? 0;
             $joined = $trip->pergi_bareng_participants->count();
 
             $transportIcon = 'car';
@@ -104,7 +124,7 @@ class PergiBarengController extends Controller
 
             return [
                 'id' => $trip->id,
-                'image' => $trip->img_name ? '/storage/' . $trip->img_name : '/assets/terminal-cibubur.jpg', 
+                'image' => $trip->img_name ? '/storage/' . $trip->img_name : '/assets/pergi-bareng/PergiBarengHeader.avif',
                 'title' => $trip->name,
                 'address' => $trip->departure_loc,
                 'date' => $parsedDate->translatedFormat('d M y'),
@@ -122,6 +142,7 @@ class PergiBarengController extends Controller
                 'transportType' => $trip->transportation,
                 'transportIcon' => $transportIcon,
                 'href' => '/pergi-bareng/' . $trip->id,
+                'liked' => $likedIds->has($trip->id),
             ];
         });
 
@@ -144,13 +165,22 @@ class PergiBarengController extends Controller
     {
         // Load semua relasi yang dibutuhkan termasuk user_ratings dari initiator
         $trip = PergiBareng::with([
-            'initiator.user_ratings', 
+            'initiator.user_ratings',
             'pergi_bareng_participants.user',
             'financing_estimate'
         ])->findOrFail($id);
-        
+
+        $data = $this->formatTripData($trip);
+        $data['liked'] = request()->user()
+            ? DB::table('favorites')
+                ->where('user_id', request()->user()->id)
+                ->where('favoritable_type', 'pergi_bareng')
+                ->where('favoritable_id', $trip->id)
+                ->exists()
+            : false;
+
         return Inertia::render('PergiBareng/Show', [
-            'trip' => $this->formatTripData($trip)
+            'trip' => $data
         ]);
     }
 

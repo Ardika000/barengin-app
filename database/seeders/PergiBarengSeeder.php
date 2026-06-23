@@ -6,6 +6,7 @@ use App\Models\PergiBareng;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\File;
 
 class PergiBarengSeeder extends Seeder
 {
@@ -14,6 +15,9 @@ class PergiBarengSeeder extends Seeder
      */
     public function run(): void
     {
+        // Pastikan gambar contoh tersedia di storage (disajikan via storage link)
+        $sampleImage = $this->ensureSeedImage();
+
         // Get beberapa user untuk jadi initiator
         $users = User::where('id', '>=', 1)->take(5)->get();
 
@@ -133,9 +137,32 @@ class PergiBarengSeeder extends Seeder
             // Assign random user sebagai initiator
             $trip['initiator_id'] = $users[$index % count($users)]->id;
 
+            // Gunakan gambar contoh dari storage (storage link)
+            $trip['img_name'] = $sampleImage;
+
             PergiBareng::create($trip);
         }
 
         $this->command?->info('PergiBareng seeder telah berhasil di-generate dengan 10 data!');
+    }
+
+    /**
+     * Salin satu gambar contoh dari folder public ke storage/app/public
+     * lalu kembalikan path relatifnya (disajikan lewat storage link).
+     */
+    private function ensureSeedImage(): string
+    {
+        $relative = 'seed/sample.jpg';
+        $target   = storage_path('app/public/' . $relative);
+
+        if (! File::exists($target)) {
+            File::ensureDirectoryExists(dirname($target));
+            $source = public_path('assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');
+            if (File::exists($source)) {
+                File::copy($source, $target);
+            }
+        }
+
+        return $relative;
     }
 }

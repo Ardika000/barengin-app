@@ -13,33 +13,48 @@ use Midtrans\Snap;
 
 class TripsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $tripsPaginated = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
+            ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
             ->orderBy('trips.created_at', 'desc')
             ->paginate(9);
 
-        $tripsPaginated->getCollection()->transform(function ($trip) {
+        $likedTripIds = $request->user()
+            ? DB::table('favorites')
+                ->where('user_id', $request->user()->id)
+                ->where('favoritable_type', 'trip')
+                ->pluck('favoritable_id')
+                ->all()
+            : [];
+        $likedTripIds = array_flip($likedTripIds);
+
+        $tripsPaginated->getCollection()->transform(function ($trip) use ($likedTripIds) {
             $startDate = Carbon::parse($trip->start_date);
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
-            // [PERBAIKAN]: Hitung partisipan murni sesuai tabel DB (tanpa angka acak)
-            $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+            // Peserta = user unik yang sudah membayar (trip_orders)
+            $joined = DB::table('trip_orders')
+                ->where('trip_id', $trip->id)
+                ->where('order_status', 'paid')
+                ->distinct()
+                ->count('user_id');
 
             // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
             $remaining = $trip->people_amount - $joined;
 
+            // Rating pemandu dari ulasan trip (type: jalan_bareng)
             $guiderRating = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
-                ->where('type', 'pergi_bareng')
+                ->where('type', 'jalan_bareng')
                 ->avg('rating_amount');
 
             $guiderReviews = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
-                ->where('type', 'pergi_bareng')
+                ->where('type', 'jalan_bareng')
                 ->count();
 
             return [
@@ -54,12 +69,12 @@ class TripsController extends Controller
                 'price' => (float) $trip->price,
                 'guide_id' => $trip->guider_id, 
                 'guide' => $trip->guide_name,
-                'guide_avatar' => $trip->profile_image ?? '/assets/default-avatar.png',
+                'guide_avatar' => $trip->profile_image ?? '/assets/default-profile.png',
                 'guide_rating' => $guiderRating ? number_format($guiderRating, 1) : '0',
                 'guide_reviews' => $guiderReviews,
                 'guide_badge' => 'Expert Guide',
-                'image' => $trip->image ?? '/assets/trips/bromo.jpg',
-                'liked' => false,
+                'image' => $this->resolveTripImage($trip->image),
+                'liked' => isset($likedTripIds[$trip->id]),
             ];
         });
 
@@ -71,7 +86,7 @@ class TripsController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         // 1. Ambil data spesifik trip
         $trip = DB::table('trips')
@@ -82,13 +97,27 @@ class TripsController extends Controller
 
         if (!$trip) abort(404);
 
-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+        // Peserta = user unik yang sudah membayar (trip_orders)
+        $participants = DB::table('trip_orders')
+            ->join('users', 'trip_orders.user_id', '=', 'users.id')
+            ->where('trip_orders.trip_id', $trip->id)
+            ->where('trip_orders.order_status', 'paid')
+            ->select('users.id', 'users.full_name', 'users.profile_image')
+            ->distinct()
+            ->get()
+            ->map(fn ($u) => [
+                'id'     => $u->id,
+                'name'   => $u->full_name,
+                'avatar' => $this->resolveAvatar($u->profile_image),
+            ])
+            ->values();
 
-        // 2. Ambil Rata-Rata Rating Guide
+        $joined = $participants->count();
+
+        // 2. Ambil Rata-Rata Rating Guide (type: jalan_bareng)
         $guiderRating = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
-            ->where('type', 'pergi_bareng')
+            ->where('type', 'jalan_bareng')
             ->avg('rating_amount');
 
         $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';
@@ -135,6 +164,8 @@ class TripsController extends Controller
             'date_range'  => $startDate->format('d F Y') . ' hingga ' . $endDate->format('d F Y'),
             'joined_count' => $joined,
             'capacity'    => $trip->people_amount,
+            'remaining_seats' => max(0, $trip->people_amount - $joined),
+            'participants' => $participants,
             'price'       => (float) $trip->price,
             'description' => $trip->description,
             'host' => [
@@ -142,10 +173,24 @@ class TripsController extends Controller
                 'name' => $trip->guide_name,
                 'role' => 'Pemilik',
                 'badge' => 'Expert Guide - ★ ' . $ratingText,
-                'avatar' => $trip->profile_image ?? '/assets/default-avatar.png'
+                'avatar' => $this->resolveAvatar($trip->profile_image),
             ],
             'itinerary'   => $itinerary,
             'facilities'  => $facilities,
+            'already_joined' => $request->user()
+                ? DB::table('trip_orders')
+                    ->where('trip_id', $trip->id)
+                    ->where('user_id', $request->user()->id)
+                    ->where('order_status', 'paid')
+                    ->exists()
+                : false,
+            'liked'       => $request->user()
+                ? DB::table('favorites')
+                    ->where('user_id', $request->user()->id)
+                    ->where('favoritable_type', 'trip')
+                    ->where('favoritable_id', $trip->id)
+                    ->exists()
+                : false,
         ];
 
         return Inertia::render('TripBareng/Detail', [
@@ -158,8 +203,8 @@ class TripsController extends Controller
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+        // Jumlah peserta = user unik yang sudah membayar (konsisten dgn detail & index)
+        $joined = $this->joinedCount($trip->id);
 
         $trip_check_out = [
             'id' => $trip->id,
@@ -168,7 +213,7 @@ class TripsController extends Controller
             'joined_count' => $joined, // <--- Pakai data asli
             'capacity' => $trip->people_amount,
             'remaining_quota' => $trip->people_amount - $joined, // <--- Hitungan sisa kursi akurat
-            'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+            'image' => $this->resolveTripImage($trip->image),
         ];
 
         return Inertia::render('TripBareng/Checkout', [
@@ -191,7 +236,7 @@ class TripsController extends Controller
         $participants = $request->input('participants', []);
 
         // Validasi sisa kuota
-        $joined    = DB::table('trip_participants')->where('trip_id', $id)->count();
+        $joined    = $this->joinedCount($id);
         $remaining = $trip->people_amount - $joined;
 
         if ($quantity > $remaining) {
@@ -224,6 +269,7 @@ class TripsController extends Controller
                 'trip_id'        => $id,
                 'user_id'        => $user->id,
                 'quantity'       => $quantity,
+                'participants'   => json_encode($participants),
                 'total'          => $totalAmount,
                 'order_status'   => 'pending',
                 'created_at'     => now(),
@@ -277,6 +323,12 @@ class TripsController extends Controller
         try {
             $snapToken = \Midtrans\Snap::getSnapToken($params);
 
+            // Simpan token agar pembayaran bisa dibuka kembali dari Profile History
+            DB::table('transactions')->where('id', $transactionId)->update([
+                'snap_token' => $snapToken,
+                'updated_at' => now(),
+            ]);
+
             return response()->json([
                 'snap_token'     => $snapToken,
                 'transaction_id' => $transactionId,
@@ -293,16 +345,21 @@ class TripsController extends Controller
         }
     }
 
-    public function success($id)
+    public function success(Request $request, $id)
     {
+        // Pastikan status pembayaran tersinkron (peserta & grup chat dibuat saat lunas)
+        if ($request->user()) {
+            MidtransController::syncPendingForUser($request->user()->id);
+        }
+
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
         $startDate = Carbon::parse($trip->start_date);
         $endDate = Carbon::parse($trip->end_date);
 
-        // [PERBAIKAN] Ambil jumlah partisipan asli yang sudah tergabung di trip ini dari DB
-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+        // Jumlah peserta = user unik yang sudah membayar (konsisten dgn detail & index)
+        $joined = $this->joinedCount($trip->id);
 
         $order = [
             'transaction_id' => 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
@@ -310,12 +367,59 @@ class TripsController extends Controller
             'trip_title' => $trip->name,
             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
             'quantity' => 1,
-            'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+            'image' => $this->resolveTripImage($trip->image),
             'friends_waiting' => $joined, // <-- Ganti rand(3, 15) menjadi data asli ($joined)
         ];
 
         return Inertia::render('TripBareng/Success', [
             'order' => $order,
         ]);
+    }
+
+    /**
+     * Ubah path gambar trip dari DB menjadi URL yang bisa dipakai <img>.
+     * - kosong  -> gambar contoh
+     * - http/.. -> dipakai apa adanya
+     * - relatif -> diarahkan ke storage link
+     */
+    /**
+     * Jumlah peserta yang sudah bergabung = user unik yang sudah membayar.
+     * Dipakai konsisten di index, detail, checkout, & success.
+     */
+    private function joinedCount($tripId): int
+    {
+        return (int) DB::table('trip_orders')
+            ->where('trip_id', $tripId)
+            ->where('order_status', 'paid')
+            ->distinct()
+            ->count('user_id');
+    }
+
+    private function resolveTripImage(?string $path): string
+    {
+        $fallback = '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg';
+
+        if (! $path) {
+            return $fallback;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        return '/storage/' . $path;
+    }
+
+    private function resolveAvatar(?string $path): string
+    {
+        if (! $path) {
+            return asset('assets/default-profile.png');
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        return asset('storage/' . $path);
     }
 }

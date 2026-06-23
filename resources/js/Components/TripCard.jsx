@@ -7,6 +7,7 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import { BsChatDots } from "react-icons/bs";
 import { Link, router } from "@inertiajs/react";
+import { useState } from "react";
 
 import Button from "@/Components/Button";
 
@@ -31,6 +32,21 @@ export default function TripCard({ trip }) {
 
     const joinedCountSafe = typeof joined_count === "number" ? joined_count : 0;
     const capacitySafe = typeof capacity === "number" ? capacity : 0;
+
+    const [isLiked, setIsLiked] = useState(Boolean(liked));
+
+    const handleToggleLike = () => {
+        setIsLiked((v) => !v);
+        router.post(
+            "/favorites/toggle",
+            { type: "trip", id: trip.id },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setIsLiked((v) => !v),
+            },
+        );
+    };
     const handleOpenChat = () => {
             const otherUserId = trip?.guide_id;
     
@@ -43,7 +59,7 @@ export default function TripCard({ trip }) {
         };
 
     return (
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition">
+        <div className="flex flex-col rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden transition hover:shadow-md">
             {/* --- Bagian Gambar --- */}
             <div className="relative">
                 <img
@@ -55,9 +71,15 @@ export default function TripCard({ trip }) {
                             "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?q=80&w=2071&auto=format&fit=crop";
                     }}
                 />
-                <button className="absolute right-3 top-3 bg-white/90 rounded-full p-2 shadow z-10 hover:scale-105 transition-transform">
+                <button
+                    type="button"
+                    onClick={handleToggleLike}
+                    aria-pressed={isLiked}
+                    aria-label={isLiked ? "Batal sukai trip" : "Sukai trip"}
+                    className="absolute right-3 top-3 bg-white/90 rounded-full p-2 shadow z-10 hover:scale-105 transition-transform cursor-pointer"
+                >
                     <FaHeart
-                        className={`h-5 w-5 ${liked ? "text-red-500" : "text-gray-400"}`}
+                        className={`h-5 w-5 transition-colors ${isLiked ? "text-red-500" : "text-gray-400"}`}
                     />
                 </button>
 
@@ -72,12 +94,12 @@ export default function TripCard({ trip }) {
             <div className="p-5">
                 {/* Judul & Lokasi */}
                 <div className="mb-4 space-y-1">
-                    <h3 className="text-xl font-bold text-gray-900 line-clamp-1">
+                    <h3 className="text-lg font-bold text-neutral-900 line-clamp-1">
                         {title}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium">
-                        <FaMapMarkerAlt className="text-primary-600" />
-                        <p>{location}</p>
+                    <div className="flex items-center gap-1.5 text-sm text-neutral-500 font-medium">
+                        <FaMapMarkerAlt className="text-primary-600 shrink-0" />
+                        <span className="truncate">{location}</span>
                     </div>
                 </div>
 
@@ -138,22 +160,22 @@ export default function TripCard({ trip }) {
                     </div>
                 </div>
 
-                <hr className="border-t border-dashed border-gray-300 my-5" />
+                <hr className="my-4 border-t border-dashed border-neutral-200" />
 
                 {/* Info Pemandu */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <div className="h-11 w-11 shrink-0 rounded-full bg-gray-200 overflow-hidden border border-neutral-200">
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-200 overflow-hidden border border-neutral-200">
                             <img
                                 src={guide_avatar}
                                 alt={guide}
                                 className="h-full w-full object-cover"
                             />
                         </div>
-                        
+
                         <div className="min-w-0 max-w-[140px] sm:max-w-[160px]">
                             {/* NAMA */}
-                            <div className="flex items-center gap-1 text-sm font-bold text-gray-900 min-w-0">
+                            <div className="flex items-center gap-1 text-sm font-bold text-neutral-900 min-w-0">
                                 <span className="truncate">{guide}</span>
                                 <MdVerified className="text-blue-500 shrink-0 size-4" />
                             </div>
@@ -177,7 +199,7 @@ export default function TripCard({ trip }) {
                     <Button
                         size="xs"
                         variant="outline"
-                        className="px-4 py-2.5 flex gap-1 items-center shrink-0"
+                        className="gap-1.5 shrink-0"
                         onClick={handleOpenChat}
                     >
                         <BsChatDots size={14} />
@@ -185,7 +207,7 @@ export default function TripCard({ trip }) {
                     </Button>
                 </div>
 
-                <hr className="border-t border-dashed border-gray-300 my-5" />
+                <hr className="my-4 border-t border-dashed border-neutral-200" />
 
                 {/* Harga & Tombol Aksi */}
                 <div className="flex items-center justify-between">

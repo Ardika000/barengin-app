@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
          $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+
+        // Webhook Midtrans dikecualikan dari verifikasi CSRF
+        $middleware->validateCsrfTokens(except: [
+            'midtrans/notification',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {

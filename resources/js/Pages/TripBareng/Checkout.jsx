@@ -173,9 +173,19 @@ export default function Checkout({ trip, midtrans_client_key }) {
                 localStorage.removeItem(storageKey);
                 router.visit(`/trip-bareng/${trip.id}/success`);
             },
-            onPending: () => { setIsProcessing(false); },
-            onError:   () => { alert("Pembayaran gagal. Silakan coba lagi."); setIsProcessing(false); },
-            onClose:   () => { setIsProcessing(false); },
+            onPending: () => {
+                // Transaksi tercatat sebagai "Menunggu Pembayaran"
+                localStorage.removeItem(storageKey);
+                router.visit("/profile-history?tab=transactions");
+            },
+            onError: () => {
+                alert("Pembayaran gagal. Silakan coba lagi.");
+                setIsProcessing(false);
+            },
+            onClose: () => {
+                // Transaksi sudah dibuat (pending) -> arahkan ke riwayat transaksi
+                router.visit("/profile-history?tab=transactions");
+            },
         });
     };
 

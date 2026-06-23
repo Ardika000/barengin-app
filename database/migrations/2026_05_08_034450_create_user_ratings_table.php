@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('rated_user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
-            $table->enum('type', ['jastiper', 'pergi_bareng']);
+            $table->enum('type', ['jastiper', 'pergi_bareng', 'trip_bareng']);
             $table->decimal('rating_amount', 3, 2);
             $table->text('comment')->nullable();
-            $table->timestamps();
+            $table->timestamps();   
 
         });
     }

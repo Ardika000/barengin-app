@@ -8,26 +8,33 @@ use App\Http\Controllers\Chat\ChatConversationController;
 use App\Http\Controllers\Chat\ChatReadController;
 use App\Http\Controllers\Chat\ChatUserController;
 use App\Http\Controllers\ForumController;
-use App\Http\Controllers\ForumProfileController;
 use App\Http\Controllers\ForumFollowController;
-use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\ForumLocationController;
-use App\Http\Controllers\TripsController;
-use App\Http\Controllers\PostController;
+use App\Http\Controllers\ForumPeopleController;
+use App\Http\Controllers\ForumProfileController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\PergiBarengController;
-
-
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ProfileHistoryController;
+use App\Http\Controllers\TripsController;
+use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AdminMessageController;
+use App\Http\Controllers\ContactController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return inertia('Home/Index');
-})->name('home');
+    })->name('home');
 
-/*
-|--------------------------------------------------------------------------
-| Guest routes
-|--------------------------------------------------------------------------
-*/
+Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.store');
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Guest routes
+    |--------------------------------------------------------------------------
+    */
 // Auth
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
@@ -98,6 +105,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/forum/locations/search', [ForumLocationController::class, 'search']);
     Route::get('/forum/locations/reverse', [ForumLocationController::class, 'reverse']);
     Route::get('/forum/locations/popular', [ForumLocationController::class, 'popular']);
+
+    // Favorites (Like) untuk Trip & Pergi Bareng
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
+
+    // Ulasan Trip / Pergi Bareng
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+
+    // Profile History
+    Route::get('/profile-history', [ProfileHistoryController::class, 'index'])->name('profile-history');
+    Route::put('/profile-history', [ProfileHistoryController::class, 'update'])->name('profile-history.update');
+    Route::post('/profile-history/image', [ProfileHistoryController::class, 'updateProfileImage'])->name('profile-history.image.update');
+    Route::delete('/profile-history/image', [ProfileHistoryController::class, 'removeProfileImage'])->name('profile-history.image.remove');
 });
 
 Route ::get('/pergi-bareng',function(){
@@ -115,6 +134,9 @@ Route::prefix('pergi-bareng')->group(function () {
 
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+
+// Midtrans webhook (server-to-server, tanpa auth & CSRF)
+Route::post('/midtrans/notification', [MidtransController::class, 'notification'])->name('midtrans.notification');
 
 Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
 Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
@@ -155,53 +177,12 @@ Route::prefix('Admin')->group(function () {
         return inertia('Admin/Test');
     })->name('admin'); 
 
-    Route::get('/management-user', function () {
-        return inertia('Admin/ManagementUser', ['users' => \App\Models\User::all()]);
-    })->name('management-user');
-    
-    // Rute untuk Halaman Edit
-    Route::get('/management-user/{id}/edit-role', function ($id) {
-    // Return inertia page form edit-nya di sini
-    })->name('management-user.edit');
+    Route::get('/management-user', [AdminUserController::class, 'index'])->name('management-user');
+    Route::get('/management-user/{id}/edit-role', [AdminUserController::class, 'edit'])->name('management-user.edit');
+    Route::put('/management-user/{id}', [AdminUserController::class, 'update'])->name('management-user.update');
+    Route::delete('/management-user/{id}', [AdminUserController::class, 'destroy'])->name('management-user.destroy');
 
-    // Rute untuk Action Delete
-    Route::delete('/management-user/{id}', function ($id) {
-        \App\Models\User::destroy($id);
-        return redirect()->back(); // Wajib direturn balik supaya tabel di react ke-refresh
-    })->name('management-user.destroy');
-
-// Rute untuk Halaman Edit
-    Route::get('/management-user/{id}/edit-role', function ($id) {
-        $user = \App\Models\User::findOrFail($id);
-        
-        return inertia('Admin/EditUser', [
-            'user' => $user
-        ]);
-    })->name('management-user.edit');
-
-    // Rute untuk Menyimpan Perubahan (Save User)
-    Route::put('/management-user/{id}', function (\Illuminate\Http\Request $request, $id) {
-            $user = \App\Models\User::findOrFail($id);
-            
-            // Update role & verified status langsung ke kolom is_verified
-            $user->update([
-                'is_admin' => $request->is_admin,
-                'is_guider' => $request->is_guider,
-                'is_jastiper' => $request->is_jastiper,
-                'is_verified' => $request->verified,
-            ]);
-
-            return redirect()->route('management-user')->with('success', 'User berhasil diupdate!');
-        });
-
-        Route::get('/messages', function () {
-            return inertia('Admin/Messages');
-        })->name('messages');
+    Route::get('/message', [AdminMessageController::class, 'index'])->name('admin.message.index');
+    Route::delete('/message/{id}', [AdminMessageController::class, 'destroy'])->name('admin.message.destroy');
 
 });
-
-// test route
-Route::get('/Admin', function () {
-    return inertia('Admin/Test');
-})->name('admin'); 
-

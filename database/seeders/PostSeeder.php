@@ -56,7 +56,7 @@ class PostSeeder extends Seeder
             for ($i = 0; $i < $imageCount; $i++) {
                 PostImage::create([
                     'post_id' => $post->id,
-                    'img_name' => '/assets/default-image.png',
+                    'img_name' => '/assets/default-profile.png',
                 ]);
             }
         }

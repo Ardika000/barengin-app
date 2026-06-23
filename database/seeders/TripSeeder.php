@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -14,6 +15,9 @@ class TripSeeder extends Seeder
     public function run()
     {
         $faker = Faker::create('id_ID');
+
+        // Pastikan gambar contoh tersedia di storage (disajikan via storage link)
+        $tripImage = $this->ensureSeedImage();
 
         // Data dummy deskripsi trip
         $tripDescriptions = [
@@ -80,7 +84,7 @@ class TripSeeder extends Seeder
                 'end_date'     => $endDate,
                 'rating'       => $faker->randomFloat(2, 4.0, 5.0),
                 'price'        => $price,
-                'image'        => '/assets/trips/bromo.jpg',
+                'image'        => $tripImage,
                 'location'     => $cityName, // ← nama kota asli, bukan "Indonesia"
                 'created_at'   => now(),
                 'updated_at'   => now(),
@@ -139,7 +143,7 @@ class TripSeeder extends Seeder
             DB::table('user_ratings')->insert([
                 'user_id' => $customerId,
                 'rated_user_id' => $guiderId,
-                'type' => 'pergi_bareng',
+                'type' => 'jalan_bareng',
                 'rating_amount' => $faker->randomFloat(2, 4.0, 5.0),
                 'comment' => $faker->randomElement(['Guide sangat ramah dan seru!', 'Perjalanan aman dan menyenangkan.', 'Sangat direkomendasikan untuk trip bareng.', 'Itinerary jelas dan on-time.']),
                 'created_at' => now(),
@@ -156,5 +160,25 @@ class TripSeeder extends Seeder
             //     'transaction_id' => $transactionId, 'trip_id' => $tripId, 'user_id' => $customerId, 'quantity' => 1, 'total' => $price, 'order_status' => 'paid', 'created_at' => now()
             // ]);
         }
+    }
+
+    /**
+     * Salin satu gambar contoh dari folder public ke storage/app/public
+     * lalu kembalikan path relatifnya (disajikan lewat storage link).
+     */
+    private function ensureSeedImage(): string
+    {
+        $relative = 'seed/sample.jpg';
+        $target   = storage_path('app/public/' . $relative);
+
+        if (! File::exists($target)) {
+            File::ensureDirectoryExists(dirname($target));
+            $source = public_path('assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');
+            if (File::exists($source)) {
+                File::copy($source, $target);
+            }
+        }
+
+        return $relative;
     }
 }
