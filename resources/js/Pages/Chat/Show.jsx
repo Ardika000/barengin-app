@@ -448,7 +448,7 @@ export default function ChatShow({
                         </div>
 
                         <div className="h-[calc(100vh-96px-84px-96px)] overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
-                            <div className="space-y-8">
+                            <div className="space-y-2">
                                 {(localMessages ?? []).map((m) => {
                                     const isMine = Number(m.sender_id) === Number(authUser?.id);
                                     const isRead =
@@ -465,6 +465,8 @@ export default function ChatShow({
                                             time={formatTime(m.created_at)}
                                             readText={isRead ? "dibaca" : ""}
                                             avatar={m.sender?.avatar}
+                                            isGroup={conversation?.is_group}
+                                            senderName={m.sender?.name}
                                             attachmentUrl={m.attachment_url}
                                             attachmentType={m.attachment_type}
                                             attachmentName={m.attachment_name}

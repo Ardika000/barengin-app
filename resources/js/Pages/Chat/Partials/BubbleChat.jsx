@@ -14,12 +14,16 @@ export default function Bubble({
     attachmentUrl,
     attachmentType,
     attachmentName,
+    isGroup,
+    senderName,
 }) {
     const isImage =
         attachmentType &&
         ["image/jpeg", "image/png", "image/webp"].includes(attachmentType);
 
     const isPdf = attachmentType === "application/pdf";
+
+    const showSenderName = isGroup && !mine && senderName;
 
     return (
         <div className={cn("flex w-full", mine ? "justify-end" : "justify-start")}>
@@ -34,6 +38,12 @@ export default function Bubble({
                         mine ? "rounded-br-sm" : "rounded-bl-sm",
                     )}
                 >
+                    {showSenderName ? (
+                        <div className="mb-1 text-xs font-semibold text-primary-700 break-words">
+                            {senderName}
+                        </div>
+                    ) : null}
+
                     {text ? (
                         <div className="whitespace-pre-line text-sm text-neutral-700 break-words break-all">
                             {text}

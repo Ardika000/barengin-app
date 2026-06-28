@@ -43,7 +43,7 @@ class ChatController extends Controller
         $conversation->load([
             'participants:id,full_name,profile_image',
             'trip:id,name,guider_id',
-            'pergi_bareng:id,name, img_name ,initiator_id',
+            'pergi_bareng:id,name,img_name,initiator_id',
         ]);
 
         $peer = $conversation->participants->firstWhere('id', '!=', $user->id);
