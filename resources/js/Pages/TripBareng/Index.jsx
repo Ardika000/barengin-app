@@ -41,25 +41,25 @@ export default function Index({ trips, all_trips, filters = {} }) {
 
             {/* Hero */}
             <header
-                className="relative pt-28 pb-32 md:pt-40 md:pb-44 bg-cover bg-center bg-no-repeat"
+                className="pt-24 pb-30 md:pt-40 md:pb-40 bg-cover bg-center"
                 style={{
                     backgroundImage:
-                        "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6)), url('/assets/trip-bareng/hero-bg.png')",
+                        "linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.4)), url('/assets/trip-bareng/hero-bg.png')",
                 }}
             >
-                <Container className="relative z-10 text-center text-white px-4">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight">
-                        Eksplor Tempat di Sekitar Anda
+                <Container className="text-center text-white">
+                    <h1 className="text-4xl md:text-6xl font-semibold mb-4">
+                        Jelajahi Trip Impianmu
                     </h1>
-                    <p className="text-sm sm:text-base md:text-lg mb-0 max-w-2xl mx-auto font-normal text-neutral-200 leading-relaxed">
-                        Ambil jeda dari stres kehidupan sehari-hari, rencanakan
-                        perjalanan, dan jelajahi destinasi favoritmu bersama-sama.
+                    <p className="text-base md:text-lg mb-0 max-w-3xl mx-auto font-light">
+                        Pilih destinasi favoritmu dan berangkat bareng pemandu
+                        berpengalaman untuk petualangan tak terlupakan.
                     </p>
                 </Container>
             </header>
 
             {/* Search Form */}
-            <section className="relative z-10 -mt-16 md:-mt-20 px-4 sm:px-0">
+            <section className="-mt-16 md:-mt-20 px-4 sm:px-0">
                 <Container>
                     <TripSearchForm
                         activeTab={activeTab}
