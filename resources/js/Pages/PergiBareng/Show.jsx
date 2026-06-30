@@ -1,6 +1,7 @@
 import React, { useState, useEffect }from "react";
 import { FaChevronLeft } from "react-icons/fa";
 import { Head, Link, router, usePage } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
@@ -101,7 +102,7 @@ export default function Show({ trip }) {
         const otherUserId = trip?.organizer?.id;
 
         if (!otherUserId) {
-            alert("Organizer id belum tersedia.");
+            toast.error("ID penyelenggara belum tersedia.");
             return;
         }
 
@@ -148,10 +149,16 @@ export default function Show({ trip }) {
                                             <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} ulasan)
                                         </div>
                                     </div>
-                                    <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleChatOrganizer}>
-                                        <BsChatDots className="text-sm" />
-                                        Chat Penyelenggara
-                                    </Button>
+                                    {trip.organizer?.is_self ? (
+                                        <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                                            Dibuat oleh Anda
+                                        </span>
+                                    ) : (
+                                        <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleChatOrganizer}>
+                                            <BsChatDots className="text-sm" />
+                                            Chat Penyelenggara
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                             

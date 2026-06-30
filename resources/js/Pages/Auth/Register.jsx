@@ -4,7 +4,6 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
-import FlashMessage from "@/Components/FlashMessage.jsx";
 import Checkbox from "@/Components/Checkbox.jsx";
 import { FcGoogle } from "react-icons/fc";
 
@@ -48,8 +47,6 @@ export default function Register() {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
-                            <FlashMessage className="mb-4" />
-
                             <Input
                                 id="username"
                                 type="text"

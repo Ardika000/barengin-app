@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Button from "@/Components/Button";
+import Input from "@/Components/Input";
 import LocationInput from "@/Components/LocationInput";
 import { FiPlus, FiX, FiUploadCloud, FiTrash2, FiImage } from "react-icons/fi";
 
@@ -19,6 +20,9 @@ const emptyActivity = () => ({
 });
 
 export default function TripForm({ data, setData, errors, processing, onSubmit, submitLabel = "Simpan draft", facilities = [] }) {
+    // Tanggal mulai minimal besok (harus setelah hari ini)
+    const minStartDate = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
     const [facilityOptions, setFacilityOptions] = useState(facilities);
     const [showFacilityModal, setShowFacilityModal] = useState(false);
     const [newFacility, setNewFacility] = useState("");
@@ -75,8 +79,8 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                         <div className="mb-4">
                             <label className={labelClass}>Nama Perjalanan</label>
-                            <input type="text" value={data.name} onChange={(e) => setData("name", e.target.value)}
-                                placeholder="Contoh: Perjalanan 3 hari mengunjungi Gunung Bromo" className={inputClass} />
+                            <Input type="text" size="sm" value={data.name} onChange={(e) => setData("name", e.target.value)}
+                                placeholder="Contoh: Perjalanan 3 hari mengunjungi Gunung Bromo" />
                             {err("name")}
                         </div>
 
@@ -98,18 +102,18 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className={labelClass}>Jumlah Orang</label>
-                                <input type="number" min="1" value={data.people_amount}
-                                    onChange={(e) => setData("people_amount", e.target.value)} placeholder="0" className={inputClass} />
+                                <Input type="number" size="sm" min="1" value={data.people_amount}
+                                    onChange={(e) => setData("people_amount", e.target.value)} placeholder="0" />
                                 {err("people_amount")}
                             </div>
                             <div>
                                 <label className={labelClass}>Tanggal Mulai</label>
-                                <input type="date" value={data.start_date} onChange={(e) => setData("start_date", e.target.value)} className={inputClass} />
+                                <Input type="date" size="sm" min={minStartDate} value={data.start_date} onChange={(e) => setData("start_date", e.target.value)} />
                                 {err("start_date")}
                             </div>
                             <div>
                                 <label className={labelClass}>Tanggal Berakhir</label>
-                                <input type="date" value={data.end_date} onChange={(e) => setData("end_date", e.target.value)} className={inputClass} />
+                                <Input type="date" size="sm" min={data.start_date || minStartDate} value={data.end_date} onChange={(e) => setData("end_date", e.target.value)} />
                                 {err("end_date")}
                             </div>
                         </div>
@@ -119,11 +123,8 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>Rincian Harga</h3>
                         <label className={labelClass}>Harga per Orang</label>
-                        <div className="flex items-center gap-2">
-                            <span className="px-3 py-2.5 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-semibold">Rp</span>
-                            <input type="number" min="0" value={data.price} onChange={(e) => setData("price", e.target.value)}
-                                placeholder="contoh: 1500000" className={inputClass} />
-                        </div>
+                        <Input type="number" size="sm" min="0" leftAddon="Rp" value={data.price}
+                            onChange={(e) => setData("price", e.target.value)} placeholder="contoh: 1500000" />
                         {err("price")}
                         <p className="text-xs text-neutral-400 mt-2">*Belum termasuk biaya admin & asuransi</p>
                     </div>
@@ -150,25 +151,26 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                                     <div className="mb-3">
                                         <label className={labelClass}>Nama aktivitas</label>
-                                        <input type="text" value={act.name} onChange={(e) => updateActivity(i, "name", e.target.value)}
-                                            placeholder="Penjemputan & Perjalanan Menuju Bromo" className={inputClass} />
+                                        <Input type="text" size="sm" value={act.name} onChange={(e) => updateActivity(i, "name", e.target.value)}
+                                            placeholder="Penjemputan & Perjalanan Menuju Bromo" />
                                         {err(`activities.${i}.name`)}
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                         <div>
                                             <label className={labelClass}>Tanggal</label>
-                                            <input type="date" value={act.date} onChange={(e) => updateActivity(i, "date", e.target.value)} className={inputClass} />
+                                            <Input type="date" size="sm" min={data.start_date || minStartDate} max={data.end_date || undefined}
+                                                value={act.date} onChange={(e) => updateActivity(i, "date", e.target.value)} />
                                             {err(`activities.${i}.date`)}
                                         </div>
                                         <div>
                                             <label className={labelClass}>Jam Mulai</label>
-                                            <input type="time" value={act.start_time} onChange={(e) => updateActivity(i, "start_time", e.target.value)} className={inputClass} />
+                                            <Input type="time" size="sm" value={act.start_time} onChange={(e) => updateActivity(i, "start_time", e.target.value)} />
                                             {err(`activities.${i}.start_time`)}
                                         </div>
                                         <div>
                                             <label className={labelClass}>Jam Selesai</label>
-                                            <input type="time" value={act.end_time} onChange={(e) => updateActivity(i, "end_time", e.target.value)} className={inputClass} />
+                                            <Input type="time" size="sm" value={act.end_time} onChange={(e) => updateActivity(i, "end_time", e.target.value)} />
                                             {err(`activities.${i}.end_time`)}
                                         </div>
                                     </div>
@@ -234,9 +236,9 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         </button>
                     </div>
 
-                    {/* Profil Perjalanan */}
+                    {/* Gambar Utama Trip */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>Profil Perjalanan</h3>
+                        <h3 className={cardTitle}>Gambar Utama Trip</h3>
                         <label className="block cursor-pointer">
                             <input type="file" accept="image/*" onChange={handleTripImage} className="hidden" />
                             <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-700 hover:text-primary-700 transition overflow-hidden bg-neutral-50">
@@ -262,7 +264,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
             {/* Modal tambah fasilitas */}
             {showFacilityModal && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
                             <h3 className="text-lg font-bold text-neutral-700">Tambah Fasilitas Lainnya</h3>
@@ -272,10 +274,10 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         </div>
                         <div className="p-6">
                             <label className={labelClass}>Nama Fasilitas</label>
-                            <input type="text" value={newFacility} autoFocus
+                            <Input type="text" size="sm" value={newFacility} autoFocus
                                 onChange={(e) => setNewFacility(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFacility(); } }}
-                                placeholder="Contoh: Alat Snorkeling, Dokumentasi Drone" className={inputClass} />
+                                placeholder="Contoh: Alat Snorkeling, Dokumentasi Drone" />
                             <div className="bg-blue-50 text-blue-800 text-xs rounded-lg p-3 mt-4">
                                 Menambahkan fasilitas yang spesifik dapat meningkatkan kepercayaan peserta trip.
                             </div>

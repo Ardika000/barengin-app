@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import axios from "axios";
 
 import Container from "@/Components/Container";
@@ -136,7 +137,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
 
         // 2. Cek Snap siap
         if (!snapReady || !window.snap) {
-            alert("Midtrans Snap belum siap. Coba refresh halaman.");
+            toast.warning("Sistem pembayaran belum siap. Coba refresh halaman.");
             return;
         }
 
@@ -162,7 +163,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
 
         } catch (error) {
             console.error("Gagal mendapatkan token", error);
-            alert("Terjadi kesalahan sistem. Coba beberapa saat lagi.");
+            toast.error("Terjadi kesalahan sistem. Coba beberapa saat lagi.");
             setIsProcessing(false);
         }
     };
@@ -179,7 +180,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                 router.visit("/profile-history?tab=transactions");
             },
             onError: () => {
-                alert("Pembayaran gagal. Silakan coba lagi.");
+                toast.error("Pembayaran gagal. Silakan coba lagi.");
                 setIsProcessing(false);
             },
             onClose: () => {

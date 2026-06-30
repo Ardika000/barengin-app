@@ -143,7 +143,7 @@ class AdminTripController extends Controller
                 ->with('flash', ['type' => 'error', 'message' => 'Trip yang sudah dipublish tidak bisa diedit.']);
         }
 
-        $validated = $this->validateTrip($request);
+        $validated = $this->validateTrip($request, true);
 
         DB::transaction(function () use ($request, $trip, $validated) {
             $trip->update([
@@ -230,31 +230,44 @@ class AdminTripController extends Controller
 
     // ── Helpers ─────────────────────────────────────────────
 
-    private function validateTrip(Request $request): array
+    private function validateTrip(Request $request, bool $isUpdate = false): array
     {
+        // Saat update draft, gambar utama boleh dikosongkan (memakai gambar lama)
+        $imageRule = $isUpdate ? 'nullable|image|max:4096' : 'required|image|max:4096';
+
         return $request->validate([
             'name' => 'required|string|max:255',
             'location' => 'required|string|max:255',
             'description' => 'required|string',
             'people_amount' => 'required|integer|min:1|max:1000',
-            'start_date' => 'required|date',
+            'start_date' => 'required|date|after:today',
             'end_date' => 'required|date|after_or_equal:start_date',
             'price' => 'required|numeric|min:0',
-            'image' => 'nullable|image|max:4096',
-            'facilities' => 'nullable|array',
-            'facilities.*' => 'nullable|string|max:100',
-            'activities' => 'nullable|array',
+            'image' => $imageRule,
+            'facilities' => 'required|array|min:1',
+            'facilities.*' => 'required|string|max:100',
+            'activities' => 'required|array|min:1',
             'activities.*.name' => 'required|string|max:255',
-            'activities.*.date' => 'required|date',
+            'activities.*.date' => 'required|date|after_or_equal:start_date|before_or_equal:end_date',
             'activities.*.start_time' => 'required|string',
             'activities.*.end_time' => 'required|string',
             'activities.*.description' => 'nullable|string',
             'activities.*.images' => 'nullable|array',
             'activities.*.images.*' => 'image|max:4096',
         ], [
+            'start_date.after' => 'Tanggal mulai harus setelah hari ini.',
             'end_date.after_or_equal' => 'Tanggal berakhir tidak boleh sebelum tanggal mulai.',
+            'image.required' => 'Gambar utama trip wajib diunggah.',
+            'facilities.required' => 'Pilih minimal 1 fasilitas.',
+            'facilities.min' => 'Pilih minimal 1 fasilitas.',
+            'activities.required' => 'Tambahkan minimal 1 aktivitas.',
+            'activities.min' => 'Tambahkan minimal 1 aktivitas.',
             'activities.*.name.required' => 'Nama aktivitas wajib diisi.',
             'activities.*.date.required' => 'Tanggal aktivitas wajib diisi.',
+            'activities.*.date.after_or_equal' => 'Tanggal aktivitas harus dalam rentang tanggal trip.',
+            'activities.*.date.before_or_equal' => 'Tanggal aktivitas harus dalam rentang tanggal trip.',
+            'activities.*.start_time.required' => 'Jam mulai wajib diisi.',
+            'activities.*.end_time.required' => 'Jam selesai wajib diisi.',
         ]);
     }
 

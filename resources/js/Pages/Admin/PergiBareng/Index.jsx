@@ -2,7 +2,8 @@ import React, { useState, useMemo } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
-import { FiSearch, FiTrash2, FiPlus, FiAlertCircle, FiUsers } from "react-icons/fi";
+import ConfirmModal from "@/Components/ConfirmModal";
+import { FiSearch, FiTrash2, FiPlus, FiUsers } from "react-icons/fi";
 import { BsChatDotsFill } from "react-icons/bs";
 
 export default function Index({ trips = [] }) {
@@ -47,40 +48,16 @@ export default function Index({ trips = [] }) {
             <Head title="Managemen Pergi Bareng" />
 
             {/* Modal hapus */}
-            {deleteModal.open && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                        <div className="p-6 text-center">
-                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <FiAlertCircle size={32} />
-                            </div>
-                            <h3 className="text-xl font-bold text-neutral-700 mb-2">Hapus Pergi Bareng?</h3>
-                            <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
-                                Yakin ingin menghapus <br />
-                                <span className="font-bold text-neutral-700">{deleteModal.name}</span>?
-                            </p>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setDeleteModal({ open: false, id: null, name: "" })}
-                                    className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    onClick={confirmDelete}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-sm transition-colors"
-                                >
-                                    Ya, Hapus
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                open={deleteModal.open}
+                onClose={() => setDeleteModal({ open: false, id: null, name: "" })}
+                onConfirm={confirmDelete}
+                title="Hapus Pergi Bareng?"
+                description={<>Yakin ingin menghapus <span className="font-semibold text-neutral-700">{deleteModal.name}</span>?</>}
+            />
 
-            <div className="p-4 sm:p-6">
-                {/* Toolbar */}
-                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-6">
+            {/* Toolbar */}
+            <div className="p-4 sm:p-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                     <div className="relative flex-1 max-w-md">
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input
@@ -97,7 +74,7 @@ export default function Index({ trips = [] }) {
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="appearance-none w-40 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
+                                className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
                             >
                                 <option value="latest">Terbaru</option>
                                 <option value="seats">Kursi Terisi</option>
@@ -120,22 +97,22 @@ export default function Index({ trips = [] }) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[820px]">
                         <thead>
-                            <tr className="text-neutral-500 text-xs font-bold uppercase tracking-wider border-b border-neutral-100">
-                                <th className="py-3 px-4">ID</th>
-                                <th className="py-3 px-4">Tujuan</th>
-                                <th className="py-3 px-4">Keberangkatan</th>
-                                <th className="py-3 px-4">Waktu Pergi</th>
-                                <th className="py-3 px-4">Jml. Kursi</th>
-                                <th className="py-3 px-4">Status</th>
-                                <th className="py-3 px-4 text-center">Aksi</th>
+                            <tr className="bg-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
+                                <th className="py-3 px-5">ID</th>
+                                <th className="py-3 px-5">Tujuan</th>
+                                <th className="py-3 px-5">Keberangkatan</th>
+                                <th className="py-3 px-5">Waktu Pergi</th>
+                                <th className="py-3 px-5">Jml. Kursi</th>
+                                <th className="py-3 px-5">Status</th>
+                                <th className="py-3 px-5 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
                             {rows.length > 0 ? (
                                 rows.map((t) => (
                                     <tr key={t.id} className="hover:bg-neutral-50/50 transition">
-                                        <td className="py-4 px-4 text-sm font-medium text-neutral-500">{t.code}</td>
-                                        <td className="py-4 px-4">
+                                        <td className="py-3.5 px-5 text-sm font-medium text-neutral-500">{t.code}</td>
+                                        <td className="py-3.5 px-5">
                                             <div className="flex items-center gap-3">
                                                 <img
                                                     src={t.image}
@@ -146,22 +123,22 @@ export default function Index({ trips = [] }) {
                                                 <span className="font-semibold text-neutral-700 text-sm max-w-[180px] truncate">{t.name}</span>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-4 text-sm text-neutral-600 max-w-[200px]">
+                                        <td className="py-3.5 px-5 text-sm text-neutral-600 max-w-[200px]">
                                             <span className="line-clamp-2">{t.departure}</span>
                                         </td>
-                                        <td className="py-4 px-4 text-sm text-neutral-700 whitespace-nowrap">
+                                        <td className="py-3.5 px-5 text-sm text-neutral-700 whitespace-nowrap">
                                             <div className="font-medium">{t.date_label}</div>
                                             <div className="text-xs text-neutral-400">{t.time_label}</div>
                                         </td>
-                                        <td className="py-4 px-4 text-sm font-semibold text-primary-700 whitespace-nowrap">
+                                        <td className="py-3.5 px-5 text-sm font-semibold text-primary-700 whitespace-nowrap">
                                             {t.joined}/{t.capacity}
                                         </td>
-                                        <td className="py-4 px-4">
+                                        <td className="py-3.5 px-5">
                                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(t.status)}`}>
                                                 {t.status}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-4">
+                                        <td className="py-3.5 px-5">
                                             <div className="flex items-center justify-center gap-2">
                                                 <Link
                                                     href={`/admin/pergi-bareng/${t.id}/requests`}
@@ -203,7 +180,6 @@ export default function Index({ trips = [] }) {
                         </tbody>
                     </table>
                 </div>
-            </div>
         </div>
     );
 }

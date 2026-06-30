@@ -1,5 +1,5 @@
 import React from "react";
-import { useForm, usePage } from "@inertiajs/react";
+import { useForm } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import Input from "@/Components/Input";
@@ -15,9 +15,6 @@ export default function ContactSection() {
         email: "",
         body: "",
     });
-
-    // Menarik flash message (opsional jika kamu ingin menampilkan alert sukses)
-    const { flash } = usePage().props;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -56,13 +53,6 @@ export default function ContactSection() {
                         <p className="text-sm text-neutral-700 mb-6">
                             Ada pertanyaan atau saran buat liburanmu? Yuk, hubungi kami di sini dan mari buat perjalananmu lebih seru bareng-bareng!
                         </p>
-
-                        {/* Flash message sukses (opsional) */}
-                        {flash?.success && (
-                            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
-                                {flash.success}
-                            </div>
-                        )}
 
                         <form className="space-y-4" onSubmit={handleSubmit}>
                             <div>

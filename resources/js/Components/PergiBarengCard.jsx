@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import Button from "@/Components/Button";
 import {
     FaMapMarkerAlt,
@@ -63,11 +64,14 @@ export default function PergiBarengCard({ data }) {
         }
     };
 
+    const authUser = usePage().props?.auth?.user;
+    const isOwner = authUser && Number(authUser.id) === Number(data?.user?.id);
+
     const handleChat = () => {
         const otherUserId = data?.user?.id; // pastikan backend mengirim ini
 
         if (!otherUserId) {
-            alert("Organizer id belum tersedia.");
+            toast.error("ID penyelenggara belum tersedia.");
             return;
         }
 
@@ -170,15 +174,21 @@ export default function PergiBarengCard({ data }) {
                         </div>
                     </div>
 
-                    <Button
-                        size="xs"
-                        variant="outline"
-                        className="gap-1.5 shrink-0"
-                        onClick={handleChat}
-                    >
-                        <BsChatDots size={14} />
-                        Chat
-                    </Button>
+                    {isOwner ? (
+                        <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                            Pergi Bareng Anda
+                        </span>
+                    ) : (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            className="gap-1.5 shrink-0"
+                            onClick={handleChat}
+                        >
+                            <BsChatDots size={14} />
+                            Chat
+                        </Button>
+                    )}
                 </div>
 
                 <hr className="my-4 border-t border-dashed border-neutral-200" />

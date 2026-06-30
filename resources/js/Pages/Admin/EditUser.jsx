@@ -60,7 +60,7 @@ export default function EditUser({ user }) {
                 MODAL POPUP: VERIFY & UNVERIFY
             ========================================== */}
             {modalType && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 transition-all">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
                         <div className="p-6">
                             {/* Header Modal */}

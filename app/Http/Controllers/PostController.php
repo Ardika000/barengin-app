@@ -121,7 +121,7 @@ class PostController extends Controller
             }
         });
 
-        return redirect()->back();
+        return redirect()->back()->with('flash', ['type' => 'success', 'message' => 'Postingan berhasil dibuat.']);
     }
 
     private function normalizeChipTags(array $tags): array

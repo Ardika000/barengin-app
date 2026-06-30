@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useForm } from "@inertiajs/react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import FlashMessage from "@/Components/FlashMessage.jsx";
 import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
@@ -21,8 +20,6 @@ export default function ResetPassword({ token, email }) {
         e.preventDefault();
         post("/reset-password");
     };
-
-    console.log('something');
 
     return (
         <div className="min-h-screen w-full bg-white">
@@ -49,8 +46,6 @@ export default function ResetPassword({ token, email }) {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
-                            <FlashMessage className="mb-2" />
-
                             {/* Keep these hidden for reset flow */}
                             <input type="hidden" value={data.email} readOnly />
                             <input type="hidden" value={data.token} readOnly />

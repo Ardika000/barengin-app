@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { router } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Pagination from "@/Components/Pagination";
-import FlashMessage from "@/Components/FlashMessage";
 import TripCard from "@/Components/TripCard";
 import PergiBarengCard from "@/Components/PergiBarengCard";
 
@@ -66,7 +66,7 @@ export default function ProfileHistory({
     const handlePay = (snapToken) => {
         if (!snapToken) return;
         if (!snapReady || !window.snap) {
-            alert("Sistem pembayaran belum siap. Coba muat ulang halaman.");
+            toast.warning("Sistem pembayaran belum siap. Coba muat ulang halaman.");
             return;
         }
 
@@ -91,8 +91,6 @@ export default function ProfileHistory({
 
     return (
         <Container className="min-h-screen py-8">
-            <FlashMessage className="mb-6" />
-
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_1fr]">
                 {/* ===== Left: Profile ===== */}
                 <aside className="lg:sticky lg:top-24 lg:self-start">

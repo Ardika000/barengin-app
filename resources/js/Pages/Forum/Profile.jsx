@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link, router } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import Container from "@/Components/Container";
 import ForumLayout from "@/Layouts/ForumLayout";
 import PostCard from "@/Pages/Forum/Partials/PostCard";
@@ -386,7 +387,7 @@ export default function Profile({
 
         try {
             await navigator.clipboard.writeText(url);
-            alert("Profile link copied!");
+            toast.success("Tautan profil disalin!");
         } catch {
             prompt("Copy this profile link:", url);
         }

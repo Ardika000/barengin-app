@@ -258,7 +258,7 @@ class ForumController extends Controller
             'comment_text' => $request->comment_text,
         ]);
 
-        return redirect()->back();
+        return redirect()->back()->with('flash', ['type' => 'success', 'message' => 'Komentar berhasil ditambahkan.']);
     }
 
     public function storeReply(Request $request, PostComment $comment)
@@ -282,7 +282,7 @@ class ForumController extends Controller
             'comment_text' => $request->comment_text,
         ]);
 
-        return redirect()->back();
+        return redirect()->back()->with('flash', ['type' => 'success', 'message' => 'Balasan berhasil ditambahkan.']);
     }
 
     public function togglePostLike(Post $post)

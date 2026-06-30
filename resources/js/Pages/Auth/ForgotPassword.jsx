@@ -1,5 +1,4 @@
 import { Link, useForm } from "@inertiajs/react";
-import FlashMessage from "@/Components/FlashMessage.jsx";
 import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
@@ -44,8 +43,6 @@ export default function ForgotPassword() {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
-                            <FlashMessage className="mb-2" />
-
                             <Input
                                 id="email"
                                 type="email"

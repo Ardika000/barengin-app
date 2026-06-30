@@ -1,13 +1,26 @@
 import React, { useState } from "react";
 import { Head, router } from "@inertiajs/react";
-import AdminLayout from "@/Layouts/AdminLayout"; 
+import AdminLayout from "@/Layouts/AdminLayout";
 import Pagination from "@/Components/Pagination";
-import { FiSearch, FiChevronDown, FiTrash2, FiAlertCircle, FiMessageSquare } from "react-icons/fi";
+import ConfirmModal from "@/Components/ConfirmModal";
+import { FiSearch, FiChevronDown, FiTrash2, FiMessageSquare } from "react-icons/fi";
 
 export default function Message({ auth, messages = {}, filters = {} }) {
-    
-    const [searchTerm, setSearchTerm] = useState(filters.search || "");
+    // Pastikan filters berupa objek (Laravel bisa mengirim array kosong []),
+    // jika tidak, `filters.filter` bisa menunjuk ke Array.prototype.filter.
+    const f = filters && !Array.isArray(filters) ? filters : {};
+
+    const [searchTerm, setSearchTerm] = useState(typeof f.search === "string" ? f.search : "");
+    const [filter, setFilter] = useState(typeof f.filter === "string" ? f.filter : "all");
     const messageData = messages.data || [];
+
+    const visit = (params) => {
+        router.get("/admin/message", { search: searchTerm || undefined, filter: filter !== "all" ? filter : undefined, ...params }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
 
     // ==========================================
     // STATE UNTUK MODAL POPUP DELETE
@@ -43,20 +56,22 @@ export default function Message({ auth, messages = {}, filters = {} }) {
     };
 
     // Fungsi Ganti Halaman
-    const handlePageChange = (page) => {
-        router.get(`/admin/message`, { search: searchTerm, page: page }, {
-            preserveState: true,
-            preserveScroll: true,
-        });
+    const handlePageChange = (page) => visit({ page });
+
+    // Fungsi Pencarian (Search) — tekan Enter
+    const handleSearch = (e) => {
+        if (e.key === "Enter") visit({ page: 1 });
     };
 
-    // Fungsi Pencarian (Search)
-    const handleSearch = (e) => {
-        if (e.key === "Enter") {
-            router.get(`/admin/message`, { search: searchTerm }, {
-                preserveState: true,
-            });
-        }
+    // Fungsi Filter (periode)
+    const handleFilter = (e) => {
+        const value = e.target.value;
+        setFilter(value);
+        router.get("/admin/message", { search: searchTerm || undefined, filter: value !== "all" ? value : undefined, page: 1 }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
     };
 
     return (
@@ -66,67 +81,45 @@ export default function Message({ auth, messages = {}, filters = {} }) {
         >
             <Head title="Manajemen Pesan" />
 
-            {/* ==========================================
-                KODE POPUP / MODAL DELETE
-            ========================================== */}
-            {deleteModal.isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 transition-all">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
-                        <div className="p-6 text-center">
-                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <FiAlertCircle size={32} />
-                            </div>
-                            
-                            <h3 className="text-xl font-bold text-neutral-700 mb-2">Hapus Pesan?</h3>
-                            
-                            <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
-                                Apakah kamu yakin ingin menghapus pesan dari <br/>
-                                <span className="font-bold text-neutral-700">{deleteModal.msgName}</span>?
-                            </p>
-                            
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={closeDeleteModal}
-                                    className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    onClick={confirmDelete}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-sm transition-colors"
-                                >
-                                    Ya, Hapus
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                open={deleteModal.isOpen}
+                onClose={closeDeleteModal}
+                onConfirm={confirmDelete}
+                title="Hapus Pesan?"
+                description={<>Apakah kamu yakin ingin menghapus pesan dari <span className="font-semibold text-neutral-700">{deleteModal.msgName}</span>?</>}
+            />
 
-            <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-6 md:p-8 min-h-[500px] flex flex-col">
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-neutral-800 mb-1">Pesan</h1>
-                    <p className="text-neutral-500 text-sm">
-                        Baca dan dengarkan setiap masukan maupun kritik dari user untuk Barengin
-                    </p>
-                </div>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-neutral-700">Pesan</h1>
+                <p className="text-neutral-500 text-sm">Baca dan dengarkan setiap masukan maupun kritik dari user untuk Barengin</p>
+            </div>
 
-                <div className="flex flex-col md:flex-row gap-4 mb-8">
-                    <div className="relative flex-1">
-                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 text-lg" />
+            <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-6 md:p-8 flex flex-col">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-8">
+                    <div className="relative flex-1 max-w-md">
+                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input
                             type="text"
-                            placeholder="Cari message... (Tekan Enter)"
+                            placeholder="Cari pesan... (Tekan Enter)"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={handleSearch}
-                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-400 rounded-lg focus:outline-none focus:border-primary-700 text-sm transition-all"
+                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-400 rounded-xl focus:outline-none focus:border-primary-700 text-sm transition-all"
                         />
                     </div>
-                    <button className="flex items-center justify-between gap-3 px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 transition-colors w-full md:w-auto shrink-0">
-                        <span>Filter By</span>
-                        <FiChevronDown className="text-neutral-400" />
-                    </button>
+                    <div className="relative w-full md:w-44 shrink-0">
+                        <select
+                            value={filter}
+                            onChange={handleFilter}
+                            className="appearance-none w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
+                        >
+                            <option value="all">Semua</option>
+                            <option value="today">Hari Ini</option>
+                            <option value="week">7 Hari Terakhir</option>
+                            <option value="month">30 Hari Terakhir</option>
+                        </select>
+                        <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500" />
+                    </div>
                 </div>
 
                 {/* Message List & Empty State */}

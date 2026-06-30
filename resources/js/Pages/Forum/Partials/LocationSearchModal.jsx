@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiArrowLeft, FiSearch, FiTarget } from "react-icons/fi";
+import { toast } from "@/lib/toast";
 
 export default function LocationSearchModal({ onBack, onSelectLocation }) {
     const [q, setQ] = useState("");
@@ -54,7 +55,7 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
 
     const handlePickCurrentLocation = async () => {
         if (!navigator.geolocation) {
-            alert("Geolocation is not supported on this device/browser.");
+            toast.warning("Geolocation tidak didukung di perangkat/browser ini.");
             return;
         }
 
@@ -81,14 +82,14 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
             const place = json?.data;
 
             if (!place?.id) {
-                alert("Failed to detect current location.");
+                toast.error("Gagal mendeteksi lokasi saat ini.");
                 return;
             }
 
             onSelectLocation?.(place);
         } catch {
-            alert(
-                "Cannot access your location. Please allow location permission.",
+            toast.error(
+                "Tidak dapat mengakses lokasi Anda. Mohon izinkan akses lokasi.",
             );
         } finally {
             setGeoLoading(false);

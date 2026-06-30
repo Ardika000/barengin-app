@@ -6,12 +6,16 @@ import { FaStar } from "react-icons/fa";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import { BsChatDots } from "react-icons/bs";
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import { useState } from "react";
 
 import Button from "@/Components/Button";
 
 export default function TripCard({ trip }) {
+    const authUser = usePage().props?.auth?.user;
+    const isOwner = authUser && Number(authUser.id) === Number(trip.guide_id);
+
     const {
         title,
         location,
@@ -51,7 +55,7 @@ export default function TripCard({ trip }) {
             const otherUserId = trip?.guide_id;
     
             if (!otherUserId) {
-                alert("Host user id belum tersedia. Pastikan backend mengirim trip.host.id");
+                toast.error("ID pemandu belum tersedia.");
                 return;
             }
     
@@ -196,15 +200,21 @@ export default function TripCard({ trip }) {
                         </div>
                     </div>
 
-                    <Button
-                        size="xs"
-                        variant="outline"
-                        className="gap-1.5 shrink-0"
-                        onClick={handleOpenChat}
-                    >
-                        <BsChatDots size={14} />
-                        Chat Pemandu
-                    </Button>
+                    {isOwner ? (
+                        <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                            Trip Anda
+                        </span>
+                    ) : (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            className="gap-1.5 shrink-0"
+                            onClick={handleOpenChat}
+                        >
+                            <BsChatDots size={14} />
+                            Chat Pemandu
+                        </Button>
+                    )}
                 </div>
 
                 <hr className="my-4 border-t border-dashed border-neutral-200" />

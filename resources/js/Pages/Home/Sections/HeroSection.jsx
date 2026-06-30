@@ -17,7 +17,7 @@ export default function HeroSection() {
             >
                 <Container className="text-center text-white">
                     <h1 className="text-4xl md:text-6xl font-semibold mb-4">
-                        Eksplor Tempat disekitar Anda
+                        Eksplor Tempat di sekitar Anda
                     </h1>
                     <p className="text-base md:text-lg mb-0 max-w-3xl mx-auto font-light">
                         Ambil jeda dari stres kehidupan sehari-hari, rencanakan

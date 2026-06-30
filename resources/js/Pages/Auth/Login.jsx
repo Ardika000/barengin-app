@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useForm } from "@inertiajs/react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import FlashMessage from "@/Components/FlashMessage.jsx";
 import Button from "@/Components/Button.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import Input from "@/Components/Input.jsx";
@@ -45,8 +44,6 @@ export default function Login() {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
-                            <FlashMessage className="mb-4" />
-
                             <Input
                                 id="login"
                                 type="text"

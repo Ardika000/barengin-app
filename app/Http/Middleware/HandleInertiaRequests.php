@@ -39,11 +39,28 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => fn () => $request->user(),
             ],
-            'flash' => [
-                // type => success, error, and info
-                'type' => fn () => $request->session()->get('flash.type'),
-                'message' => fn () => $request->session()->get('flash.message'),
-            ],
+            // Normalisasi flash dari berbagai pola controller -> {type, message}
+            'flash' => function () use ($request) {
+                $s = $request->session();
+
+                if ($s->has('flash.message')) {
+                    return ['type' => $s->get('flash.type', 'info'), 'message' => $s->get('flash.message')];
+                }
+                if ($s->has('success') || $s->has('success_message')) {
+                    return ['type' => 'success', 'message' => $s->get('success', $s->get('success_message'))];
+                }
+                if ($s->has('error') || $s->has('error_message')) {
+                    return ['type' => 'error', 'message' => $s->get('error', $s->get('error_message'))];
+                }
+                if ($s->has('warning')) {
+                    return ['type' => 'warning', 'message' => $s->get('warning')];
+                }
+                if ($s->has('info')) {
+                    return ['type' => 'info', 'message' => $s->get('info')];
+                }
+
+                return ['type' => null, 'message' => null];
+            },
         ]);
     }
 }
