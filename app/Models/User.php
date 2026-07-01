@@ -49,6 +49,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_seen_at' => 'datetime',
             'is_verified' => 'boolean',
+            'streak_last_date' => 'date',
         ];
     }
 

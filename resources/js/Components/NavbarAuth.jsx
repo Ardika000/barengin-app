@@ -5,6 +5,7 @@ import NavDropdown from "@/Components/NavDropdown.jsx";
 import NavLink from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
+import StreakBadge from "@/Components/StreakBadge.jsx";
 
 import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
 import { MdDashboard } from "react-icons/md";
@@ -91,6 +92,14 @@ export default function NavbarAuth() {
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-3">
+                    <Link
+                        href="/profile-history"
+                        onClick={closeAll}
+                        aria-label="Streak Nyala"
+                    >
+                        <StreakBadge count={user?.streak_count ?? 0} />
+                    </Link>
+
                     <Button
                         isButtonLink
                         href="/chat"
@@ -141,7 +150,15 @@ export default function NavbarAuth() {
                     />
                 </div>
 
-                <div className="md:hidden flex items-center">
+                <div className="md:hidden flex items-center gap-3">
+                    <Link
+                        href="/profile-history"
+                        onClick={closeAll}
+                        aria-label="Streak Nyala"
+                    >
+                        <StreakBadge count={user?.streak_count ?? 0} />
+                    </Link>
+
                     <button
                         type="button"
                         onClick={() => setIsMobileMenuOpen((v) => !v)}

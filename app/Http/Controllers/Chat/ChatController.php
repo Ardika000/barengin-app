@@ -257,9 +257,17 @@ class ChatController extends Controller
         }
 
         if ($conversation->pergi_bareng) {
-            return $conversation->pergi_bareng->img_name
-                ? asset('storage/' . $conversation->pergi_bareng->img_name)
-                : asset('assets/pergi-bareng/PergiBarengHeader.avif');
+            $img = $conversation->pergi_bareng->img_name;
+
+            if (! $img) {
+                return asset('assets/pergi-bareng/PergiBarengHeader.avif');
+            }
+
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://') || str_starts_with($img, '/')) {
+                return $img;
+            }
+
+            return asset('storage/' . $img);
         }
 
         return null;

@@ -242,7 +242,13 @@ export default function Show({ trip }) {
                             {/* Gambar Bus */}
                             <div className="relative w-full md:w-1/3 bg-neutral-100 min-h-[250px] md:min-h-[200px]">
                                 <img
-                                    src={trip.img_name ? `/storage/${trip.img_name}` : '/assets/pergi-bareng/PergiBarengHeader.avif'}
+                                    src={
+                                        !trip.img_name
+                                            ? "/assets/pergi-bareng/PergiBarengHeader.avif"
+                                            : trip.img_name.startsWith("/") || trip.img_name.startsWith("http")
+                                                ? trip.img_name
+                                                : `/storage/${trip.img_name}`
+                                    }
                                     alt={trip.title}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {

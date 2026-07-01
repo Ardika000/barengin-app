@@ -6,7 +6,6 @@ use App\Models\PergiBareng;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\File;
 
 class PergiBarengSeeder extends Seeder
 {
@@ -15,8 +14,19 @@ class PergiBarengSeeder extends Seeder
      */
     public function run(): void
     {
-        // Pastikan gambar contoh tersedia di storage (disajikan via storage link)
-        $sampleImage = $this->ensureSeedImage();
+        // Gambar berbeda-beda untuk tiap pergi bareng (aset publik yang ada)
+        $images = [
+            '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg',
+            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-1.jpg',
+            '/assets/trip-bareng/list-trip/candi_borobudur/trip_bareng-candi_borobudur-1.jpg',
+            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-2.jpg',
+            '/assets/trip-bareng/list-trip/c3076436a3227fcc40c253e4e7782a31.jpg',
+            '/assets/home/hero-bg.jpg',
+            '/assets/home/gallery.jpg',
+            '/assets/home/trip-card-image.jpg',
+            '/assets/home/about-us.jpg',
+            '/assets/pergi-bareng/PergiBarengHeader.avif',
+        ];
 
         // Get beberapa user untuk jadi initiator
         $users = User::where('id', '>=', 1)->take(5)->get();
@@ -137,32 +147,12 @@ class PergiBarengSeeder extends Seeder
             // Assign random user sebagai initiator
             $trip['initiator_id'] = $users[$index % count($users)]->id;
 
-            // Gunakan gambar contoh dari storage (storage link)
-            $trip['img_name'] = $sampleImage;
+            // Gambar berbeda per pergi bareng
+            $trip['img_name'] = $images[$index % count($images)];
 
             PergiBareng::create($trip);
         }
 
         $this->command?->info('PergiBareng seeder telah berhasil di-generate dengan 10 data!');
-    }
-
-    /**
-     * Salin satu gambar contoh dari folder public ke storage/app/public
-     * lalu kembalikan path relatifnya (disajikan lewat storage link).
-     */
-    private function ensureSeedImage(): string
-    {
-        $relative = 'seed/sample.jpg';
-        $target   = storage_path('app/public/' . $relative);
-
-        if (! File::exists($target)) {
-            File::ensureDirectoryExists(dirname($target));
-            $source = public_path('assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');
-            if (File::exists($source)) {
-                File::copy($source, $target);
-            }
-        }
-
-        return $relative;
     }
 }
