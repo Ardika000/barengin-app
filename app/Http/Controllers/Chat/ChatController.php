@@ -42,7 +42,7 @@ class ChatController extends Controller
 
         $conversation->load([
             'participants:id,full_name,profile_image',
-            'trip:id,name,guider_id',
+            'trip:id,name,guider_id,image',
             'pergi_bareng:id,name,img_name,initiator_id',
         ]);
 
@@ -193,7 +193,7 @@ class ChatController extends Controller
         return $user->conversations()
             ->with([
                 'participants:id,full_name,profile_image',
-                'trip:id,name',
+                'trip:id,name,image',
                 'pergi_bareng:id,name,img_name'
             ])
             ->get()
@@ -246,18 +246,41 @@ class ChatController extends Controller
     }
 
     /**
-     * Avatar grup: gunakan gambar pergi bareng bila ada, jatuhkan ke header default
-     * pergi bareng untuk grup pergi bareng. Mengembalikan null untuk grup non-pergi-bareng
-     * (mis. grup trip) sehingga pemanggil memakai fallback-nya sendiri.
+     * Avatar grup: untuk grup trip pakai gambar utama trip, untuk grup pergi
+     * bareng pakai gambarnya (atau header default). Mengembalikan null untuk
+     * grup lain sehingga pemanggil memakai fallback-nya sendiri.
      */
     private function groupAvatar(Conversation $conversation): ?string
     {
-        if (! $conversation->pergi_bareng) {
-            return null;
+        if ($conversation->trip) {
+            return $this->resolveTripImage($conversation->trip->image);
         }
 
-        return $conversation->pergi_bareng->img_name
-            ? asset('storage/' . $conversation->pergi_bareng->img_name)
-            : asset('assets/pergi-bareng/PergiBarengHeader.avif');
+        if ($conversation->pergi_bareng) {
+            return $conversation->pergi_bareng->img_name
+                ? asset('storage/' . $conversation->pergi_bareng->img_name)
+                : asset('assets/pergi-bareng/PergiBarengHeader.avif');
+        }
+
+        return null;
+    }
+
+    /**
+     * Ubah path gambar trip dari DB menjadi URL yang bisa dipakai <img>.
+     * Konsisten dengan TripsController::resolveTripImage.
+     */
+    private function resolveTripImage(?string $path): string
+    {
+        $fallback = asset('assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');
+
+        if (! $path) {
+            return $fallback;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        return asset('storage/' . $path);
     }
 }

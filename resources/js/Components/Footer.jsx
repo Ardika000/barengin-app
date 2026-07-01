@@ -26,7 +26,7 @@ export default function Footer() {
                 />
 
                 <h2 className="text-2xl font-semibold mt-4 text-neutral-900">
-                    Eksplor bersama barengin
+                    Eksplor bersama Barengin
                 </h2>
 
                 <p className="text-neutral-600 mt-4 max-w-2xl leading-relaxed">

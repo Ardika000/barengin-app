@@ -95,7 +95,7 @@ export default function Login() {
                                     id="remember"
                                     checked={data.remember}
                                     onChange={(v) => setData("remember", v)}
-                                    label="Ingat saya 30 hari kedepan"
+                                    label="Ingat saya"
                                 />
 
                                 <Link

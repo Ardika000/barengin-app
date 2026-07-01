@@ -17,7 +17,7 @@ export default function Toaster() {
     if (items.length === 0) return null;
 
     return (
-        <div className="fixed top-20 inset-x-3 sm:inset-x-auto sm:right-5 z-[10000] flex flex-col items-center sm:items-end gap-2.5 font-poppins pointer-events-none">
+        <div className="fixed top-25 inset-x-3 sm:inset-x-auto sm:right-5 z-[10000] flex flex-col items-center sm:items-end gap-2.5 font-poppins pointer-events-none">
             {items.map((t) => {
                 const v = VARIANTS[t.type] || VARIANTS.info;
                 const { Icon } = v;

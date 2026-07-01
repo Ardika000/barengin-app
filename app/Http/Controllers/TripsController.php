@@ -205,6 +205,7 @@ class TripsController extends Controller
         $tripData = [
             'id'          => $trip->id,
             'title'       => $trip->name,
+            'image'       => $this->resolveTripImage($trip->image),
             'location'    => $trip->location ?? $trip->city ?? $trip->destination ?? $trip->name,
 
             'duration'    => $startDate->diffInDays($endDate) . ' Hari',

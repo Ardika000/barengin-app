@@ -151,7 +151,7 @@ export default function Detail({ trip }) {
                 {/* HERO */}
                 <div className="relative h-[350px] md:h-[400px] w-full rounded-3xl overflow-hidden mb-10 shadow-sm">
                     <img
-                        src="/assets/trips/hero.jpg"
+                        src={currentTrip.image || "/assets/trips/hero.jpg"}
                         alt={currentTrip.title}
                         className="absolute inset-0 w-full h-full object-cover"
                         onError={(e) => {

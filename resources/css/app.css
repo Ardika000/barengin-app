@@ -6,6 +6,25 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/* Tailwind v4 Preflight men-set kursor tombol jadi `default`. Kembalikan
+   `pointer` untuk semua elemen yang bisa diklik agar UI lebih intuitif. */
+@layer base {
+    button:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    a[href],
+    label[for],
+    summary,
+    select:not(:disabled),
+    input[type="checkbox"]:not(:disabled),
+    input[type="radio"]:not(:disabled),
+    input[type="submit"]:not(:disabled),
+    input[type="button"]:not(:disabled),
+    input[type="reset"]:not(:disabled),
+    input[type="file"]:not(:disabled)::file-selector-button {
+        cursor: pointer;
+    }
+}
+
 @theme {
     --font-sans:
         "Instrument Sans", ui-sans-serif, system-ui, sans-serif,

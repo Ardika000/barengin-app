@@ -78,7 +78,7 @@ export default function ContactSection() {
 
                             <div>
                                 <Textarea
-                                    label="Message"
+                                    label="Pesan"
                                     placeholder="Tuliskan bagaimana saran ataupun bantuan yang anda inginkan"
                                     rows={4}
                                     value={data.body}

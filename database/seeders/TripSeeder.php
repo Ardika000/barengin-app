@@ -16,8 +16,12 @@ class TripSeeder extends Seeder
     {
         $faker = Faker::create('id_ID');
 
-        // Pastikan gambar contoh tersedia di storage (disajikan via storage link)
-        $tripImage = $this->ensureSeedImage();
+        // Gambar utama trip (dipakai di kartu trip & avatar grup chat trip)
+        $tripImages = [
+            '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg',
+            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-1.jpg',
+            '/assets/trip-bareng/list-trip/candi_borobudur/trip_bareng-candi_borobudur-1.jpg',
+        ];
 
         // Data dummy deskripsi trip
         $tripDescriptions = [
@@ -84,7 +88,7 @@ class TripSeeder extends Seeder
                 'end_date'     => $endDate,
                 'rating'       => $faker->randomFloat(2, 4.0, 5.0),
                 'price'        => $price,
-                'image'        => $tripImage,
+                'image'        => $tripImages[($i - 1) % count($tripImages)],
                 'location'     => $cityName, // ← nama kota asli, bukan "Indonesia"
                 'status'       => 'created', // sudah dipublish (cron akan ubah ke ongoing/done sesuai tanggal)
                 'created_at'   => now(),
@@ -161,25 +165,5 @@ class TripSeeder extends Seeder
             //     'transaction_id' => $transactionId, 'trip_id' => $tripId, 'user_id' => $customerId, 'quantity' => 1, 'total' => $price, 'order_status' => 'paid', 'created_at' => now()
             // ]);
         }
-    }
-
-    /**
-     * Salin satu gambar contoh dari folder public ke storage/app/public
-     * lalu kembalikan path relatifnya (disajikan lewat storage link).
-     */
-    private function ensureSeedImage(): string
-    {
-        $relative = 'seed/sample.jpg';
-        $target   = storage_path('app/public/' . $relative);
-
-        if (! File::exists($target)) {
-            File::ensureDirectoryExists(dirname($target));
-            $source = public_path('assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');
-            if (File::exists($source)) {
-                File::copy($source, $target);
-            }
-        }
-
-        return $relative;
     }
 }

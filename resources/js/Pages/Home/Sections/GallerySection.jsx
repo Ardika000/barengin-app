@@ -1,40 +1,38 @@
 import React from "react";
+import { router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import SectionHeading from "../Partials/SectionHeading";
 import GalleryGrid from "../Partials/GalleryGrid";
 
-export default function GallerySection() {
-    const images = [
-        "/assets/home/gallery.jpg",
-        "/assets/home/gallery.jpg",
-        "/assets/home/gallery.jpg",
-        "/assets/home/gallery.jpg",
-        "/assets/home/gallery.jpg",
-        "/assets/home/gallery.jpg",
-        "/assets/home/gallery.jpg",
+const FALLBACK_IMAGE = "/assets/home/gallery.jpg";
+
+export default function GallerySection({ galleryImages = [] }) {
+    // Susunan span per tile (mobile grid-cols-6, desktop grid-cols-12)
+    const spanClasses = [
+        "col-span-3 md:col-span-3",
+        "col-span-3 md:col-span-2",
+        "col-span-2 md:col-span-3",
+        "col-span-2 md:col-span-4",
+        "col-span-2 md:col-span-6",
+        "col-span-3 md:col-span-4",
+        "col-span-3 md:col-span-2",
     ];
 
-    const items = [
-        // Mobile (grid-cols-6): 3+3
-        // Desktop (grid-cols-12): 3,2,3,4
-        { id: 1, src: images[0], spanClass: "col-span-3 md:col-span-3" },
-        { id: 2, src: images[1], spanClass: "col-span-3 md:col-span-2" },
+    // Gambar acak dari forum; jika kosong pakai fallback, dan diulang agar
+    // semua tile selalu terisi meski jumlah gambar forum sedikit.
+    const pool = galleryImages.length > 0 ? galleryImages : [FALLBACK_IMAGE];
 
-        // Mobile: 2+2+2 (three small tiles)
-        { id: 3, src: images[2], spanClass: "col-span-2 md:col-span-3" },
-        { id: 4, src: images[3], spanClass: "col-span-2 md:col-span-4" },
-        { id: 5, src: images[4], spanClass: "col-span-2 md:col-span-6" },
-
-        // Mobile: 3+3
-        { id: 6, src: images[5], spanClass: "col-span-3 md:col-span-4" },
-        { id: 7, src: images[6], spanClass: "col-span-3 md:col-span-2" },
-    ];
+    const items = spanClasses.map((spanClass, i) => ({
+        id: i + 1,
+        src: pool[i % pool.length],
+        spanClass,
+    }));
 
     return (
         <section className="py-12 text-center mt-8 pt-4">
             <Container>
                 <SectionHeading
-                    label="Gallery"
+                    label="Galeri"
                     align="center"
                     className="mb-12"
                 />
@@ -48,7 +46,11 @@ export default function GallerySection() {
                 </h2>
 
                 <div className="mb-8">
-                    <GalleryGrid items={items} ctaLabel="Lihat Lebih Banyak" />
+                    <GalleryGrid
+                        items={items}
+                        ctaLabel="Lihat Lebih Banyak"
+                        onCtaClick={() => router.visit("/forum")}
+                    />
                 </div>
 
                 <p className="text-sm text-neutral-700 max-w-2xl mx-auto">

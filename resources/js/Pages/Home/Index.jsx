@@ -8,7 +8,7 @@ import JastipSection from "./Sections/JastipSection";
 import GallerySection from "./Sections/GallerySection";
 import ContactSection from "./Sections/ContactSection";
 
-export default function Home() {
+export default function Home({ galleryImages = [] }) {
     const popularTrips = [
         {
             id: 1,
@@ -97,7 +97,7 @@ export default function Home() {
             <AboutSection />
             <PopularTripsSection trips={popularTrips} />
             <JastipSection products={jastipProducts} />
-            <GallerySection />
+            <GallerySection galleryImages={galleryImages} />
             <ContactSection />
         </>
     );

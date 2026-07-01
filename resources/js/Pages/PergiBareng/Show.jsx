@@ -5,8 +5,9 @@ import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
@@ -15,11 +16,48 @@ import {
 } from "react-icons/fa";
 import { BsChatDots } from "react-icons/bs";
 
+const JAKARTA = [-6.1751, 106.8272];
+
+// Pin berwarna (biru = titik kumpul, hijau = titik tujuan) agar konsisten
+// dengan warna label di detail perjalanan.
+const makePinIcon = (color) =>
+    L.divIcon({
+        className: "",
+        html: `<svg width="26" height="34" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 0C5.4 0 0 5.4 0 12c0 8.4 12 20 12 20s12-11.6 12-20C24 5.4 18.6 0 12 0z" fill="${color}"/>
+            <circle cx="12" cy="12" r="4.5" fill="white"/>
+        </svg>`,
+        iconSize: [26, 34],
+        iconAnchor: [13, 34],
+        popupAnchor: [0, -30],
+    });
+
+const ORIGIN_ICON = makePinIcon("#0c8ce9"); // primary-600
+const DEST_ICON = makePinIcon("#2fb248");   // success-600
+
+// Menyesuaikan tampilan peta agar kedua titik terlihat (atau fokus ke satu
+// titik bila hanya satu yang tersedia).
+function MapView({ origin, destination }) {
+    const map = useMap();
+    useEffect(() => {
+        if (origin && destination) {
+            map.fitBounds([origin, destination], { padding: [28, 28], maxZoom: 15 });
+        } else if (origin) {
+            map.setView(origin, 14);
+        } else if (destination) {
+            map.setView(destination, 14);
+        }
+    }, [origin, destination, map]);
+    return null;
+}
+
 export default function Show({ trip }) {
     const { auth } = usePage().props;
     const isLoggedIn = Boolean(auth?.user);
 
-    const [position, setPosition] = useState([-6.1751, 106.8272]);
+    const [origin, setOrigin] = useState(null);          // titik kumpul
+    const [destination, setDestination] = useState(null); // titik tujuan
+    const [routeLine, setRouteLine] = useState(null);     // jalur antar titik
     const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
 
     // ── Join state ──────────────────────────────────────────
@@ -77,26 +115,65 @@ export default function Show({ trip }) {
     };
 
     useEffect(() => {
-        if (!trip?.details?.titik_kumpul) return; 
-
-        const fetchCoordinates = async () => {
-            try {
-                const query = encodeURIComponent(`${trip.details.titik_kumpul}, Indonesia`);
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
-                );
-                const data = await response.json();
-                
-                if (data && data.length > 0) {
-                    setPosition([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        const geocode = async (label) => {
+            if (!label) return null;
+            // Coba beberapa varian: bias ke Indonesia (countrycodes=id) pada
+            // label mentah dulu — ini menemukan POI spesifik seperti "Bandung
+            // Factory Outlet" maupun nama kota. Fallback: tambah ", Indonesia".
+            const base = "https://nominatim.openstreetmap.org/search?format=json&limit=1";
+            const urls = [
+                `${base}&countrycodes=id&q=${encodeURIComponent(label)}`,
+                `${base}&q=${encodeURIComponent(`${label}, Indonesia`)}`,
+            ];
+            for (const url of urls) {
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                    }
+                } catch (error) {
+                    console.error("Gagal cari koordinat:", error);
                 }
-            } catch (error) {
-                console.error("Gagal cari koordinat:", error);
             }
+            return null;
         };
 
-        fetchCoordinates();
-    }, [trip?.details?.titik_kumpul]);
+        let cancelled = false;
+
+        (async () => {
+            const [o, d] = await Promise.all([
+                geocode(trip?.details?.titik_kumpul),
+                geocode(trip?.details?.titik_tujuan),
+            ]);
+            if (cancelled) return;
+
+            setOrigin(o);
+            setDestination(d);
+
+            if (o && d) {
+                // Coba ambil rute jalan sebenarnya (OSRM); fallback ke garis lurus
+                try {
+                    const res = await fetch(
+                        `https://router.project-osrm.org/route/v1/driving/${o[1]},${o[0]};${d[1]},${d[0]}?overview=full&geometries=geojson`
+                    );
+                    const json = await res.json();
+                    const coords = json?.routes?.[0]?.geometry?.coordinates?.map(
+                        ([lng, lat]) => [lat, lng]
+                    );
+                    if (!cancelled) setRouteLine(coords?.length ? coords : [o, d]);
+                } catch {
+                    if (!cancelled) setRouteLine([o, d]);
+                }
+            } else if (!cancelled) {
+                setRouteLine(null);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [trip?.details?.titik_kumpul, trip?.details?.titik_tujuan]);
 
     const handleChatOrganizer = () => {
         const otherUserId = trip?.organizer?.id;
@@ -294,31 +371,58 @@ export default function Show({ trip }) {
                         <div className="sticky top-24 space-y-4">
                             <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
                                 {/* Map */}
-                                <div className="h-40 bg-neutral-200 relative z-0">
-                                    <MapContainer 
-                                        key={`${position[0]}-${position[1]}`} 
-                                        center={position} 
-                                        zoom={15} 
-                                        scrollWheelZoom={false} 
+                                <div className="h-56 bg-neutral-200 relative z-0">
+                                    <MapContainer
+                                        center={origin || destination || JAKARTA}
+                                        zoom={13}
+                                        scrollWheelZoom={false}
                                         className="w-full h-full z-0"
                                     >
                                         <TileLayer
                                             attribution='© OpenStreetMap'
                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         />
-                                        <Marker position={position}>
-                                            <Popup>
-                                                <b className="font-bold">Titik Kumpul:</b> <br /> 
-                                                {trip?.details?.titik_kumpul || "Lokasi belum ditentukan"}
-                                            </Popup>
-                                        </Marker>
+
+                                        {origin && (
+                                            <Marker position={origin} icon={ORIGIN_ICON}>
+                                                <Popup>
+                                                    <b className="font-bold">Titik Kumpul:</b> <br />
+                                                    {trip?.details?.titik_kumpul || "Lokasi belum ditentukan"}
+                                                </Popup>
+                                            </Marker>
+                                        )}
+
+                                        {destination && (
+                                            <Marker position={destination} icon={DEST_ICON}>
+                                                <Popup>
+                                                    <b className="font-bold">Titik Tujuan:</b> <br />
+                                                    {trip?.details?.titik_tujuan || "Lokasi belum ditentukan"}
+                                                </Popup>
+                                            </Marker>
+                                        )}
+
+                                        {routeLine && (
+                                            <Polyline
+                                                positions={routeLine}
+                                                pathOptions={{ color: "#0c8ce9", weight: 4, opacity: 0.75 }}
+                                            />
+                                        )}
+
+                                        <MapView origin={origin} destination={destination} />
                                     </MapContainer>
 
-                                    <Button 
-                                        size="sm" 
-                                        variant="solid" 
+                                    <Button
+                                        size="sm"
+                                        variant="solid"
                                         className="absolute bottom-3 right-3 z-[1000] bg-primary-600 text-white shadow-md hover:bg-primary-700"
-                                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip?.details?.titik_kumpul)}`, '_blank')}
+                                        onClick={() => {
+                                            const o = encodeURIComponent(trip?.details?.titik_kumpul || "");
+                                            const d = encodeURIComponent(trip?.details?.titik_tujuan || "");
+                                            const url = trip?.details?.titik_tujuan
+                                                ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`
+                                                : `https://www.google.com/maps/search/?api=1&query=${o}`;
+                                            window.open(url, "_blank");
+                                        }}
                                     >
                                         Buka di Google Maps
                                     </Button>

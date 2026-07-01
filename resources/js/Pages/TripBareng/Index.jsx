@@ -91,10 +91,10 @@ export default function Index({ trips, all_trips, filters = {} }) {
                         selectClassName="h-10 bg-white"
                     >
                         <option value="">Urutkan</option>
-                        <option value="rating">⭐ Rating Tertinggi</option>
-                        <option value="price_asc">💰 Harga Termurah</option>
-                        <option value="price_desc">💎 Harga Termahal</option>
-                        <option value="newest">🆕 Terbaru</option>
+                        <option value="rating">Rating Tertinggi</option>
+                        <option value="price_asc">Harga Termurah</option>
+                        <option value="price_desc">Harga Termahal</option>
+                        <option value="newest">Terbaru</option>
                     </Select>
                 </div>
 

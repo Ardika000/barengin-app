@@ -14,6 +14,18 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 
 const createEmptyParticipant = () => ({ name: "", passport: "", phone: "", nik: "" });
 
+// Validasi nomor HP Indonesia (dipakai bersama prefix +62).
+// Mengembalikan "empty", "invalid", atau null (valid).
+const validatePhone = (raw) => {
+    let digits = String(raw || "").replace(/\D/g, "");
+    // Toleransi bila user mengawali dengan 0 (mis. 0812...) padahal sudah ada +62
+    if (digits.startsWith("0")) digits = digits.slice(1);
+    if (!digits) return "empty";
+    // Nomor HP Indonesia diawali 8, total 9–12 digit (tanpa 0/+62)
+    if (!/^8\d{8,11}$/.test(digits)) return "invalid";
+    return null;
+};
+
 export default function Checkout({ trip, midtrans_client_key }) {
     // storageKey harus didefinisikan PERTAMA sebelum dipakai di useState
     const storageKey = `trip_${trip.id}_participants`;
@@ -122,7 +134,8 @@ export default function Checkout({ trip, midtrans_client_key }) {
         participants.forEach((p, idx) => {
             const err = { name: false, phone: false };
             if (!p.name.trim())  { err.name  = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
-            if (!p.phone.trim()) { err.phone = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
+            const phoneErr = validatePhone(p.phone);
+            if (phoneErr) { err.phone = phoneErr; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
             newErrors[idx] = err;
         });
 
@@ -282,7 +295,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                     {/* Nama */}
                                     <div>
                                         <Input
-                                            label="Nama Lengkap"
+                                            label={<>Nama Lengkap <span className="text-red-500">*</span></>}
                                             placeholder="Masukkan nama lengkap sesuai KTP"
                                             value={p.name}
                                             onChange={(e) => handleParticipantChange(idx, "name", e.target.value)}
@@ -297,7 +310,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
 
                                     {/* Paspor */}
                                     <Input
-                                        label="No. Paspor (Opsional)"
+                                        label="No. Paspor"
                                         placeholder="Nomor paspor resmi anda"
                                         value={p.passport}
                                         onChange={(e) => handleParticipantChange(idx, "passport", e.target.value)}
@@ -308,8 +321,9 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
                                             <Input
-                                                label="Nomor Telepon"
-                                                placeholder="No Telpon"
+                                                label={<>Nomor Telepon <span className="text-red-500">*</span></>}
+                                                placeholder="81234567890"
+                                                inputMode="numeric"
                                                 value={p.phone}
                                                 onChange={(e) => handleParticipantChange(idx, "phone", e.target.value)}
                                                 disabled={snapToken !== null}
@@ -317,12 +331,15 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                             />
                                             {errors[idx]?.phone && (
                                                 <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
-                                                    <IoMdInformationCircleOutline className="text-sm" /> Nomor Telepon wajib diisi.
+                                                    <IoMdInformationCircleOutline className="text-sm" />
+                                                    {errors[idx].phone === "invalid"
+                                                        ? "Nomor HP tidak valid (contoh: 81234567890)."
+                                                        : "Nomor Telepon wajib diisi."}
                                                 </p>
                                             )}
                                         </div>
                                         <Input
-                                            label="NIK (Opsional)"
+                                            label="NIK"
                                             placeholder="NIK"
                                             value={p.nik}
                                             onChange={(e) => handleParticipantChange(idx, "nik", e.target.value)}

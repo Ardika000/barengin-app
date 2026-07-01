@@ -25,10 +25,27 @@ use App\Http\Controllers\AdminPergiBarengController;
 use App\Http\Controllers\AdminTripController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ContactController;
+use App\Models\PostImage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return inertia('Home/Index');
+    // Ambil sebagian gambar acak dari postingan forum untuk galeri beranda
+    $galleryImages = PostImage::inRandomOrder()
+        ->limit(7)
+        ->pluck('img_name')
+        ->map(function ($name) {
+            if (str_starts_with($name, '/') || str_starts_with($name, 'http')) {
+                return $name;
+            }
+
+            return asset('storage/posts/' . $name);
+        })
+        ->values()
+        ->all();
+
+    return inertia('Home/Index', [
+        'galleryImages' => $galleryImages,
+    ]);
     })->name('home');
 
 Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.store');
