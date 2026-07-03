@@ -76,6 +76,15 @@ export default function ChatShow({
     const [sidebarConversations, setSidebarConversations] = useState(conversations ?? []);
     useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
 
+    // Melacak id percakapan yang sudah ada di sidebar, dipakai untuk mendeteksi
+    // percakapan BARU yang masuk lewat channel pribadi user.
+    const knownConvIdsRef = useRef(new Set());
+    useEffect(() => {
+        knownConvIdsRef.current = new Set(
+            (sidebarConversations ?? []).map((c) => Number(c.id)),
+        );
+    }, [sidebarConversations]);
+
     const filtered = useMemo(() => {
     return (sidebarConversations ?? [])
         .filter((c) => {
@@ -214,6 +223,34 @@ export default function ChatShow({
             ids.forEach((id) => window.Echo.leave(`private-conversation.${id}`));
         };
     }, [conversations?.length, conversation?.id, authUser?.id]);
+
+    // Channel pribadi user: menangkap pesan dari percakapan yang BELUM ada di
+    // sidebar (mis. seseorang baru pertama kali chat kita). Saat itu terjadi,
+    // muat ulang daftar percakapan supaya chat baru langsung muncul tanpa refresh.
+    useEffect(() => {
+        if (!window.Echo || !authUser?.id) return;
+
+        const channelName = `user.${authUser.id}`;
+        const channel = window.Echo.private(channelName);
+
+        channel.listen(".message.sent", (payload) => {
+            const cid = Number(payload.conversation_id);
+            if (knownConvIdsRef.current.has(cid)) return;
+
+            // Tandai optimistik agar pesan susulan tidak memicu reload berulang.
+            knownConvIdsRef.current.add(cid);
+
+            router.reload({
+                only: ["conversations"],
+                preserveScroll: true,
+                preserveState: true,
+            });
+        });
+
+        return () => {
+            window.Echo.leave(`private-${channelName}`);
+        };
+    }, [authUser?.id]);
 
     useEffect(() => {
         markAsRead();

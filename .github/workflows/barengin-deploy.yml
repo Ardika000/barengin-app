@@ -27,9 +27,6 @@ jobs:
 
       - name: Build frontend
         run: npm run build
-        env:
-          VITE_PUSHER_APP_KEY: ${{ secrets.VITE_PUSHER_APP_KEY }}
-          VITE_PUSHER_APP_CLUSTER: ${{ secrets.VITE_PUSHER_APP_CLUSTER }}
 
       - name: Setup SSH
         shell: bash

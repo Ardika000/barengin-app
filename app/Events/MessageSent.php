@@ -7,6 +7,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\Message;
 
@@ -23,9 +24,21 @@ class MessageSent implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('conversation.'.$this->message->conversation_id),
         ];
+
+        // Juga broadcast ke channel pribadi tiap partisipan, supaya percakapan
+        // yang BARU dibuat langsung muncul realtime tanpa perlu refresh.
+        $participantIds = DB::table('conversation_participants')
+            ->where('conversation_id', $this->message->conversation_id)
+            ->pluck('user_id');
+
+        foreach ($participantIds as $uid) {
+            $channels[] = new PrivateChannel('user.'.$uid);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string{
