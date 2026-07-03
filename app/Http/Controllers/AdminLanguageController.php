@@ -11,8 +11,10 @@ class AdminLanguageController extends Controller
     {
         $languages = Language::orderBy('sort_order')->get();
 
+        // Nb: dinamai `manageLanguages`, bukan `languages`, agar tidak menimpa shared
+        // prop `languages` (khusus bahasa aktif) yang dipakai LanguageSwitcher.
         return Inertia::render('Admin/Languages', [
-            'languages' => $languages,
+            'manageLanguages' => $languages,
         ]);
     }
 
@@ -36,6 +38,10 @@ class AdminLanguageController extends Controller
 
         $language->is_active = ! $language->is_active;
         $language->save();
+
+        \App\Models\ActivityLog::record(
+            ($language->is_active ? 'Mengaktifkan' : 'Menonaktifkan') . ' bahasa: ' . $language->name
+        );
 
         return back()->with('flash', [
             'type' => 'success',

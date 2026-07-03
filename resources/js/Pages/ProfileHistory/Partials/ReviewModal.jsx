@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { FaTimes, FaStar } from "react-icons/fa";
 import Button from "@/Components/Button";
+import { useTranslation } from "@/lib/useTranslation";
 
 /**
  * Modal ulasan yang dipakai ulang berdasarkan tipe:
@@ -9,6 +10,7 @@ import Button from "@/Components/Button";
  * - pergi_bareng : menilai pembuat perjalanan (satu rating)
  */
 export default function ReviewModal({ target, onClose }) {
+    const { t } = useTranslation();
     const isTrip = target.type === "trip";
 
     const { data, setData, post, processing, errors } = useForm({
@@ -25,14 +27,14 @@ export default function ReviewModal({ target, onClose }) {
         e.preventDefault();
 
         if (isTrip && data.trip_rating < 1) {
-            setLocalError("Mohon beri rating untuk trip.");
+            setLocalError(t("ph.err_rate_trip"));
             return;
         }
         if (data.user_rating < 1) {
             setLocalError(
                 isTrip
-                    ? "Mohon beri rating untuk pemandu."
-                    : "Mohon beri rating untuk pembuat perjalanan.",
+                    ? t("ph.err_rate_guide")
+                    : t("ph.err_rate_creator"),
             );
             return;
         }
@@ -58,7 +60,7 @@ export default function ReviewModal({ target, onClose }) {
                 <div className="flex items-start justify-between gap-4 px-6 pt-6">
                     <div>
                         <h2 className="text-lg font-bold text-neutral-900">
-                            Beri Ulasan Perjalanan
+                            {t("ph.review_title")}
                         </h2>
                         <p className="mt-0.5 text-sm text-neutral-500">
                             {target.title}
@@ -90,7 +92,7 @@ export default function ReviewModal({ target, onClose }) {
                                 {target.user.name}
                             </p>
                             <p className="text-xs text-neutral-500">
-                                {isTrip ? "Pemandu Trip" : "Pembuat Perjalanan"}
+                                {isTrip ? t("ph.trip_guide") : t("ph.trip_creator")}
                             </p>
                         </div>
                     </div>
@@ -98,7 +100,7 @@ export default function ReviewModal({ target, onClose }) {
                     {/* Rating trip (khusus trip) */}
                     {isTrip && (
                         <RatingRow
-                            label="Rating Trip"
+                            label={t("ph.rating_trip")}
                             value={data.trip_rating}
                             onChange={(v) => setData("trip_rating", v)}
                         />
@@ -107,7 +109,7 @@ export default function ReviewModal({ target, onClose }) {
                     {/* Rating user (pemandu / pembuat) */}
                     <RatingRow
                         label={
-                            isTrip ? "Rating Pemandu" : "Rating Pembuat Perjalanan"
+                            isTrip ? t("ph.rating_guide") : t("ph.rating_creator")
                         }
                         value={data.user_rating}
                         onChange={(v) => setData("user_rating", v)}
@@ -116,13 +118,13 @@ export default function ReviewModal({ target, onClose }) {
                     {/* Komentar */}
                     <div>
                         <label className="mb-2 block font-semibold text-neutral-900">
-                            Beri Ulasan
+                            {t("ph.give_review")}
                         </label>
                         <textarea
                             rows={4}
                             value={data.comment}
                             onChange={(e) => setData("comment", e.target.value)}
-                            placeholder="ulasan terkait perjalanan"
+                            placeholder={t("ph.review_ph")}
                             className="w-full resize-none rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-800 outline-none transition-colors focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                         />
                         {errors.comment && (
@@ -149,7 +151,7 @@ export default function ReviewModal({ target, onClose }) {
                         size="sm"
                         onClick={onClose}
                     >
-                        Batal
+                        {t("common.cancel")}
                     </Button>
                     <Button
                         type="primary"
@@ -157,7 +159,7 @@ export default function ReviewModal({ target, onClose }) {
                         size="sm"
                         disabled={processing}
                     >
-                        {processing ? "Mengirim..." : "Kirim Ulasan"}
+                        {processing ? t("common.processing") : t("ph.send_review")}
                     </Button>
                 </div>
             </form>

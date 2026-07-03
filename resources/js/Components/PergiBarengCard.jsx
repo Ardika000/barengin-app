@@ -14,8 +14,10 @@ import {
 } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import { BsLightningFill, BsChatDots } from "react-icons/bs";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function PergiBarengCard({ data }) {
+    const { t } = useTranslation();
     const {
         image = "/assets/pergi-bareng/PergiBarengHeader.avif",
         title = "Terminal Cibubur",
@@ -71,7 +73,7 @@ export default function PergiBarengCard({ data }) {
         const otherUserId = data?.user?.id; // pastikan backend mengirim ini
 
         if (!otherUserId) {
-            toast.error("ID penyelenggara belum tersedia.");
+            toast.error(t("pb.card.organizer_unavailable"));
             return;
         }
 
@@ -96,7 +98,7 @@ export default function PergiBarengCard({ data }) {
                     type="button"
                     onClick={handleToggleLike}
                     aria-pressed={isLiked}
-                    aria-label={isLiked ? "Batal sukai" : "Sukai"}
+                    aria-label={isLiked ? t("pb.card.unlike") : t("pb.card.like")}
                     className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-2 shadow transition-transform hover:scale-105 cursor-pointer"
                 >
                     <FaHeart
@@ -107,7 +109,7 @@ export default function PergiBarengCard({ data }) {
                 {/* SISA KURSI DINAMIS */}
                 <div className="absolute left-3 bottom-3 z-10 flex items-center gap-1.5 rounded-full bg-neutral-800/80 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white">
                     <BsLightningFill className="text-yellow-400" />
-                    <span>sisa {remainingSeats} kursi lagi</span>
+                    <span>{t("common.seats_left_badge").replace("{n}", remainingSeats)}</span>
                 </div>
             </div>
 
@@ -168,7 +170,7 @@ export default function PergiBarengCard({ data }) {
                                     {user.rating}
                                 </span>
                                 <span className="truncate">
-                                    ({user.reviews} ulasan)
+                                    ({user.reviews} {t("common.reviews")})
                                 </span>
                             </div>
                         </div>
@@ -176,7 +178,7 @@ export default function PergiBarengCard({ data }) {
 
                     {isOwner ? (
                         <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
-                            Pergi Bareng Anda
+                            {t("pb.card.your_pb")}
                         </span>
                     ) : (
                         <Button
@@ -186,7 +188,7 @@ export default function PergiBarengCard({ data }) {
                             onClick={handleChat}
                         >
                             <BsChatDots size={14} />
-                            Chat
+                            {t("pb.card.chat")}
                         </Button>
                     )}
                 </div>
@@ -202,7 +204,7 @@ export default function PergiBarengCard({ data }) {
 
                         <div className="min-w-0 text-xs">
                             <p className="whitespace-nowrap text-neutral-400">
-                                Transportasi
+                                {t("pb.card.transport_label")}
                             </p>
                             <p className="truncate font-medium text-neutral-700">
                                 {transportType}
@@ -216,7 +218,7 @@ export default function PergiBarengCard({ data }) {
                         href={href}
                         className="px-4 py-2 shrink-0 whitespace-nowrap"
                     >
-                        Ikut Pergi
+                        {t("pb.card.join_pb")}
                     </Button>
                 </div>
             </div>

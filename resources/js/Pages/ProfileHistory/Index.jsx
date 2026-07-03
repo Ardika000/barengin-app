@@ -12,6 +12,7 @@ import ProfileEditForm from "./Partials/ProfileEditForm";
 import TransactionCard from "./Partials/TransactionCard";
 import JalanBarengCard from "./Partials/JalanBarengCard";
 import ReviewModal from "./Partials/ReviewModal";
+import { useTranslation } from "@/lib/useTranslation";
 // import JastipFavoriteCard from "./Partials/JastipFavoriteCard"; // Jastip dinonaktifkan sementara
 
 import {
@@ -23,12 +24,12 @@ import {
 } from "react-icons/fa";
 
 const TABS = [
-    { key: "transactions", label: "Transaksi Anda", pageParam: "tx_page", icon: FaReceipt },
-    { key: "history", label: "History Jalan Bareng", pageParam: "jb_page", icon: FaRoute },
+    { key: "transactions", labelKey: "ph.tab_transactions", pageParam: "tx_page", icon: FaReceipt },
+    { key: "history", labelKey: "ph.tab_history", pageParam: "jb_page", icon: FaRoute },
     // Jastip dinonaktifkan sementara (fitur jastip kemungkinan dihapus)
     // { key: "jastip", label: "Jastip Kesukaan", pageParam: "jastip_page", icon: FaUtensils },
-    { key: "trips", label: "Trip Kesukaan", pageParam: "trip_page", icon: FaMapMarkedAlt },
-    { key: "pergi", label: "Pergi Bareng", pageParam: "pb_page", icon: FaCarSide },
+    { key: "trips", labelKey: "ph.tab_trips", pageParam: "trip_page", icon: FaMapMarkedAlt },
+    { key: "pergi", labelKey: "nav.pergi_bareng", pageParam: "pb_page", icon: FaCarSide },
 ];
 
 export default function ProfileHistory({
@@ -41,6 +42,7 @@ export default function ProfileHistory({
     tab = "transactions",
     midtrans_client_key,
 }) {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState(tab);
     const [editing, setEditing] = useState(false);
     const [snapReady, setSnapReady] = useState(false);
@@ -66,7 +68,7 @@ export default function ProfileHistory({
     const handlePay = (snapToken) => {
         if (!snapToken) return;
         if (!snapReady || !window.snap) {
-            toast.warning("Sistem pembayaran belum siap. Coba muat ulang halaman.");
+            toast.warning(t("ph.pay_not_ready"));
             return;
         }
 
@@ -111,20 +113,20 @@ export default function ProfileHistory({
                 <section className="rounded-3xl border border-neutral-200 bg-white p-5 sm:p-7">
                     {/* Tab nav */}
                     <div className="mb-6 flex flex-wrap gap-x-4 gap-y-1 border-b border-neutral-200 sm:gap-x-6">
-                        {TABS.map((t) => {
-                            const isActive = activeTab === t.key;
+                        {TABS.map((item) => {
+                            const isActive = activeTab === item.key;
                             return (
                                 <button
-                                    key={t.key}
+                                    key={item.key}
                                     type="button"
-                                    onClick={() => setActiveTab(t.key)}
+                                    onClick={() => setActiveTab(item.key)}
                                     className={`-mb-px whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold transition-colors ${
                                         isActive
                                             ? "border-primary-700 text-primary-700"
                                             : "border-transparent text-neutral-500 hover:text-neutral-800"
                                     }`}
                                 >
-                                    {t.label}
+                                    {t(item.labelKey)}
                                 </button>
                             );
                         })}
@@ -138,8 +140,8 @@ export default function ProfileHistory({
                             onPageChange={goToPage}
                             empty={{
                                 icon: <FaReceipt className="h-12 w-12" />,
-                                title: "Belum ada transaksi",
-                                desc: "Transaksi trip & jastip Anda akan muncul di sini.",
+                                title: t("ph.empty_tx_title"),
+                                desc: t("ph.empty_tx_desc"),
                             }}
                         >
                             <div className="space-y-4">
@@ -162,8 +164,8 @@ export default function ProfileHistory({
                             onPageChange={goToPage}
                             empty={{
                                 icon: <FaRoute className="h-12 w-12" />,
-                                title: "Belum ada riwayat jalan bareng",
-                                desc: "Trip & pergi bareng yang sudah Anda ikuti akan muncul di sini untuk diulas.",
+                                title: t("ph.empty_history_title"),
+                                desc: t("ph.empty_history_desc"),
                             }}
                         >
                             <div className="space-y-4">
@@ -209,8 +211,8 @@ export default function ProfileHistory({
                             onPageChange={goToPage}
                             empty={{
                                 icon: <FaMapMarkedAlt className="h-12 w-12" />,
-                                title: "Belum ada trip kesukaan",
-                                desc: "Temukan dan ikuti trip seru di sekitar Anda.",
+                                title: t("ph.empty_trips_title"),
+                                desc: t("ph.empty_trips_desc"),
                             }}
                         >
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -228,8 +230,8 @@ export default function ProfileHistory({
                             onPageChange={goToPage}
                             empty={{
                                 icon: <FaCarSide className="h-12 w-12" />,
-                                title: "Belum ada pergi bareng",
-                                desc: "Gabung atau buat perjalanan bareng komunitas.",
+                                title: t("ph.empty_pergi_title"),
+                                desc: t("ph.empty_pergi_desc"),
                             }}
                         >
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

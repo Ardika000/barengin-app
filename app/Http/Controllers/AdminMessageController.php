@@ -43,7 +43,10 @@ class AdminMessageController extends Controller
     {
         // <-- UBAH PEMANGGILAN MODEL INI
         $message = ContactMessage::findOrFail($id);
+        $senderName = $message->name ?? '-';
         $message->delete();
+
+        \App\Models\ActivityLog::record('Menghapus pesan dari: ' . $senderName);
 
         return redirect()->back()->with('success', 'Pesan berhasil dihapus.');
     }

@@ -3,6 +3,7 @@ import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle } from "react-icons/fi";
 
 const STATUS_STYLES = {
@@ -15,6 +16,7 @@ const STATUS_STYLES = {
 const STATUS_ORDER = { draft: 0, created: 1, ongoing: 2, done: 3 };
 
 export default function Index({ trips = [] }) {
+    const { t: translate } = useTranslation();
     const [search, setSearch] = useState("");
     const [sortBy, setSortBy] = useState("latest");
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
@@ -47,6 +49,11 @@ export default function Index({ trips = [] }) {
     const rupiah = (n) => "Rp " + Number(n).toLocaleString("id-ID");
 
     return (
+        <>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-neutral-700">{translate("admin.trip.index_title")}</h1>
+                <p className="text-neutral-500 text-sm">{translate("admin.trip.index_subtitle")}</p>
+            </div>
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title="Manajemen Trip" />
 
@@ -56,9 +63,9 @@ export default function Index({ trips = [] }) {
                 onConfirm={confirmDelete}
                 icon={<FiAlertCircle size={26} />}
                 iconClass="bg-red-100 text-red-500"
-                title="Hapus Draft Trip?"
-                description={<>Yakin ingin menghapus <span className="font-semibold text-neutral-700">{deleteModal.name}</span>?</>}
-                confirmLabel="Ya, Hapus"
+                title={translate("admin.trip.delete_title")}
+                description={<>{translate("admin.trip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{translate("admin.trip.delete_desc_suffix")}</>}
+                confirmLabel={translate("admin.trip.delete_confirm")}
                 confirmClass="bg-red-600 hover:bg-red-700"
             />
             <ConfirmModal
@@ -67,9 +74,9 @@ export default function Index({ trips = [] }) {
                 onConfirm={confirmPublish}
                 icon={<FiUploadCloud size={26} />}
                 iconClass="bg-blue-100 text-primary-700"
-                title="Publish Trip?"
-                description={<>Setelah dipublish, <span className="font-semibold text-neutral-700">{publishModal.name}</span> akan tampil di Trip Bareng dan tidak bisa diedit/dihapus lagi.</>}
-                confirmLabel="Ya, Publish"
+                title={translate("admin.trip.publish_title")}
+                description={<>{translate("admin.trip.publish_desc_prefix")} <span className="font-semibold text-neutral-700">{publishModal.name}</span> {translate("admin.trip.publish_desc_suffix")}</>}
+                confirmLabel={translate("admin.trip.publish_confirm")}
                 confirmClass="bg-primary-700 hover:bg-blue-700"
             />
 
@@ -77,7 +84,7 @@ export default function Index({ trips = [] }) {
             <div className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="relative flex-1 max-w-md">
                     <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                    <input type="text" placeholder="Cari trip..." value={search} onChange={(e) => setSearch(e.target.value)}
+                    <input type="text" placeholder={translate("admin.trip.search_ph")} value={search} onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all" />
                 </div>
 
@@ -85,9 +92,9 @@ export default function Index({ trips = [] }) {
                     <div className="relative">
                         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
                             className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all">
-                            <option value="latest">Terbaru</option>
-                            <option value="seats">Kursi Terisi</option>
-                            <option value="status">Status</option>
+                            <option value="latest">{translate("admin.trip.sort_latest")}</option>
+                            <option value="seats">{translate("admin.trip.sort_seats")}</option>
+                            <option value="status">{translate("admin.trip.sort_status")}</option>
                         </select>
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +104,7 @@ export default function Index({ trips = [] }) {
                     </div>
 
                     <Button isButtonLink href="/admin/trip/create" size="sm" className="gap-2 whitespace-nowrap">
-                        Buat Perjalanan <FiPlus />
+                        {translate("admin.trip.create_btn")} <FiPlus />
                     </Button>
                 </div>
             </div>
@@ -107,13 +114,13 @@ export default function Index({ trips = [] }) {
                 <table className="w-full text-left border-collapse min-w-[820px]">
                     <thead>
                         <tr className="bg-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                            <th className="py-3 px-5">Trip</th>
-                            <th className="py-3 px-5">Lokasi</th>
-                            <th className="py-3 px-5">Tanggal</th>
-                            <th className="py-3 px-5">Harga</th>
-                            <th className="py-3 px-5">Jml. Kursi</th>
-                            <th className="py-3 px-5">Status</th>
-                            <th className="py-3 px-5 text-center">Aksi</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_trip")}</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_location")}</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_date")}</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_price")}</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_seats")}</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_status")}</th>
+                            <th className="py-3 px-5 text-center">{translate("admin.trip.col_action")}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -140,21 +147,21 @@ export default function Index({ trips = [] }) {
                                         <div className="flex items-center justify-center gap-2">
                                             {t.is_draft ? (
                                                 <>
-                                                    <Link href={`/admin/trip/${t.id}/edit`} title="Edit draft"
+                                                    <Link href={`/admin/trip/${t.id}/edit`} title={translate("admin.trip.action_edit")}
                                                         className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors">
                                                         <FiEdit2 size={16} />
                                                     </Link>
-                                                    <button onClick={() => setPublishModal({ open: true, id: t.id, name: t.name })} title="Publish"
+                                                    <button onClick={() => setPublishModal({ open: true, id: t.id, name: t.name })} title={translate("admin.trip.action_publish")}
                                                         className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors">
                                                         <FiUploadCloud size={16} />
                                                     </button>
-                                                    <button onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })} title="Hapus"
+                                                    <button onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })} title={translate("admin.trip.action_delete")}
                                                         className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors">
                                                         <FiTrash2 size={16} />
                                                     </button>
                                                 </>
                                             ) : t.status !== "done" ? (
-                                                <Link href={`/trip-bareng/${t.id}`} title="Lihat di Trip Bareng"
+                                                <Link href={`/trip-bareng/${t.id}`} title={translate("admin.trip.action_view")}
                                                     className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors">
                                                     <FiExternalLink size={16} />
                                                 </Link>
@@ -168,7 +175,7 @@ export default function Index({ trips = [] }) {
                         ) : (
                             <tr>
                                 <td colSpan="7" className="py-12 text-center text-neutral-500 text-sm">
-                                    Belum ada trip. Klik "Buat Perjalanan" untuk membuat draft pertama.
+                                    {translate("admin.trip.empty")}
                                 </td>
                             </tr>
                         )}
@@ -176,15 +183,12 @@ export default function Index({ trips = [] }) {
                 </table>
             </div>
         </div>
+        </>
     );
 }
 
 Index.layout = (page) => (
-    <AdminLayout title="Dasbor - Home" subtitle="Selamat datang, Pemandu!">
-        <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-700">Aktivitas Pembuatan Perjalanan</h1>
-            <p className="text-neutral-500 text-sm">Kelola trip, publikasikan, dan pantau statusnya.</p>
-        </div>
+    <AdminLayout title="Dasbor - Home">
         {page}
     </AdminLayout>
 );

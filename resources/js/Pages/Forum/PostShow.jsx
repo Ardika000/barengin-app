@@ -8,8 +8,10 @@ import PostCard from "./Partials/PostCard";
 import ResponseSortBar from "./Partials/ResponseSortBar";
 import ResponseItem from "./Partials/ResponseItem";
 import CommentComposer from "./Partials/CommentComposer";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function PostShow() {
+    const { t } = useTranslation();
     const { post, comments, responseCount, sort, auth } = usePage().props;
 
     const [localPost, setLocalPost] = useState(post);
@@ -283,7 +285,7 @@ export default function PostShow() {
         <Container className="py-10">
             <div className="max-w-3xl">
                 <div className="mb-6">
-                    <ForumBackLink href="/forum" label="Kembali" />
+                    <ForumBackLink href="/forum" label={t("common.back")} />
                 </div>
 
                 <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
@@ -306,8 +308,8 @@ export default function PostShow() {
 
                     {postCard.allowsComment ? (
                         <CommentComposer
-                            placeholder="Tulis komentar..."
-                            submitLabel="Kirim"
+                            placeholder={t("forum.write_comment")}
+                            submitLabel={t("forum.send")}
                             onSubmit={submitNewComment}
                         />
                     ) : null}

@@ -4,10 +4,12 @@ import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import Input from "@/Components/Input";
+import { useTranslation } from "@/lib/useTranslation";
 
 import { FaUserFriends, FaMinus, FaPlus, FaChevronLeft, FaShoppingCart } from "react-icons/fa";
 
 export default function Join({ trip }) {
+    const { t } = useTranslation();
     const maxSisa = trip.capacity - trip.joined;
     const [count, setCount] = useState(1);
     const [validationErrors, setValidationErrors] = useState({}); 
@@ -44,7 +46,7 @@ export default function Join({ trip }) {
         if (field === 'telepon') {
             const newErrors = { ...validationErrors };
             if (value && !validatePhoneNumber(value)) {
-                newErrors[`telepon-${index}`] = 'Isi nomor dengan format yang sesuai ! (cth: 821234567890)';
+                newErrors[`telepon-${index}`] = t("pb.join.err_phone_format");
             } else {
                 delete newErrors[`telepon-${index}`];
             }
@@ -60,22 +62,22 @@ export default function Join({ trip }) {
 
         data.participants.forEach((participant, index) => {
             if (!participant.nama.trim()) {
-                newErrors[`nama-${index}`] = 'Nama lengkap wajib diisi';
+                newErrors[`nama-${index}`] = t("pb.join.err_name");
                 hasErrors = true;
             }
             if (!participant.tanggal_lahir) {
-                newErrors[`tanggal_lahir-${index}`] = 'Tanggal lahir wajib diisi';
+                newErrors[`tanggal_lahir-${index}`] = t("pb.join.err_birth");
                 hasErrors = true;
             }
             if (!participant.telepon.trim()) {
-                newErrors[`telepon-${index}`] = 'Nomor telepon wajib diisi';
+                newErrors[`telepon-${index}`] = t("pb.join.err_phone");
                 hasErrors = true;
             } else if (!validatePhoneNumber(participant.telepon)) {
-                newErrors[`telepon-${index}`] = 'Isi dengan format nomor yang sesuai !';
+                newErrors[`telepon-${index}`] = t("pb.join.err_phone_format");
                 hasErrors = true;
             }
             if (!participant.nik.trim()) {
-                newErrors[`nik-${index}`] = 'NIK wajib diisi (16 digit)';
+                newErrors[`nik-${index}`] = t("pb.join.err_nik");
                 hasErrors = true;
             }
         });
@@ -95,9 +97,9 @@ export default function Join({ trip }) {
             <Container className="py-8 max-w-5xl">
                 <div className="mb-6">
                     <Link href={`/pergi-bareng/${trip.id}`} className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 gap-3 transition">
-                        <FaChevronLeft /> Detail Parjalanan
+                        <FaChevronLeft /> {t("pb.join.title")}
                     </Link>
-                    <p className="text-sm text-neutral-500 mt-1 ml-6">Masukan data partisipan demi keamanan anda</p>
+                    <p className="text-sm text-neutral-500 mt-1 ml-6">{t("pb.join.subtitle")}</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -109,15 +111,15 @@ export default function Join({ trip }) {
                                 <div>
                                     <h3 className="font-bold text-neutral-700">{trip.title}</h3>
                                     <p className="text-sm text-primary-600 flex items-center gap-1 mt-1">
-                                        <FaUserFriends /> {trip.joined} / {trip.capacity} telah bergabung
+                                        <FaUserFriends /> {trip.joined} / {trip.capacity} {t("trip.detail.joined")}
                                     </p>
                                 </div>
                             </div>
                             
                             <div className="border-t border-neutral-100 pt-4 flex items-center justify-between">
                                 <div>
-                                    <p className="font-semibold text-sm">Total partisipan</p>
-                                    <p className="text-xs text-neutral-500">Hanya tersisa {maxSisa} kuota lagi</p>
+                                    <p className="font-semibold text-sm">{t("trip.checkout.total_participants")}</p>
+                                    <p className="text-xs text-neutral-500">{t("trip.checkout.only")} {maxSisa} {t("trip.checkout.quota_more")}</p>
                                 </div>
                                 <div className="flex items-center gap-4 bg-neutral-50 rounded-full border border-neutral-200 px-2 py-1">
                                     <button 
@@ -143,15 +145,15 @@ export default function Join({ trip }) {
                             {Array.from({ length: count }).map((_, i) => (
                                 <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-6 relative overflow-hidden">
                                     <div className="flex items-center justify-between mb-5">
-                                        <h4 className="font-bold text-neutral-700">Info Partisipan {i + 1}</h4>
-                                        <span className="text-xs font-semibold bg-success-50 text-success-700 px-3 py-1 rounded-md">Person {i + 1}</span>
+                                        <h4 className="font-bold text-neutral-700">{t("trip.checkout.participant_info")} {i + 1}</h4>
+                                        <span className="text-xs font-semibold bg-success-50 text-success-700 px-3 py-1 rounded-md">{t("trip.checkout.person")} {i + 1}</span>
                                     </div>
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="md:col-span-2">
                                             <Input 
-                                                label="Nama Lengkap" 
-                                                placeholder="Masukkan nama lengkap anda sesuai KTP" 
+                                                label={t("auth.onboard.full_name")}
+                                                placeholder={t("trip.checkout.name_ph")}
                                                 value={data.participants[i].nama}
                                                 onChange={(e) => handleInputChange(i, 'nama', e.target.value)}
                                                 error={validationErrors[`nama-${i}`] || errors[`participants.${i}.nama`]} // <-- DIPERBAIKI
@@ -162,7 +164,7 @@ export default function Join({ trip }) {
                                         <div className="md:col-span-2">
                                             <Input 
                                                 type="date"
-                                                label="Tanggal Lahir (Required)" 
+                                                label={t("auth.onboard.birth_date")}
                                                 value={data.participants[i].tanggal_lahir}
                                                 onChange={(e) => handleInputChange(i, 'tanggal_lahir', e.target.value)}
                                                 error={validationErrors[`tanggal_lahir-${i}`] || errors[`participants.${i}.tanggal_lahir`]} // <-- DIPERBAIKI
@@ -172,16 +174,16 @@ export default function Join({ trip }) {
 
                                         <div className="md:col-span-2">
                                             <Input 
-                                                label="No. Paspor (Optional)" 
-                                                placeholder="Nomor paspor resmi anda" 
+                                                label={t("trip.checkout.passport")}
+                                                placeholder={t("trip.checkout.passport_ph")}
                                                 value={data.participants[i].paspor}
                                                 onChange={(e) => handleInputChange(i, 'paspor', e.target.value)}
                                             />
                                         </div>
                                         <div>
                                             <Input 
-                                                label="Nomor Telepon" 
-                                                placeholder="821234567890" 
+                                                label={t("trip.checkout.phone_label")}
+                                                placeholder="821234567890"
                                                 leftAddon="+62"
                                                 value={data.participants[i].telepon}
                                                 onChange={(e) => handleInputChange(i, 'telepon', e.target.value)}
@@ -192,8 +194,8 @@ export default function Join({ trip }) {
                                         </div>
                                         <div>
                                             <Input 
-                                                label="NIK (Required)" 
-                                                placeholder="Nomor Identitas (16 digit)" 
+                                                label="NIK"
+                                                placeholder={t("pb.join.nik_ph")}
                                                 value={data.participants[i].nik}
                                                 onChange={(e) => handleInputChange(i, 'nik', e.target.value)}
                                                 error={validationErrors[`nik-${i}`] || errors[`participants.${i}.nik`]} // <-- DIPERBAIKI
@@ -211,7 +213,7 @@ export default function Join({ trip }) {
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-2xl border border-neutral-200 p-6 sticky top-24">
                             <h3 className="font-bold flex items-center gap-2 mb-4">
-                                <FaShoppingCart className="text-primary-600" /> Detail Pembiayaan
+                                <FaShoppingCart className="text-primary-600" /> {t("pb.join.financing")}
                             </h3>
                             {trip.financing_estimates?.length > 0 ? (
                                 <ul className="list-disc list-inside space-y-1">
@@ -220,12 +222,12 @@ export default function Join({ trip }) {
                                 ))}
                                 </ul>
                             ) : (
-                                <p className="text-xs text-neutral-400">Belum ada estimasi pembiayaan.</p>
+                                <p className="text-xs text-neutral-400">{t("pb.join.no_estimate")}</p>
                             )}
                             
                             <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-xs flex items-start gap-2 mt-3 mb-6 border border-blue-100">
                                 <FaShoppingCart className="mt-0.5 shrink-0 flex-shrink-0" />
-                                <p>Estimasi bersifat fleksibel. Teknis pembayaran dan pembagian biaya diserahkan sepenuhnya kepada kesepakatan tiap pihak.</p>
+                                <p>{t("pb.show.estimate_note")}</p>
                             </div>
 
                             <Button 
@@ -234,7 +236,7 @@ export default function Join({ trip }) {
                                 onClick={submit}
                                 disabled={processing}
                             >
-                                Gabung Sekarang
+                                {t("pb.join.submit")}
                             </Button>
                         </div>
                     </div>

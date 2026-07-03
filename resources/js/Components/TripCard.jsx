@@ -9,10 +9,12 @@ import { BsChatDots } from "react-icons/bs";
 import { Link, router, usePage } from "@inertiajs/react";
 import { toast } from "@/lib/toast";
 import { useState } from "react";
+import { useTranslation } from "@/lib/useTranslation";
 
 import Button from "@/Components/Button";
 
 export default function TripCard({ trip }) {
+    const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
     const isOwner = authUser && Number(authUser.id) === Number(trip.guide_id);
 
@@ -53,12 +55,12 @@ export default function TripCard({ trip }) {
     };
     const handleOpenChat = () => {
             const otherUserId = trip?.guide_id;
-    
+
             if (!otherUserId) {
-                toast.error("ID pemandu belum tersedia.");
+                toast.error(t("trip.card.guide_unavailable"));
                 return;
             }
-    
+
             router.post("/chat/personal", { user_id: otherUserId });
         };
 
@@ -79,7 +81,7 @@ export default function TripCard({ trip }) {
                     type="button"
                     onClick={handleToggleLike}
                     aria-pressed={isLiked}
-                    aria-label={isLiked ? "Batal sukai trip" : "Sukai trip"}
+                    aria-label={isLiked ? t("trip.card.unlike") : t("trip.card.like")}
                     className="absolute right-3 top-3 bg-white/90 rounded-full p-2 shadow z-10 hover:scale-105 transition-transform cursor-pointer"
                 >
                     <FaHeart
@@ -90,7 +92,7 @@ export default function TripCard({ trip }) {
                 {/* SISA KURSI DINAMIS */}
                 <div className="absolute left-3 bottom-3 bg-neutral-800/80 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium z-10">
                     <BsLightningFill className="text-yellow-400" />
-                    <span>sisa {remaining_seats} kursi lagi</span>
+                    <span>{t("common.seats_left_badge").replace("{n}", remaining_seats)}</span>
                 </div>
             </div>
 
@@ -116,7 +118,7 @@ export default function TripCard({ trip }) {
                                 size={14}
                                 className="text-neutral-400 shrink-0"
                             />
-                            <span className="truncate">Tanggal Trip</span>
+                            <span className="truncate">{t("trip.card.date_label")}</span>
                         </div>
                         <div className="flex flex-col min-w-0" title={date}>
                             <span className="text-neutral-800 font-semibold leading-tight pr-1.5 truncate">
@@ -137,12 +139,14 @@ export default function TripCard({ trip }) {
                                 size={14}
                                 className="text-primary-500 shrink-0"
                             />
-                            <span className="truncate">Kapasitas</span>
+                            <span className="truncate">{t("trip.card.capacity_label")}</span>
                         </div>
                         <p className="text-neutral-800 font-semibold">
                             {typeof joined_count === "number"
-                                ? `${joined_count}/${capacity} orang`
-                                : `${capacity} orang`}
+                                ? `${joined_count}/${capacity} ${t("common.people_word")}`
+                                : typeof capacity === "string" && /[a-zA-Z]/.test(capacity)
+                                    ? capacity
+                                    : `${capacity} ${t("common.people_word")}`}
                         </p>
                     </div>
 
@@ -153,13 +157,13 @@ export default function TripCard({ trip }) {
                                 size={14}
                                 className="text-yellow-400 shrink-0"
                             />
-                            <span className="truncate">Rating Trip</span>
+                            <span className="truncate">{t("trip.card.rating_label")}</span>
                         </div>
                         <div className="flex items-center gap-1 mt-0.5 text-[11px] font-medium text-neutral-500">
                         <span className="text-neutral-700 font-bold">
                             {guide_rating}
                         </span>
-                        <span>({guide_reviews} ulasan)</span>
+                        <span>({guide_reviews} {t("common.reviews")})</span>
                     </div>
                     </div>
                 </div>
@@ -195,14 +199,14 @@ export default function TripCard({ trip }) {
                                 <span className="text-neutral-700 font-bold shrink-0">
                                     {guide_rating}
                                 </span>
-                                <span className="truncate">({guide_reviews} ulasan)</span>
+                                <span className="truncate">({guide_reviews} {t("common.reviews")})</span>
                             </div>
                         </div>
                     </div>
 
                     {isOwner ? (
                         <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
-                            Trip Anda
+                            {t("trip.detail.your_trip")}
                         </span>
                     ) : (
                         <Button
@@ -212,7 +216,7 @@ export default function TripCard({ trip }) {
                             onClick={handleOpenChat}
                         >
                             <BsChatDots size={14} />
-                            Chat Pemandu
+                            {t("trip.card.chat_guide")}
                         </Button>
                     )}
                 </div>
@@ -224,7 +228,7 @@ export default function TripCard({ trip }) {
                     <div className="text-xl font-bold text-gray-900">
                         Rp {price?.toLocaleString("id-ID") ?? 0}
                         <span className="text-sm font-medium text-gray-500 ml-1">
-                            / orang
+                            {t("common.per_person")}
                         </span>
                     </div>
                     <Button
@@ -233,7 +237,7 @@ export default function TripCard({ trip }) {
                         href={`/trip-bareng/${trip.id}`}
                         className="px-4 py-2"
                     >
-                        Ikut Trip
+                        {t("trip.card.join_trip")}
                     </Button>
                 </div>
             </div>

@@ -3,8 +3,10 @@ import { MdVerified } from "react-icons/md";
 import { usePage } from "@inertiajs/react";
 import Button from "@/Components/Button";
 import AvatarEditor from "./AvatarEditor";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function ProfileSidebar({ profile, onEdit }) {
+    const { t } = useTranslation();
     const { auth } = usePage().props;
     const streak = auth?.user?.streak_count ?? 0;
     const streakBest = auth?.user?.streak_best ?? 0;
@@ -19,7 +21,7 @@ export default function ProfileSidebar({ profile, onEdit }) {
                     {profile.verified && (
                         <MdVerified
                             className="size-6 shrink-0 text-primary-600"
-                            title="Akun terverifikasi"
+                            title={t("ph.verified_account")}
                         />
                     )}
                 </h1>
@@ -34,13 +36,13 @@ export default function ProfileSidebar({ profile, onEdit }) {
                     <span className="font-bold text-neutral-900">
                         {profile.followers_count}
                     </span>{" "}
-                    Pengikut
+                    {t("forum.followers")}
                 </span>
                 <span className="text-neutral-700">
                     <span className="font-bold text-neutral-900">
                         {profile.following_count}
                     </span>{" "}
-                    Mengikuti
+                    {t("forum.following")}
                 </span>
             </div>
 
@@ -57,7 +59,7 @@ export default function ProfileSidebar({ profile, onEdit }) {
                 onClick={onEdit}
                 className="mt-5 w-full"
             >
-                Edit Profile
+                {t("ph.edit_profile")}
             </Button>
 
             {/* Streak Nyala */}
@@ -67,18 +69,18 @@ export default function ProfileSidebar({ profile, onEdit }) {
                 </div>
                 <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-orange-700/80">
-                        Nyala Harian
+                        {t("ph.streak_label")}
                     </p>
                     <p className="text-lg font-bold leading-tight text-neutral-700 mt-1">
-                        {streak} hari{" "}
+                        {streak} {t("ph.streak_unit")}{" "}
                         <span className="text-sm font-medium text-neutral-500">
-                            beruntun
+                            {t("ph.streak_streak")}
                         </span>
                     </p>
                     <p className="mt-1 text-xs text-neutral-500">
-                        Rekor terbaikmu:{" "}
+                        {t("ph.streak_best")}{" "}
                         <span className="font-semibold text-neutral-600">
-                            {streakBest} hari
+                            {streakBest} {t("ph.streak_unit")}
                         </span>
                     </p>
                 </div>

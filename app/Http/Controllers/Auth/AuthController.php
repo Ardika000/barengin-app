@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
+use App\Models\ActivityLog;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -79,6 +80,8 @@ class AuthController extends Controller
         $remember = $request->boolean('remember');
         Auth::login($user, $remember);
 
+        ActivityLog::record('Mendaftar sebagai pengguna baru', $user);
+
         return redirect("/onboarding");
     }
 
@@ -99,6 +102,9 @@ class AuthController extends Controller
         $remember = $request->boolean('remember');
 
         if (!Auth::attempt($credentials, $remember)) {
+            // Catat percobaan login gagal (aktor tak dikenal) untuk audit keamanan
+            ActivityLog::record('Percobaan login gagal (' . $loginField . ': ' . $request->login . ')', null);
+
             return back()->with('flash', [
                 'type' => 'error', // three category yaa ada error, success, info
                 'message' => 'Kredensial tersebut tidak sesuai dengan catatan kami.',
@@ -106,6 +112,9 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+
+        ActivityLog::record('Berhasil masuk ke akun');
+
         return redirect()->intended('/')->with('flash', [
             'type' => 'success',
             'message' => 'Selamat datang kembali, ' . Auth::user()->full_name . '!',
@@ -114,10 +123,21 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        // Simpan preferensi bahasa agar tidak ikut terhapus saat session di-invalidate
+        $locale = $request->session()->get('locale');
+
+        // Catat aktivitas keluar mumpung user masih ter-autentikasi
+        ActivityLog::record('Keluar dari akun', $request->user());
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // Kembalikan locale ke session baru supaya bahasa tetap konsisten setelah logout
+        if ($locale) {
+            $request->session()->put('locale', $locale);
+        }
 
         return redirect()->route('login');
     }

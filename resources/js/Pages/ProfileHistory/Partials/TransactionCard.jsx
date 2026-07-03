@@ -3,23 +3,25 @@ import { FaSuitcaseRolling, FaUtensils, FaDownload } from "react-icons/fa";
 import Button from "@/Components/Button";
 import TransactionDetailModal from "./TransactionDetailModal";
 import { downloadReceipt } from "./receipt";
+import { useTranslation } from "@/lib/useTranslation";
 
 const STATUS_CONFIG = {
     completed: {
-        label: "Selesai",
+        labelKey: "ph.status_completed",
         badge: "bg-success-100 text-success-700",
     },
     waiting_payment: {
-        label: "Menunggu Pembayaran",
+        labelKey: "ph.status_waiting",
         badge: "bg-danger-100 text-danger-700",
     },
     in_progress: {
-        label: "Dalam Proses",
+        labelKey: "ph.status_progress",
         badge: "bg-warning-100 text-warning-700",
     },
 };
 
 export default function TransactionCard({ transaction, onPay, onReview }) {
+    const { t } = useTranslation();
     const {
         kind,
         type_label,
@@ -57,7 +59,7 @@ export default function TransactionCard({ transaction, onPay, onReview }) {
                 <span
                     className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${statusConfig.badge}`}
                 >
-                    {statusConfig.label}
+                    {t(statusConfig.labelKey)}
                 </span>
             </div>
 
@@ -80,14 +82,14 @@ export default function TransactionCard({ transaction, onPay, onReview }) {
                                 {item_name}
                             </p>
                             <p className="text-sm text-neutral-500">
-                                {slot} Slot
+                                {slot} {t("ph.slot")}
                             </p>
                         </div>
                     </div>
 
                     <div className="mt-4">
                         <p className="text-xs text-neutral-500">
-                            Total Pembayaran
+                            {t("trip.checkout.total_payment")}
                         </p>
                         <p className="text-lg font-bold text-neutral-900">
                             Rp {Number(total || 0).toLocaleString("id-ID")}
@@ -125,6 +127,7 @@ export default function TransactionCard({ transaction, onPay, onReview }) {
 }
 
 function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload }) {
+    const { t } = useTranslation();
     if (status === "completed") {
         return (
             <>
@@ -136,7 +139,7 @@ function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload
                     className="rounded-lg"
                     onClick={onViewDetail}
                 >
-                    Lihat Detail
+                    {t("ph.view_detail")}
                 </Button>
                 <Button
                     type="primary"
@@ -147,7 +150,7 @@ function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload
                     onClick={onDownload}
                 >
                     <FaDownload className="h-3.5 w-3.5" />
-                    Download Bukti
+                    {t("ph.download_receipt")}
                 </Button>
             </>
         );
@@ -164,7 +167,7 @@ function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload
                 onClick={() => onPay?.(snapToken)}
                 disabled={!snapToken}
             >
-                Bayar Sekarang
+                {t("trip.checkout.pay_now")}
             </Button>
         );
     }
@@ -179,7 +182,7 @@ function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload
             className="rounded-lg"
             onClick={onViewDetail}
         >
-            Pantau Barang
+            {t("ph.track_item")}
         </Button>
     );
 }

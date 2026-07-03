@@ -5,11 +5,14 @@ import { MdHome } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
 import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
 import StreakBadge from "@/Components/StreakBadge.jsx";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
+    const { t } = useTranslation();
     // Ambil data user dari Inertia
     const { props } = usePage();
     const user = props.auth?.user;
+    const greeting = subtitle ?? `${t("admin.navbar.welcome")}, ${user?.full_name || t("admin.navbar.welcome_fallback")}!`;
 
     // State untuk toggle dropdown profil
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -44,63 +47,68 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                         {title}
                     </h1>
                     <p className="text-xs sm:text-sm text-neutral-500">
-                        {subtitle}
+                        {greeting}
                     </p>
                 </div>
             </div>
 
             {/* Bagian Kanan Navbar (Bahasa, Streak, User Profile) */}
-            <div className="flex items-center gap-2 sm:gap-3 relative" ref={dropdownRef}>
+            <div className="flex items-center gap-2 sm:gap-3">
                 <LanguageSwitcher className="hidden sm:block" />
 
                 <Link href="/profile-history" aria-label="Streak Nyala">
                     <StreakBadge count={user?.streak_count ?? 0} />
                 </Link>
 
-                <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center gap-2 focus:outline-none"
-                >
-                    <img
-                        src={user?.public_profile_image ?? "/assets/default-profile.png"}
-                        alt={user?.name ?? "Admin Profile"}
-                        className="w-10 h-10 rounded-full object-cover border border-neutral-200 shadow-sm cursor-pointer"
-                    />
-                </button>
+                {/* Wrapper khusus profil: ref hanya membungkus tombol + menu profil,
+                    supaya klik di luar (mis. pemilih bahasa) menutup dropdown ini
+                    dan tidak saling menumpuk. */}
+                <div className="relative" ref={dropdownRef}>
+                    <button
+                        onClick={() => setIsProfileOpen((v) => !v)}
+                        className="flex items-center gap-2 focus:outline-none"
+                    >
+                        <img
+                            src={user?.public_profile_image ?? "/assets/default-profile.png"}
+                            alt={user?.name ?? "Admin Profile"}
+                            className="w-10 h-10 rounded-full object-cover border border-neutral-200 shadow-sm cursor-pointer"
+                        />
+                    </button>
 
-                {/* --- DROPDOWN MENU PROFILE --- */}
-                {isProfileOpen && (
-                    <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-xl shadow-lg border border-neutral-100 z-50 overflow-hidden animate-fade-in-up">
-                        <Link
-                            href="/"
-                            className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
-                            onClick={() => setIsProfileOpen(false)}
-                        >
-                            <MdHome className="w-5 h-5 text-current shrink-0" />
-                            <span>Beranda</span>
-                        </Link>
+                    {/* --- DROPDOWN MENU PROFILE --- */}
+                    {isProfileOpen && (
+                        <div className="absolute right-0 top-full mt-3 w-56 bg-white rounded-xl shadow-lg border border-neutral-100 z-50 overflow-hidden animate-fade-in-up">
+                            <Link
+                                href="/"
+                                className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
+                                onClick={() => setIsProfileOpen(false)}
+                            >
+                                <MdHome className="w-5 h-5 text-current shrink-0" />
+                                <span>{t("nav.home")}</span>
+                            </Link>
 
-                        <Link
-                            href="/profile-history"
-                            className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
-                            onClick={() => setIsProfileOpen(false)}
-                        >
-                            <HiOutlineDocumentText className="w-5 h-5 text-current shrink-0" />
-                            <span>Riwayat Profil</span>
-                        </Link>
+                            <Link
+                                href="/profile-history"
+                                className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
+                                onClick={() => setIsProfileOpen(false)}
+                            >
+                                <HiOutlineDocumentText className="w-5 h-5 text-current shrink-0" />
+                                <span>{t("nav.profile_history")}</span>
+                            </Link>
 
-                        {/* Logout menggunakan POST method sesuai bawaan Laravel Breeze/Jetstream */}
-                        <Link
-                            href="/logout"
-                            method="post"
-                            as="button"
-                            className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer"
-                        >
-                            <FiLogOut className="w-5 h-5 text-current shrink-0" />
-                            <span>Keluar</span>
-                        </Link>
-                    </div>
-                )}
+                            {/* Logout menggunakan POST method sesuai bawaan Laravel Breeze/Jetstream */}
+                            <Link
+                                href="/logout"
+                                method="post"
+                                as="button"
+                                className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer"
+                            >
+                                <FiLogOut className="w-5 h-5 text-current shrink-0" />
+                                <span>{t("nav.logout")}</span>
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </header>
     );

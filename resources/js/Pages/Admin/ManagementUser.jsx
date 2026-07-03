@@ -3,6 +3,7 @@ import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Pagination from "@/Components/Pagination";
 import ConfirmModal from "@/Components/ConfirmModal";
+import { useTranslation } from "@/lib/useTranslation";
 
 import { FiSearch, FiTrash2, FiEdit2 } from "react-icons/fi";
 import { FaCircleCheck } from "react-icons/fa6";
@@ -32,6 +33,7 @@ const getRandomBg = (id) => {
 };
 
 export default function ManagementUser({ users = [] }) {
+    const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState("");
     const [filterRole, setFilterRole] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -56,9 +58,9 @@ export default function ManagementUser({ users = [] }) {
 
         return users.map((user) => {
             const userRoles = [];
-            if (user.is_admin) userRoles.push("Admin");
-            if (user.is_guider) userRoles.push("Guider");
-            if (userRoles.length === 0) userRoles.push("Pengguna Biasa");
+            if (user.is_admin) userRoles.push("admin");
+            if (user.is_guider) userRoles.push("guider");
+            if (userRoles.length === 0) userRoles.push("user");
 
             return {
                 id: user.id,
@@ -127,11 +129,17 @@ export default function ManagementUser({ users = [] }) {
         setDeleteModal({ isOpen: false, userId: null, userName: "" });
     };
 
+    const roleLabel = (role) =>
+        role === "guider"
+            ? t("admin.users.role_guider")
+            : role === "admin"
+                ? t("admin.users.role_admin")
+                : t("admin.users.role_user");
+
     const renderRoleBadge = (role, idx) => {
         let colorClasses = "";
-        if (role === "Jastiper") colorClasses = "bg-green-100 text-green-700";
-        else if (role === "Guider") colorClasses = "bg-orange-100 text-orange-700";
-        else if (role === "Admin") colorClasses = "bg-blue-100 text-primary-700";
+        if (role === "guider") colorClasses = "bg-orange-100 text-orange-700";
+        else if (role === "admin") colorClasses = "bg-blue-100 text-primary-700";
         else colorClasses = "bg-gray-100 text-gray-600";
 
         return (
@@ -139,12 +147,17 @@ export default function ManagementUser({ users = [] }) {
                 key={idx}
                 className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${colorClasses}`}
             >
-                {role}
+                {roleLabel(role)}
             </span>
         );
     };
 
     return (
+        <>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-neutral-700">{t("admin.nav.users")}</h1>
+                <p className="text-neutral-500 text-sm">{t("admin.users.subtitle")}</p>
+            </div>
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden flex flex-col relative">
             <Head title="Manajemen Pengguna" />
 
@@ -152,8 +165,8 @@ export default function ManagementUser({ users = [] }) {
                 open={deleteModal.isOpen}
                 onClose={closeDeleteModal}
                 onConfirm={confirmDelete}
-                title="Hapus Pengguna?"
-                description={<>Apakah kamu yakin ingin menghapus <span className="font-semibold text-neutral-700">{deleteModal.userName}</span>?</>}
+                title={t("admin.users.delete_title")}
+                description={<>{t("admin.users.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.userName}</span>{t("admin.users.delete_desc_suffix")}</>}
             />
 
             <div className="p-4 sm:p-6 border-b border-neutral-100">
@@ -162,7 +175,7 @@ export default function ManagementUser({ users = [] }) {
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input
                             type="text"
-                            placeholder="Cari nama atau email..."
+                            placeholder={t("admin.users.search_ph")}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all"
@@ -175,10 +188,10 @@ export default function ManagementUser({ users = [] }) {
                             onChange={(e) => setFilterRole(e.target.value)}
                             className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer appearance-none transition-all"
                         >
-                            <option value="">Filter (Semua)</option>
-                            <option value="Guider">Guider</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Pengguna Biasa">Pengguna Biasa</option>
+                            <option value="">{t("admin.users.filter_all")}</option>
+                            <option value="guider">{t("admin.users.role_guider")}</option>
+                            <option value="admin">{t("admin.users.role_admin")}</option>
+                            <option value="user">{t("admin.users.role_user")}</option>
                         </select>
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,10 +208,10 @@ export default function ManagementUser({ users = [] }) {
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr className="bg-neutral-100 border-y border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-3 px-5">NAMA</th>
-                                <th className="py-3 px-5">EMAIL</th>
-                                <th className="py-3 px-5">PERAN</th>
-                                <th className="py-3 px-5 text-center">AKSI</th>
+                                <th className="py-3 px-5">{t("admin.users.col_name")}</th>
+                                <th className="py-3 px-5">{t("admin.users.col_email")}</th>
+                                <th className="py-3 px-5">{t("admin.users.col_role")}</th>
+                                <th className="py-3 px-5 text-center">{t("admin.users.col_action")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -236,16 +249,16 @@ export default function ManagementUser({ users = [] }) {
                                                 <button
                                                     onClick={() => openDeleteModal(user.id, user.name)}
                                                     className="p-2 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                                                    title="Hapus Pengguna"
+                                                    title={t("admin.users.action_delete")}
                                                 >
                                                     <FiTrash2 size={16} />
                                                 </button>
-                                                
+
                                                 {/* TOMBOL EDIT */}
                                                 <Link
                                                     href={`/admin/management-user/${user.id}/edit-role`}
                                                     className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors inline-flex items-center justify-center"
-                                                    title="Edit Peran Pengguna"
+                                                    title={t("admin.users.action_edit")}
                                                 >
                                                     <FiEdit2 size={16} />
                                                 </Link>
@@ -256,7 +269,7 @@ export default function ManagementUser({ users = [] }) {
                             ) : (
                                 <tr>
                                     <td colSpan="4" className="py-12 text-center text-neutral-500">
-                                        Data user tidak ditemukan.
+                                        {t("admin.users.no_results")}
                                     </td>
                                 </tr>
                             )}
@@ -313,7 +326,7 @@ export default function ManagementUser({ users = [] }) {
                         ))
                     ) : (
                         <div className="py-12 text-center text-neutral-500 text-sm">
-                            Data user tidak ditemukan.
+                            {t("admin.users.no_results")}
                         </div>
                     )}
                 </div>
@@ -321,7 +334,7 @@ export default function ManagementUser({ users = [] }) {
 
             <div className="bg-neutral-100 p-4 border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-neutral-500 font-medium text-center md:text-left">
-                    Menampilkan {paginatedUsers.length} dari {filteredUsers.length} data
+                    {t("common.showing")} {paginatedUsers.length} {t("common.of")} {filteredUsers.length} {t("common.data")}
                 </div>
                 <Pagination
                     currentPage={currentPage}
@@ -331,15 +344,12 @@ export default function ManagementUser({ users = [] }) {
                 />
             </div>
         </div>
+        </>
     );
 }
 
 ManagementUser.layout = (page) => (
-    <AdminLayout title="Dasbor - Admin" subtitle="Selamat datang, Admin!">
-        <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-700">Manajemen Pengguna</h1>
-            <p className="text-neutral-500 text-sm">Tempat admin mengatur semua pengguna dalam Barengin.</p>
-        </div>
+    <AdminLayout title="Dasbor - Admin">
         {page}
     </AdminLayout>
 );

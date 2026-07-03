@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import { FiHome, FiSearch, FiPlus, FiUser } from "react-icons/fi";
+import { useTranslation } from "@/lib/useTranslation";
 
 function Tooltip({ label }) {
     return (
@@ -60,6 +61,7 @@ export default function ForumSideNav({
     isCreatePostOpen = false,
 }) {
     const { url } = usePage();
+    const { t } = useTranslation();
 
     const activeKey = useMemo(() => {
         const u = url ?? "";
@@ -86,20 +88,20 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiHome />}
                         href="/forum"
-                        label="Beranda"
+                        label={t("nav.home")}
                         active={activeKey === "home"}
                     />
 
                     <NavIconButton
                         icon={<FiSearch />}
-                        label="Cari Orang"
+                        label={t("forum.nav.find_people")}
                         active={activeKey === "search"}
                         onClick={() => onFindPeople?.()}
                     />
 
                     <NavIconButton
                         icon={<FiPlus />}
-                        label="Buat"
+                        label={t("forum.nav.create")}
                         active={activeKey === "create"}
                         onClick={() => onCreatePost?.()}
                     />
@@ -107,7 +109,7 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiUser />}
                         href="/forum/profile"
-                        label="Profil"
+                        label={t("forum.nav.profile")}
                         active={activeKey === "profile"}
                     />
                 </div>
@@ -119,20 +121,20 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiHome />}
                         href="/forum"
-                        label="Beranda"
+                        label={t("nav.home")}
                         active={activeKey === "home"}
                     />
 
                     <NavIconButton
                         icon={<FiSearch />}
-                        label="Cari Orang"
+                        label={t("forum.nav.find_people")}
                         active={activeKey === "search"}
                         onClick={() => onFindPeople?.()}
                     />
 
                     <NavIconButton
                         icon={<FiPlus />}
-                        label="Buat"
+                        label={t("forum.nav.create")}
                         active={activeKey === "create"}
                         onClick={() => onCreatePost?.()}
                     />
@@ -140,7 +142,7 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiUser />}
                         href="/forum/profile"
-                        label="Profil"
+                        label={t("forum.nav.profile")}
                         active={activeKey === "profile"}
                     />
                 </div>

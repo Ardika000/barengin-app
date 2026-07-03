@@ -7,8 +7,10 @@ import PergiBarengCard from "@/Components/PergiBarengCard";
 import Select from "@/Components/Select";
 import Pagination from "@/Components/Pagination";
 import HeroSection from "./HeroSection";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Index({ trips = {}, filters = {} }) {
+    const { t } = useTranslation();
     const [sortBy, setSortBy] = useState(filters?.sort ?? "schedule");
 
     // `trips` adalah objek paginator dari Laravel (data + meta)
@@ -55,7 +57,7 @@ export default function Index({ trips = {}, filters = {} }) {
             <Container className="py-12 mt-8">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                     <h2 className="text-2xl font-bold text-neutral-700">
-                        Cari Teman Bareng Anda
+                        {t("pb.index.heading")}
                     </h2>
 
                     <div className="flex items-center gap-3">
@@ -66,9 +68,9 @@ export default function Index({ trips = {}, filters = {} }) {
                             className="w-48"
                             selectClassName="h-10"
                         >
-                            <option value="schedule">Jadwal Terdekat</option>
-                            <option value="rating">Rating Tertinggi</option>
-                            <option value="seats">Sisa Kursi Terbanyak</option>
+                            <option value="schedule">{t("pb.sort.schedule")}</option>
+                            <option value="rating">{t("trip.sort.rating")}</option>
+                            <option value="seats">{t("pb.sort.seats")}</option>
                         </Select>
 
                     </div>
@@ -95,7 +97,7 @@ export default function Index({ trips = {}, filters = {} }) {
                 ) : (
                     <div className="text-center py-20 bg-neutral-50 rounded-2xl border border-neutral-200">
                         <p className="text-neutral-500 text-lg">
-                            Belum ada jadwal pergi bareng saat ini.
+                            {t("pb.index.empty")}
                         </p>
                     </div>
                 )}

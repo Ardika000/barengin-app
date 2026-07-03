@@ -1,11 +1,13 @@
 import { FaMapMarkerAlt, FaRegCalendarAlt, FaRoute, FaCarSide, FaCheck, FaStar } from "react-icons/fa";
 import Button from "@/Components/Button";
+import { useTranslation } from "@/lib/useTranslation";
 
 /**
  * Kartu horizontal riwayat "Jalan Bareng" (Trip Bareng / Pergi Bareng)
  * dengan tombol "Beri Ulasan".
  */
 export default function JalanBarengCard({ item, onReview }) {
+    const { t } = useTranslation();
     const {
         type,
         type_label,
@@ -79,7 +81,7 @@ export default function JalanBarengCard({ item, onReview }) {
                 {reviewed ? (
                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-success-50 px-4 py-2 text-sm font-semibold text-success-700">
                         <FaCheck className="h-3.5 w-3.5" />
-                        Sudah Diulas
+                        {t("ph.reviewed")}
                     </span>
                 ) : (
                     <Button
@@ -91,7 +93,7 @@ export default function JalanBarengCard({ item, onReview }) {
                         onClick={() => onReview(review_target)}
                     >
                         <FaStar className="h-3.5 w-3.5" />
-                        Beri Ulasan
+                        {t("ph.give_review")}
                     </Button>
                 )}
             </div>

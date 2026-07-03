@@ -1,5 +1,6 @@
 import React from "react";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Pagination({
     currentPage = 1,
@@ -7,6 +8,7 @@ export default function Pagination({
     onPageChange = () => {},
     className = "",
 }) {
+    const { t } = useTranslation();
     // Logika perhitungan halaman yang dinamis dan optimal
     const getPageNumbers = () => {
         // Jika total halaman sedikit (<= 7), tampilkan semua angkanya
@@ -42,10 +44,10 @@ export default function Pagination({
                         ? "text-neutral-300 cursor-not-allowed"
                         : "text-neutral-600 hover:text-primary-700 active:scale-95"
                 }`}
-                aria-label="Halaman sebelumnya"
+                aria-label={t("pagination.previous_aria")}
             >
                 <FaChevronLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sebelumnya</span>
+                <span className="hidden sm:inline">{t("pagination.previous")}</span>
             </button>
 
             {/* --- Angka Halaman --- */}
@@ -92,9 +94,9 @@ export default function Pagination({
                         ? "text-neutral-300 cursor-not-allowed"
                         : "text-neutral-600 hover:text-primary-700 active:scale-95"
                 }`}
-                aria-label="Halaman selanjutnya"
+                aria-label={t("pagination.next_aria")}
             >
-                <span className="hidden sm:inline">Selanjutnya</span>
+                <span className="hidden sm:inline">{t("pagination.next")}</span>
                 <FaChevronRight className="w-3.5 h-3.5" />
             </button>
 

@@ -3,9 +3,11 @@ import { Head, router } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import { useTranslation } from "@/lib/useTranslation";
 import { FaCheck, FaCalendarAlt } from "react-icons/fa";
 import { BsChatDotsFill } from "react-icons/bs";
 export default function Success({ trip }) {
+    const { t } = useTranslation();
     const handleOpenPergiBarengGroupChat = () => {
         router.post(`/chat/pergi-bareng/${trip.id}/group`);
     }
@@ -20,8 +22,8 @@ export default function Success({ trip }) {
                     <FaCheck className="text-3xl" />
                 </div>
 
-                <h1 className="text-3xl font-bold text-neutral-700 mb-2">Berhasil Bergabung</h1>
-                <p className="text-neutral-600 mb-8">Yeay, Kamu berhasil bergabung</p>
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2">{t("pb.success.title")}</h1>
+                <p className="text-neutral-600 mb-8">{t("pb.success.subtitle")}</p>
 
                 {/* Card Summary */}
                 <div className="bg-white border border-neutral-200 rounded-2xl p-6 w-full max-w-md shadow-sm mb-8">
@@ -30,7 +32,7 @@ export default function Success({ trip }) {
                             <p className="text-xs text-neutral-500">Pergi Bareng ID</p>
                             <p className="font-bold text-neutral-700">{trip.trip_id}</p>
                         </div>
-                        <span className="bg-success-100 text-success-700 text-xs font-semibold px-2 py-1 rounded">Tergabung</span>
+                        <span className="bg-success-100 text-success-700 text-xs font-semibold px-2 py-1 rounded">{t("pb.success.joined_badge")}</span>
                     </div>
 
                     <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-xl border border-neutral-100">
@@ -49,10 +51,10 @@ export default function Success({ trip }) {
                 <div className="w-full max-w-md space-y-3">
                     <Button isButtonLink={false} type="primary" className="w-full font-bold flex items-center justify-center gap-2 text-white" onClick={handleOpenPergiBarengGroupChat}>
                         <BsChatDotsFill className="text-lg" />
-                        Masuk ke Grup Chat
+                        {t("trip.success.enter_group")}
                     </Button>
                     <Button isButtonLink href={`/pergi-bareng/${trip.id}`} variant="outline" className="w-full justify-center text-neutral-600 border-neutral-300 hover:bg-neutral-50">
-                        Lewati
+                        {t("trip.success.skip")}
                     </Button>
                 </div>
 

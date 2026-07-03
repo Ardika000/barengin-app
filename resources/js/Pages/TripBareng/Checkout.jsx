@@ -7,6 +7,7 @@ import Container from "@/Components/Container";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
+import { useTranslation } from "@/lib/useTranslation";
 
 import { FaChevronLeft, FaUserFriends, FaMinus, FaPlus } from "react-icons/fa";
 import { MdOutlineShoppingBag } from "react-icons/md";
@@ -27,6 +28,7 @@ const validatePhone = (raw) => {
 };
 
 export default function Checkout({ trip, midtrans_client_key }) {
+    const { t } = useTranslation();
     // storageKey harus didefinisikan PERTAMA sebelum dipakai di useState
     const storageKey = `trip_${trip.id}_participants`;
 
@@ -216,9 +218,9 @@ export default function Checkout({ trip, midtrans_client_key }) {
                         className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
                     >
                         <FaChevronLeft className="text-xl" />
-                        Checkout Trip
+                        {t("trip.checkout.title")}
                     </Link>
-                    <p className="text-neutral-500 ml-9">Selesaikan pesanan Anda dengan aman dan cepat</p>
+                    <p className="text-neutral-500 ml-9">{t("trip.checkout.subtitle")}</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -239,19 +241,19 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                     <h3 className="text-lg font-bold text-neutral-700 mb-1">{trip.title}</h3>
                                     <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2 font-medium">
                                         <FaUserFriends className="text-neutral-400" />
-                                        {trip.joined_count} / {trip.capacity} orang telah bergabung
+                                        {trip.joined_count} / {trip.capacity} {t("trip.checkout.people_joined")}
                                     </div>
                                     <p className="text-primary-700 font-bold">
                                         Rp {Number(trip.price).toLocaleString("id-ID")}{" "}
-                                        <span className="text-sm font-normal text-neutral-500">/orang</span>
+                                        <span className="text-sm font-normal text-neutral-500">{t("common.per_person")}</span>
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between pt-6">
                                 <div>
-                                    <h4 className="font-bold text-neutral-700">Total partisipan</h4>
-                                    <p className="text-sm text-neutral-500">Hanya tersisa {trip.remaining_quota} kuota lagi</p>
+                                    <h4 className="font-bold text-neutral-700">{t("trip.checkout.total_participants")}</h4>
+                                    <p className="text-sm text-neutral-500">{t("trip.checkout.only")} {trip.remaining_quota} {t("trip.checkout.quota_more")}</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <button
@@ -285,9 +287,9 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                 }`}
                             >
                                 <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-bold text-neutral-700">Info Partisipan {idx + 1}</h3>
+                                    <h3 className="text-lg font-bold text-neutral-700">{t("trip.checkout.participant_info")} {idx + 1}</h3>
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${idx % 2 === 0 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
-                                        Person {idx + 1}
+                                        {t("trip.checkout.person")} {idx + 1}
                                     </span>
                                 </div>
 
@@ -295,23 +297,23 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                     {/* Nama */}
                                     <div>
                                         <Input
-                                            label={<>Nama Lengkap <span className="text-red-500">*</span></>}
-                                            placeholder="Masukkan nama lengkap sesuai KTP"
+                                            label={<>{t("auth.onboard.full_name")} <span className="text-red-500">*</span></>}
+                                            placeholder={t("trip.checkout.name_ph")}
                                             value={p.name}
                                             onChange={(e) => handleParticipantChange(idx, "name", e.target.value)}
                                             disabled={snapToken !== null}
                                         />
                                         {errors[idx]?.name && (
                                             <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
-                                                <IoMdInformationCircleOutline className="text-sm" /> Nama Lengkap wajib diisi.
+                                                <IoMdInformationCircleOutline className="text-sm" /> {t("trip.checkout.name_required")}
                                             </p>
                                         )}
                                     </div>
 
                                     {/* Paspor */}
                                     <Input
-                                        label="No. Paspor"
-                                        placeholder="Nomor paspor resmi anda"
+                                        label={t("trip.checkout.passport")}
+                                        placeholder={t("trip.checkout.passport_ph")}
                                         value={p.passport}
                                         onChange={(e) => handleParticipantChange(idx, "passport", e.target.value)}
                                         disabled={snapToken !== null}
@@ -321,7 +323,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
                                             <Input
-                                                label={<>Nomor Telepon <span className="text-red-500">*</span></>}
+                                                label={<>{t("trip.checkout.phone_label")} <span className="text-red-500">*</span></>}
                                                 placeholder="81234567890"
                                                 inputMode="numeric"
                                                 value={p.phone}
@@ -333,8 +335,8 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                                 <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
                                                     <IoMdInformationCircleOutline className="text-sm" />
                                                     {errors[idx].phone === "invalid"
-                                                        ? "Nomor HP tidak valid (contoh: 81234567890)."
-                                                        : "Nomor Telepon wajib diisi."}
+                                                        ? t("trip.checkout.phone_invalid")
+                                                        : t("trip.checkout.phone_required")}
                                                 </p>
                                             )}
                                         </div>
@@ -356,34 +358,33 @@ export default function Checkout({ trip, midtrans_client_key }) {
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 sticky top-24">
                             <div className="flex items-center gap-2 mb-6">
                                 <MdOutlineShoppingBag className="text-xl text-neutral-800" />
-                                <h3 className="text-lg font-bold text-neutral-700">Detail Pembayaran</h3>
+                                <h3 className="text-lg font-bold text-neutral-700">{t("trip.checkout.payment_details")}</h3>
                             </div>
 
                             <div className="space-y-4 text-sm text-neutral-600 border-b border-neutral-100 pb-6 mb-6">
                                 <div className="flex justify-between items-center">
-                                    <span>Subtotal ({quantity} orang)</span>
+                                    <span>Subtotal ({quantity} {t("common.people_word")})</span>
                                     <span className="font-semibold text-neutral-700">Rp {Number(subtotal).toLocaleString("id-ID")}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span>Biaya Layanan</span>
+                                    <span>{t("trip.checkout.service_fee")}</span>
                                     <span className="font-semibold text-neutral-700">Rp {Number(serviceFee).toLocaleString("id-ID")}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span>Biaya Asuransi Trip</span>
+                                    <span>{t("trip.checkout.insurance_fee")}</span>
                                     <span className="font-semibold text-neutral-700">Rp {Number(insuranceFee).toLocaleString("id-ID")}</span>
                                 </div>
                             </div>
 
                             <div className="flex justify-between items-center mb-6">
-                                <span className="font-bold text-neutral-700">Total Pembayaran</span>
+                                <span className="font-bold text-neutral-700">{t("trip.checkout.total_payment")}</span>
                                 <span className="text-lg font-bold text-neutral-700">Rp {Number(total).toLocaleString("id-ID")}</span>
                             </div>
 
                             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-2xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed">
-                                    Dengan menekan 'Bayar Sekarang', Anda menyetujui Ketentuan Layanan dan Kebijakan
-                                    Pembatalan kami. Pembayaran ditangani aman oleh Midtrans.
+                                    {t("trip.checkout.terms_note")}
                                 </p>
                             </div>
 
@@ -394,12 +395,12 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                 size="md"
                                 className="w-full font-bold flex justify-center text-white py-3 rounded-lg disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                {isProcessing ? "Memproses..." : snapToken ? "Buka Kembali Pembayaran" : "Bayar Sekarang"}
+                                {isProcessing ? t("common.processing") : snapToken ? t("trip.checkout.reopen_payment") : t("trip.checkout.pay_now")}
                             </Button>
 
                             {!snapReady && (
                                 <p className="text-xs text-neutral-400 mt-3 text-center">
-                                    Memuat sistem pembayaran... (Jika lama, coba refresh)
+                                    {t("trip.checkout.loading_payment")}
                                 </p>
                             )}
                         </div>

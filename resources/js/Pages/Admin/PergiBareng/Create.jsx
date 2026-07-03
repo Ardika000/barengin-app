@@ -3,9 +3,11 @@ import { Head, Link, useForm } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import LocationInput from "@/Components/LocationInput";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiPlus, FiX, FiUploadCloud, FiChevronLeft } from "react-icons/fi";
 
 export default function Create({ transportations = [] }) {
+    const { t } = useTranslation();
     const [preview, setPreview] = useState(null);
 
     const { data, setData, post, processing, errors } = useForm({
@@ -54,42 +56,55 @@ export default function Create({ transportations = [] }) {
         <form onSubmit={submit}>
             <Head title="Tambah Pergi Bareng Baru" />
 
+            <div className="mb-6 flex items-center gap-3">
+                <Link
+                    href="/admin/pergi-bareng"
+                    className="p-2 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
+                >
+                    <FiChevronLeft size={18} />
+                </Link>
+                <div>
+                    <h1 className="text-2xl font-bold text-neutral-700">{t("admin.pergi.create_title")}</h1>
+                    <p className="text-neutral-500 text-sm">{t("admin.pergi.create_subtitle")}</p>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Kolom kiri */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Destinasi & titik kumpul */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>Destination &amp; Meeting Point</h3>
+                        <h3 className={cardTitle}>{t("admin.pergi.form.section_destination")}</h3>
 
                         <div className="mb-4">
-                            <label className={labelClass}>Nama Pergi Bareng</label>
+                            <label className={labelClass}>{t("admin.pergi.form.name_label")}</label>
                             <input
                                 type="text"
                                 value={data.name}
                                 onChange={(e) => setData("name", e.target.value)}
-                                placeholder="cth: Bandara Soekarno Hatta ke Bandung"
+                                placeholder={t("admin.pergi.form.name_ph")}
                                 className={inputClass}
                             />
                             {fieldError("name")}
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>Tujuan Lokasi</label>
+                            <label className={labelClass}>{t("admin.pergi.form.destination_label")}</label>
                             <LocationInput
                                 value={data.destination_loc}
                                 onChange={(v) => setData("destination_loc", v)}
-                                placeholder="Lokasi tujuan"
+                                placeholder={t("admin.pergi.form.destination_ph")}
                                 className={inputClass}
                             />
                             {fieldError("destination_loc")}
                         </div>
 
                         <div>
-                            <label className={labelClass}>Titik Kumpul</label>
+                            <label className={labelClass}>{t("admin.pergi.form.meeting_point_label")}</label>
                             <LocationInput
                                 value={data.departure_loc}
                                 onChange={(v) => setData("departure_loc", v)}
-                                placeholder="Lokasi titik kumpul"
+                                placeholder={t("admin.pergi.form.meeting_point_ph")}
                                 className={inputClass}
                             />
                             {fieldError("departure_loc")}
@@ -98,11 +113,11 @@ export default function Create({ transportations = [] }) {
 
                     {/* Logistik */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>Pergi Bareng Logistics</h3>
+                        <h3 className={cardTitle}>{t("admin.pergi.form.logistics_section")}</h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
-                                <label className={labelClass}>Tanggal</label>
+                                <label className={labelClass}>{t("admin.trip.form.date")}</label>
                                 <input
                                     type="date"
                                     value={data.date}
@@ -112,7 +127,7 @@ export default function Create({ transportations = [] }) {
                                 {fieldError("date")}
                             </div>
                             <div>
-                                <label className={labelClass}>Jam Kumpul</label>
+                                <label className={labelClass}>{t("admin.pergi.form.time_label")}</label>
                                 <input
                                     type="time"
                                     value={data.time}
@@ -122,15 +137,15 @@ export default function Create({ transportations = [] }) {
                                 {fieldError("time")}
                             </div>
                             <div>
-                                <label className={labelClass}>Transportasi</label>
+                                <label className={labelClass}>{t("admin.pergi.form.transport_label")}</label>
                                 <select
                                     value={data.transportation}
                                     onChange={(e) => setData("transportation", e.target.value)}
                                     className={inputClass + " bg-white cursor-pointer"}
                                 >
-                                    <option value="">Pilih Kendaraan</option>
-                                    {transportations.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
+                                    <option value="">{t("admin.pergi.form.transport_ph")}</option>
+                                    {transportations.map((opt) => (
+                                        <option key={opt} value={opt}>{opt}</option>
                                     ))}
                                 </select>
                                 {fieldError("transportation")}
@@ -138,19 +153,19 @@ export default function Create({ transportations = [] }) {
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>Deskripsi</label>
+                            <label className={labelClass}>{t("admin.trip.form.description")}</label>
                             <textarea
                                 rows={4}
                                 value={data.description}
                                 onChange={(e) => setData("description", e.target.value)}
-                                placeholder="Deskripsi tentang pergi bareng, ekspektasi, dan kesepakatan aturan bersama..."
+                                placeholder={t("admin.pergi.form.description_ph")}
                                 className={inputClass + " resize-none"}
                             />
                             {fieldError("description")}
                         </div>
 
                         <div>
-                            <label className={labelClass}>Estimasi Pembiayaan</label>
+                            <label className={labelClass}>{t("admin.pergi.form.financing_label")}</label>
                             <div className="space-y-2">
                                 {data.financing_estimates.map((est, i) => (
                                     <div key={i} className="flex items-center gap-2">
@@ -158,7 +173,7 @@ export default function Create({ transportations = [] }) {
                                             type="text"
                                             value={est}
                                             onChange={(e) => setEstimate(i, e.target.value)}
-                                            placeholder="cth: Pembayaran Tol"
+                                            placeholder={t("admin.pergi.form.financing_ph")}
                                             className={inputClass}
                                         />
                                         {data.financing_estimates.length > 1 && (
@@ -178,7 +193,7 @@ export default function Create({ transportations = [] }) {
                                 onClick={addEstimate}
                                 className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-700 hover:underline"
                             >
-                                <FiPlus /> Tambah estimasi
+                                <FiPlus /> {t("admin.pergi.form.add_estimate")}
                             </button>
                         </div>
                     </div>
@@ -187,8 +202,8 @@ export default function Create({ transportations = [] }) {
                 {/* Kolom kanan */}
                 <div className="space-y-6">
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>Participants</h3>
-                        <label className={labelClass}>Jumlah Orang</label>
+                        <h3 className={cardTitle}>{t("admin.pergi.form.participants_section")}</h3>
+                        <label className={labelClass}>{t("admin.trip.form.people_amount")}</label>
                         <input
                             type="number"
                             min="1"
@@ -198,11 +213,11 @@ export default function Create({ transportations = [] }) {
                             className={inputClass}
                         />
                         {fieldError("people_amount")}
-                        <p className="text-xs text-neutral-400 mt-2">Jumlah kursi yang tersedia untuk trip ini.</p>
+                        <p className="text-xs text-neutral-400 mt-2">{t("admin.pergi.form.people_amount_hint")}</p>
                     </div>
 
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>Gambar Tujuan</h3>
+                        <h3 className={cardTitle}>{t("admin.pergi.form.image_section")}</h3>
                         <label className="block cursor-pointer">
                             <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
                             <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-700 hover:text-primary-700 transition-colors overflow-hidden bg-neutral-50">
@@ -211,7 +226,7 @@ export default function Create({ transportations = [] }) {
                                 ) : (
                                     <>
                                         <FiUploadCloud size={28} className="mb-2" />
-                                        <span className="text-sm font-medium">Unggah</span>
+                                        <span className="text-sm font-medium">{t("admin.trip.form.upload")}</span>
                                     </>
                                 )}
                             </div>
@@ -223,10 +238,10 @@ export default function Create({ transportations = [] }) {
 
             <div className="mt-6 flex items-center gap-3">
                 <Button disabled={processing} className="font-semibold">
-                    {processing ? "Menyimpan..." : "Buat Pergi Bareng"}
+                    {processing ? t("admin.trip.form.saving") : t("admin.pergi.form.submit")}
                 </Button>
                 <Button isButtonLink href="/admin/pergi-bareng" variant="outline" type="neutral" className="font-semibold">
-                    Batal
+                    {t("common.cancel")}
                 </Button>
             </div>
         </form>
@@ -234,19 +249,7 @@ export default function Create({ transportations = [] }) {
 }
 
 Create.layout = (page) => (
-    <AdminLayout title="Dasbor - Home" subtitle="Selamat datang!">
-        <div className="mb-6 flex items-center gap-3">
-            <Link
-                href="/admin/pergi-bareng"
-                className="p-2 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
-            >
-                <FiChevronLeft size={18} />
-            </Link>
-            <div>
-                <h1 className="text-2xl font-bold text-neutral-700">Tambah Pergi Bareng Baru</h1>
-                <p className="text-neutral-500 text-sm">Rencanakan perjalanan kolaboratifmu selanjutnya...</p>
-            </div>
-        </div>
+    <AdminLayout title="Dasbor - Home">
         {page}
     </AdminLayout>
 );

@@ -166,6 +166,8 @@ class AdminTripController extends Controller
             $this->syncActivities($request, $trip, $validated['activities'] ?? []);
         });
 
+        \App\Models\ActivityLog::record('Memperbarui draft trip: ' . $trip->name);
+
         return redirect()->route('admin.trip.index')
             ->with('flash', ['type' => 'success', 'message' => 'Draft trip berhasil diperbarui.']);
     }
@@ -178,7 +180,10 @@ class AdminTripController extends Controller
             return back()->with('flash', ['type' => 'error', 'message' => 'Trip yang sudah dipublish tidak bisa dihapus.']);
         }
 
+        $tripName = $trip->name;
         $trip->delete();
+
+        \App\Models\ActivityLog::record('Menghapus draft trip: ' . $tripName);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Draft trip berhasil dihapus.']);
     }

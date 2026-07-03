@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import CommentComposer from "./CommentComposer";
 import { FaHeart } from "react-icons/fa";
+import { useTranslation } from "@/lib/useTranslation";
 
 function ReplyRow({ reply, isCurrentUser, onToggleLikeReply }) {
     return (
@@ -65,6 +66,7 @@ export default function ResponseItem({
     onToggleLikeComment,
     onToggleLikeReply,
 }) {
+    const { t } = useTranslation();
     const [openReplyComposer, setOpenReplyComposer] = useState(false);
     const [openReplies, setOpenReplies] = useState(false);
 
@@ -134,7 +136,7 @@ export default function ResponseItem({
                             className="text-sm font-medium hover:text-neutral-900 transition cursor-pointer"
                             onClick={() => setOpenReplyComposer((v) => !v)}
                         >
-                            Balas
+                            {t("forum.reply")}
                         </button>
                     </div>
 
@@ -142,8 +144,8 @@ export default function ResponseItem({
                         <div className="mt-3 pl-12">
                             <CommentComposer
                                 compact
-                                placeholder="Tulis balasan..."
-                                submitLabel="Balas"
+                                placeholder={t("forum.write_reply")}
+                                submitLabel={t("forum.reply")}
                                 onCancel={() => setOpenReplyComposer(false)}
                                 onSubmit={(text) => {
                                     onReplySubmit?.(response.id, text);

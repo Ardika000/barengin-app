@@ -3,10 +3,12 @@ import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiSearch, FiTrash2, FiPlus, FiUsers } from "react-icons/fi";
 import { BsChatDotsFill } from "react-icons/bs";
 
 export default function Index({ trips = [] }) {
+    const { t: translate } = useTranslation();
     const [search, setSearch] = useState("");
     const [sortBy, setSortBy] = useState("latest");
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
@@ -44,6 +46,11 @@ export default function Index({ trips = [] }) {
             : "bg-green-100 text-green-700";
 
     return (
+        <>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-neutral-700">{translate("admin.pergi.index_title")}</h1>
+                <p className="text-neutral-500 text-sm">{translate("admin.pergi.index_subtitle")}</p>
+            </div>
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title="Managemen Pergi Bareng" />
 
@@ -52,8 +59,8 @@ export default function Index({ trips = [] }) {
                 open={deleteModal.open}
                 onClose={() => setDeleteModal({ open: false, id: null, name: "" })}
                 onConfirm={confirmDelete}
-                title="Hapus Pergi Bareng?"
-                description={<>Yakin ingin menghapus <span className="font-semibold text-neutral-700">{deleteModal.name}</span>?</>}
+                title={translate("admin.pergi.delete_title")}
+                description={<>{translate("admin.trip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{translate("admin.trip.delete_desc_suffix")}</>}
             />
 
             {/* Toolbar */}
@@ -62,7 +69,7 @@ export default function Index({ trips = [] }) {
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input
                             type="text"
-                            placeholder="Search Pergi Bareng..."
+                            placeholder={translate("admin.pergi.search_ph")}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all"
@@ -76,9 +83,9 @@ export default function Index({ trips = [] }) {
                                 onChange={(e) => setSortBy(e.target.value)}
                                 className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
                             >
-                                <option value="latest">Terbaru</option>
-                                <option value="seats">Kursi Terisi</option>
-                                <option value="status">Status</option>
+                                <option value="latest">{translate("admin.trip.sort_latest")}</option>
+                                <option value="seats">{translate("admin.trip.sort_seats")}</option>
+                                <option value="status">{translate("admin.trip.sort_status")}</option>
                             </select>
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +95,7 @@ export default function Index({ trips = [] }) {
                         </div>
 
                         <Button isButtonLink href="/admin/pergi-bareng/create" size="sm" className="gap-2 whitespace-nowrap">
-                            <FiPlus /> Tambah Pergi Bareng
+                            <FiPlus /> {translate("admin.pergi.add_btn")}
                         </Button>
                     </div>
                 </div>
@@ -98,13 +105,13 @@ export default function Index({ trips = [] }) {
                     <table className="w-full text-left border-collapse min-w-[820px]">
                         <thead>
                             <tr className="bg-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-3 px-5">ID</th>
-                                <th className="py-3 px-5">Tujuan</th>
-                                <th className="py-3 px-5">Keberangkatan</th>
-                                <th className="py-3 px-5">Waktu Pergi</th>
-                                <th className="py-3 px-5">Jml. Kursi</th>
-                                <th className="py-3 px-5">Status</th>
-                                <th className="py-3 px-5 text-center">Aksi</th>
+                                <th className="py-3 px-5">{translate("admin.pergi.col_id")}</th>
+                                <th className="py-3 px-5">{translate("admin.pergi.col_destination")}</th>
+                                <th className="py-3 px-5">{translate("admin.pergi.col_departure")}</th>
+                                <th className="py-3 px-5">{translate("admin.pergi.col_time")}</th>
+                                <th className="py-3 px-5">{translate("admin.trip.col_seats")}</th>
+                                <th className="py-3 px-5">{translate("admin.trip.col_status")}</th>
+                                <th className="py-3 px-5 text-center">{translate("admin.trip.col_action")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -143,7 +150,7 @@ export default function Index({ trips = [] }) {
                                                 <Link
                                                     href={`/admin/pergi-bareng/${t.id}/requests`}
                                                     className="relative p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
-                                                    title="Lihat permintaan bergabung"
+                                                    title={translate("admin.pergi.action_requests")}
                                                 >
                                                     <FiUsers size={16} />
                                                     {t.pending_requests > 0 && (
@@ -155,14 +162,14 @@ export default function Index({ trips = [] }) {
                                                 <button
                                                     onClick={() => openGroupChat(t.id)}
                                                     className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
-                                                    title="Buka grup chat"
+                                                    title={translate("admin.pergi.action_chat")}
                                                 >
                                                     <BsChatDotsFill size={16} />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })}
                                                     className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
-                                                    title="Hapus"
+                                                    title={translate("admin.trip.action_delete")}
                                                 >
                                                     <FiTrash2 size={16} />
                                                 </button>
@@ -173,7 +180,7 @@ export default function Index({ trips = [] }) {
                             ) : (
                                 <tr>
                                     <td colSpan="7" className="py-12 text-center text-neutral-500 text-sm">
-                                        Belum ada pergi bareng. Klik "Tambah Pergi Bareng" untuk membuat.
+                                        {translate("admin.pergi.empty")}
                                     </td>
                                 </tr>
                             )}
@@ -181,15 +188,12 @@ export default function Index({ trips = [] }) {
                     </table>
                 </div>
         </div>
+        </>
     );
 }
 
 Index.layout = (page) => (
-    <AdminLayout title="Dasbor - Home" subtitle="Selamat datang!">
-        <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-700">Managemen Pergi Bareng</h1>
-            <p className="text-neutral-500 text-sm">Pantau aktivitas pergi bareng anda dengan efisien.</p>
-        </div>
+    <AdminLayout title="Dasbor - Home">
         {page}
     </AdminLayout>
 );

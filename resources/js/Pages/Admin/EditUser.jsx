@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Input from "@/Components/Input";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiAlertTriangle } from "react-icons/fi";
 import { FaKey } from "react-icons/fa6"; // Menggunakan FaKey untuk icon verify
 
 export default function EditUser({ user }) {
+    const { t } = useTranslation();
     // Guard ringan agar tidak error bila prop user belum tersedia (tanpa data palsu).
     const safeUser = user ?? {};
 
@@ -77,12 +79,12 @@ export default function EditUser({ user }) {
 
                                 <div>
                                     <h3 className="text-lg font-bold text-neutral-700 mb-1">
-                                        {modalType === "verify" ? "Verifikasi Pengguna" : "Batalkan Verifikasi"}
+                                        {modalType === "verify" ? t("admin.edit_user.verify_modal_title") : t("admin.edit_user.unverify_modal_title")}
                                     </h3>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
                                         {modalType === "verify"
-                                            ? "Konfirmasi verifikasi untuk menandai pengguna ini sebagai tepercaya. Pengguna terverifikasi mendapatkan akses dan kredibilitas lebih di dalam aplikasi."
-                                            : "Apakah Anda yakin ingin membatalkan verifikasi user ini? Tindakan ini akan menghapus status tepercaya beserta hak akses terkait."}
+                                            ? t("admin.edit_user.verify_modal_desc")
+                                            : t("admin.edit_user.unverify_modal_desc")}
                                     </p>
                                 </div>
                             </div>
@@ -94,7 +96,7 @@ export default function EditUser({ user }) {
                                     onClick={closeModal}
                                     className="px-5 py-2.5 rounded-xl border border-neutral-200 bg-white text-neutral-700 font-semibold hover:bg-neutral-50 transition-colors"
                                 >
-                                    Batal
+                                    {t("common.cancel")}
                                 </button>
                                 <button
                                     type="button"
@@ -105,7 +107,7 @@ export default function EditUser({ user }) {
                                             : "bg-red-600 hover:bg-red-700"
                                     }`}
                                 >
-                                    {modalType === "verify" ? "Verifikasi Pengguna" : "Batalkan Verifikasi"}
+                                    {modalType === "verify" ? t("admin.edit_user.confirm_verify") : t("admin.edit_user.confirm_unverify")}
                                 </button>
                             </div>
                         </div>
@@ -124,8 +126,8 @@ export default function EditUser({ user }) {
                     <FiChevronLeft size={24} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-neutral-700">Edit Pengguna</h2>
-                    <p className="text-neutral-500 text-sm">Ubah data user aplikasi Barengin</p>
+                    <h2 className="text-2xl font-bold text-neutral-700">{t("admin.edit_user.title")}</h2>
+                    <p className="text-neutral-500 text-sm">{t("admin.edit_user.subtitle")}</p>
                 </div>
             </div>
 
@@ -142,10 +144,10 @@ export default function EditUser({ user }) {
                         onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
                     />
                     <div>
-                        <h4 className="font-semibold text-neutral-700 mb-1">Foto Profil</h4>
-                        <p className="text-xs text-neutral-500 mb-2">JPG, GIF, atau PNG. Ukuran maksimal 5mb</p>
+                        <h4 className="font-semibold text-neutral-700 mb-1">{t("admin.edit_user.photo_label")}</h4>
+                        <p className="text-xs text-neutral-500 mb-2">{t("admin.edit_user.photo_hint")}</p>
                         <button type="button" className="text-primary-700 text-sm font-semibold hover:underline">
-                            Hapus Gambar
+                            {t("admin.edit_user.remove_photo")}
                         </button>
                     </div>
                 </div>
@@ -153,22 +155,22 @@ export default function EditUser({ user }) {
                 {/* --- READ ONLY FIELDS (Data Diri) --- */}
                 <div className="space-y-5 mb-8">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">Nama Lengkap</label>
+                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.full_name")}</label>
                         <Input type="text" value={safeUser.full_name ?? ""} disabled />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">Username</label>
+                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.username")}</label>
                         <Input type="text" value={safeUser.username ?? ""} disabled />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">Email</label>
+                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.email")}</label>
                         <Input type="email" value={safeUser.email ?? ""} disabled />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">Bio</label>
+                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.bio")}</label>
                         <textarea
                             value={safeUser.bio ?? ""}
                             disabled
@@ -179,11 +181,11 @@ export default function EditUser({ user }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-neutral-700">Nomor Telepon</label>
+                            <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.phone")}</label>
                             <Input type="text" value={safeUser.phone ?? ""} disabled />
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-neutral-700">Tanggal Lahir</label>
+                            <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.birth_date")}</label>
                             <Input type="text" value={safeUser.birth_date ?? ""} disabled />
                         </div>
                     </div>
@@ -191,14 +193,14 @@ export default function EditUser({ user }) {
 
                 {/* --- EDITABLE FIELDS (Roles) --- */}
                 <div className="mb-8">
-                    <label className="text-sm font-semibold text-neutral-700 block mb-3">Peran</label>
+                    <label className="text-sm font-semibold text-neutral-700 block mb-3">{t("admin.edit_user.roles_label")}</label>
                     <div className="border border-neutral-200 rounded-2xl p-4 flex flex-col gap-3">
 
                         {/* Guider Checkbox Card */}
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_guider ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
-                                <div className="font-bold text-neutral-700 text-sm mb-0.5">Guider</div>
-                                <div className="text-xs text-neutral-500">Pengguna bisa mengoperasikan trip bareng</div>
+                                <div className="font-bold text-neutral-700 text-sm mb-0.5">{t("admin.edit_user.guider_title")}</div>
+                                <div className="text-xs text-neutral-500">{t("admin.edit_user.guider_desc")}</div>
                             </div>
                             <input
                                 type="checkbox"
@@ -211,8 +213,8 @@ export default function EditUser({ user }) {
                         {/* Admin Checkbox Card */}
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_admin ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
-                                <div className="font-bold text-neutral-700 text-sm mb-0.5">Admin</div>
-                                <div className="text-xs text-neutral-500">Pengguna bisa mempunyai akses admin</div>
+                                <div className="font-bold text-neutral-700 text-sm mb-0.5">{t("admin.edit_user.admin_title")}</div>
+                                <div className="text-xs text-neutral-500">{t("admin.edit_user.admin_desc")}</div>
                             </div>
                             <input
                                 type="checkbox"
@@ -227,7 +229,7 @@ export default function EditUser({ user }) {
 
                 {/* --- USER VERIFICATION TOGGLE --- */}
                 <div className="mb-10">
-                    <label className="text-sm font-semibold text-neutral-700 block mb-3">Verifikasi Pengguna</label>
+                    <label className="text-sm font-semibold text-neutral-700 block mb-3">{t("admin.edit_user.verify_label")}</label>
                     <div className="flex items-center gap-3">
                         {/* Custom Tailwind Switch */}
                         <button
@@ -244,7 +246,7 @@ export default function EditUser({ user }) {
                             />
                         </button>
                         <span className="text-sm font-medium text-primary-700 cursor-pointer" onClick={handleToggleClick}>
-                            {data.verified ? "Klik untuk batalkan verifikasi" : "Klik untuk verifikasi pengguna"}
+                            {data.verified ? t("admin.edit_user.verify_click_on") : t("admin.edit_user.verify_click_off")}
                         </span>
                     </div>
                 </div>
@@ -255,7 +257,7 @@ export default function EditUser({ user }) {
                     disabled={processing}
                     className="px-8 py-3 bg-primary-700 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                 >
-                    Simpan Perubahan
+                    {t("admin.edit_user.submit")}
                 </button>
             </form>
         </div>
@@ -263,7 +265,7 @@ export default function EditUser({ user }) {
 }
 
 EditUser.layout = (page) => (
-    <AdminLayout title="Dasbor - Admin" subtitle="Selamat datang, Admin!">
+    <AdminLayout title="Dasbor - Admin">
         {page}
     </AdminLayout>
 );

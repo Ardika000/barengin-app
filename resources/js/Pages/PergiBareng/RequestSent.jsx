@@ -3,9 +3,11 @@ import { Head } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import { useTranslation } from "@/lib/useTranslation";
 import { FaRegClock, FaCalendarAlt } from "react-icons/fa";
 
 export default function RequestSent({ trip }) {
+    const { t } = useTranslation();
     return (
         <MainLayout>
             <Head title="Permintaan Terkirim" />
@@ -17,9 +19,9 @@ export default function RequestSent({ trip }) {
                     <FaRegClock className="text-3xl" />
                 </div>
 
-                <h1 className="text-3xl font-bold text-neutral-700 mb-2">Permintaan Terkirim</h1>
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2">{t("pb.request.title")}</h1>
                 <p className="text-neutral-600 mb-8 text-center max-w-md">
-                    Permintaanmu sudah dikirim ke penyelenggara. Kamu akan tergabung setelah disetujui.
+                    {t("pb.request.subtitle")}
                 </p>
 
                 {/* Card Summary */}
@@ -30,7 +32,7 @@ export default function RequestSent({ trip }) {
                             <p className="font-bold text-neutral-700">{trip.trip_id}</p>
                         </div>
                         <span className="bg-warning-100 text-warning-700 text-xs font-semibold px-2 py-1 rounded">
-                            Menunggu Persetujuan
+                            {t("pb.request.pending_badge")}
                         </span>
                     </div>
 
@@ -59,7 +61,7 @@ export default function RequestSent({ trip }) {
                         type="primary"
                         className="w-full justify-center"
                     >
-                        Kembali ke Detail
+                        {t("pb.request.back_detail")}
                     </Button>
                 </div>
 

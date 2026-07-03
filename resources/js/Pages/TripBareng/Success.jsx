@@ -3,11 +3,13 @@ import { Head, Link, router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
+import { useTranslation } from "@/lib/useTranslation";
 
 import { FaRegCalendarAlt, FaUserFriends } from "react-icons/fa";
 import { BsCheckLg, BsChatDotsFill } from "react-icons/bs";
 
 export default function Success({ order }) {
+    const { t } = useTranslation();
     const handleOpenTripGroupChat = () => {
         router.post(`/chat/trip/${order.trip_id}/group`);
     };
@@ -23,8 +25,8 @@ export default function Success({ order }) {
                 </div>
 
                 {/* 2. Judul */}
-                <h1 className="text-3xl font-bold text-neutral-700 mb-2 text-center">Pembayaran Berhasil</h1>
-                <p className="text-lg text-neutral-600 mb-10 text-center">Yeay, Pembayaran Kamu berhasil</p>
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2 text-center">{t("trip.success.title")}</h1>
+                <p className="text-lg text-neutral-600 mb-10 text-center">{t("trip.success.subtitle")}</p>
 
                 {/* 3. Kartu Transaksi */}
                 <div className="w-full max-w-[500px] relative mb-8">
@@ -37,7 +39,7 @@ export default function Success({ order }) {
                                 <p className="text-xl font-bold text-neutral-700 tracking-wide">{order.transaction_id}</p>
                             </div>
                             <div className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-sm font-bold">
-                                Terbayar
+                                {t("trip.success.paid")}
                             </div>
                         </div>
 
@@ -65,9 +67,9 @@ export default function Success({ order }) {
                     {/* 4. Floating Badge (Dinamis Sesuai Permintaan) */}
                     <div className="absolute -bottom-5 right-2 md:-right-8 bg-[#6ED78D] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-green-200 z-10 font-semibold text-sm">
                         <FaUserFriends className="text-lg shrink-0" />
-                        {order.friends_waiting > 0 
-                            ? `${order.friends_waiting} Teman Baru Menunggu` 
-                            : "Bergabung dalam grup"
+                        {order.friends_waiting > 0
+                            ? `${order.friends_waiting} ${t("trip.success.friends_waiting")}`
+                            : t("trip.success.join_group")
                         }
                     </div>
                 </div>
@@ -84,7 +86,7 @@ export default function Success({ order }) {
                         onClick={handleOpenTripGroupChat}
                     >
                         <BsChatDotsFill className="text-lg" />
-                        Masuk ke Grup Chat
+                        {t("trip.success.enter_group")}
                     </Button>
                     
                     {/* Tombol Outline untuk Lewati */}
@@ -97,7 +99,7 @@ export default function Success({ order }) {
                         rounded={true}
                         className="w-full font-bold bg-white text-neutral-700"
                     >
-                        Lewati
+                        {t("trip.success.skip")}
                     </Button>
                 </div>
 

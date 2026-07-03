@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiCheck, FiX, FiInbox } from "react-icons/fi";
 
 export default function Requests({ trip, requests = [] }) {
+    const { t } = useTranslation();
     const [busyId, setBusyId] = useState(null);
 
     const approve = (id) => {
@@ -24,6 +26,19 @@ export default function Requests({ trip, requests = [] }) {
     };
 
     return (
+        <>
+            <div className="mb-6 flex items-center gap-3">
+                <Link
+                    href="/admin/pergi-bareng"
+                    className="p-2 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
+                >
+                    <FiChevronLeft size={18} />
+                </Link>
+                <div>
+                    <h1 className="text-2xl font-bold text-neutral-700">{t("admin.pergi.requests_title")}</h1>
+                    <p className="text-neutral-500 text-sm">{t("admin.pergi.requests_subtitle")}</p>
+                </div>
+            </div>
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title={`Permintaan - ${trip.name}`} />
 
@@ -34,8 +49,8 @@ export default function Requests({ trip, requests = [] }) {
                     <p className="text-sm text-neutral-500">{trip.destination}</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-sm font-semibold text-primary-700">{trip.joined}/{trip.capacity} kursi terisi</p>
-                    <p className="text-xs text-neutral-400">Sisa {trip.remaining} kursi</p>
+                    <p className="text-sm font-semibold text-primary-700">{trip.joined}/{trip.capacity} {t("admin.pergi.requests.seats_filled_suffix")}</p>
+                    <p className="text-xs text-neutral-400">{t("admin.pergi.requests.remaining_prefix")} {trip.remaining} {t("admin.pergi.requests.seats_word")}</p>
                 </div>
             </div>
 
@@ -43,7 +58,7 @@ export default function Requests({ trip, requests = [] }) {
                 {requests.length === 0 ? (
                     <div className="py-16 flex flex-col items-center justify-center text-neutral-400">
                         <FiInbox size={40} className="mb-3" />
-                        <p className="text-sm">Belum ada permintaan bergabung.</p>
+                        <p className="text-sm">{t("admin.pergi.requests.empty")}</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -64,7 +79,7 @@ export default function Requests({ trip, requests = [] }) {
                                         <div className="min-w-0">
                                             <p className="font-semibold text-neutral-700 text-sm truncate">{req.user.name}</p>
                                             <p className="text-xs text-neutral-500">
-                                                Meminta <span className="font-semibold text-primary-700">{req.quantity} kursi</span>
+                                                {t("admin.pergi.requests.requesting_prefix")} <span className="font-semibold text-primary-700">{req.quantity} {t("admin.pergi.requests.seats_word")}</span>
                                                 {req.requested_at ? ` • ${req.requested_at}` : ""}
                                             </p>
                                         </div>
@@ -72,23 +87,23 @@ export default function Requests({ trip, requests = [] }) {
 
                                     <div className="flex items-center gap-2 shrink-0">
                                         {overQuota && (
-                                            <span className="text-xs text-red-500 font-medium hidden sm:inline">Melebihi kuota</span>
+                                            <span className="text-xs text-red-500 font-medium hidden sm:inline">{t("admin.pergi.requests.over_quota")}</span>
                                         )}
                                         <button
                                             onClick={() => approve(req.id)}
                                             disabled={busyId === req.id || overQuota}
                                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title={overQuota ? "Kuota tidak cukup" : "Setujui"}
+                                            title={overQuota ? t("admin.pergi.requests.quota_insufficient_title") : t("admin.pergi.requests.approve")}
                                         >
-                                            <FiCheck size={16} /> Setujui
+                                            <FiCheck size={16} /> {t("admin.pergi.requests.approve")}
                                         </button>
                                         <button
                                             onClick={() => reject(req.id)}
                                             disabled={busyId === req.id}
                                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50"
-                                            title="Tolak"
+                                            title={t("admin.pergi.requests.reject")}
                                         >
-                                            <FiX size={16} /> Tolak
+                                            <FiX size={16} /> {t("admin.pergi.requests.reject")}
                                         </button>
                                     </div>
                                 </div>
@@ -98,23 +113,12 @@ export default function Requests({ trip, requests = [] }) {
                 )}
             </div>
         </div>
+        </>
     );
 }
 
 Requests.layout = (page) => (
-    <AdminLayout title="Dasbor - Home" subtitle="Selamat datang!">
-        <div className="mb-6 flex items-center gap-3">
-            <Link
-                href="/admin/pergi-bareng"
-                className="p-2 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
-            >
-                <FiChevronLeft size={18} />
-            </Link>
-            <div>
-                <h1 className="text-2xl font-bold text-neutral-700">Permintaan Bergabung</h1>
-                <p className="text-neutral-500 text-sm">Setujui atau tolak permintaan, lalu undang ke grup chat.</p>
-            </div>
-        </div>
+    <AdminLayout title="Dasbor - Home">
         {page}
     </AdminLayout>
 );

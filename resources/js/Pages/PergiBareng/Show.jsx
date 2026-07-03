@@ -5,6 +5,7 @@ import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import { useTranslation } from "@/lib/useTranslation";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -54,6 +55,7 @@ function MapView({ origin, destination }) {
 export default function Show({ trip }) {
     const { auth } = usePage().props;
     const isLoggedIn = Boolean(auth?.user);
+    const { t } = useTranslation();
 
     const [origin, setOrigin] = useState(null);          // titik kumpul
     const [destination, setDestination] = useState(null); // titik tujuan
@@ -193,7 +195,7 @@ export default function Show({ trip }) {
             <div className="bg-white border-b border-neutral-200 py-4">
                 <Container>
                     <Link href="/pergi-bareng" className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition">
-                        <FaChevronLeft className="text-xl" /> Kembali ke Daftar
+                        <FaChevronLeft className="text-xl" /> {t("pb.show.back")}
                     </Link>
                 </Container>
             </div> 
@@ -211,7 +213,7 @@ export default function Show({ trip }) {
                                     <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-600 mb-6">
                                         <div className="flex items-center gap-1.5"><FaCalendarAlt className="text-primary-600"/> {trip.date}</div>
                                         <div className="flex items-center gap-1.5"><FaRegClock className="text-primary-600"/> {trip.time}</div>
-                                        <div className="flex items-center gap-1.5"><FaUserFriends className="text-primary-600"/> {trip.joined}/{trip.capacity} Kursi Terisi</div>
+                                        <div className="flex items-center gap-1.5"><FaUserFriends className="text-primary-600"/> {trip.joined}/{trip.capacity} {t("pb.show.seats_filled")}</div>
                                     </div>
                                 </div>
                                 
@@ -223,17 +225,17 @@ export default function Show({ trip }) {
                                             {trip.organizer.name} {trip.organizer.verified && <FaCheckCircle className="text-primary-500 text-sm"/>}
                                         </div>
                                         <div className="text-xs text-neutral-500 flex items-center gap-1">
-                                            <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} ulasan)
+                                            <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} {t("common.reviews")})
                                         </div>
                                     </div>
                                     {trip.organizer?.is_self ? (
                                         <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
-                                            Dibuat oleh Anda
+                                            {t("pb.show.created_by_you")}
                                         </span>
                                     ) : (
                                         <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleChatOrganizer}>
                                             <BsChatDots className="text-sm" />
-                                            Chat Penyelenggara
+                                            {t("pb.show.chat_organizer")}
                                         </Button>
                                     )}
                                 </div>
@@ -275,27 +277,27 @@ export default function Show({ trip }) {
                         <div className="bg-white rounded-2xl border border-neutral-200 p-6">
                             <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
                                 <span className="p-1.5 bg-neutral-100 rounded-md"><FaInfoCircle className="text-neutral-600 text-sm"/></span>
-                                Deskripsi Perjalanan
+                                {t("pb.show.description")}
                             </h3>
                             <p className="text-neutral-600 text-sm leading-relaxed mb-4">{trip.description}</p>
-                            
-                            <h4 className="font-semibold text-sm mb-2">Detail Perjalanan:</h4>
+
+                            <h4 className="font-semibold text-sm mb-2">{t("pb.show.trip_details")}</h4>
                             <ul className="space-y-3 mt-3">
                                 <li className="flex items-start gap-3 text-sm">
                                     <FaMapMarkerAlt className="text-primary-600 mt-1 flex-shrink-0"/>
-                                    <div><span className="text-neutral-500 block text-xs">Titik Kumpul</span> {trip.details.titik_kumpul}</div>
+                                    <div><span className="text-neutral-500 block text-xs">{t("pb.show.pickup")}</span> {trip.details.titik_kumpul}</div>
                                 </li>
                                 <li className="flex items-start gap-3 text-sm">
                                     <FaMapMarkerAlt className="text-success-600 mt-1 flex-shrink-0"/>
-                                    <div><span className="text-neutral-500 block text-xs">Titik Tujuan</span> {trip.details.titik_tujuan}</div>
+                                    <div><span className="text-neutral-500 block text-xs">{t("pb.show.destination")}</span> {trip.details.titik_tujuan}</div>
                                 </li>
                                 <li className="flex items-start gap-3 text-sm">
                                     <FaCar className="text-primary-600 mt-1 flex-shrink-0"/>
-                                    <div><span className="text-neutral-500 block text-xs">Transportasi</span> {trip.details.transportasi}</div>
+                                    <div><span className="text-neutral-500 block text-xs">{t("pb.show.transport")}</span> {trip.details.transportasi}</div>
                                 </li>
                                 <li className="flex items-start gap-3 text-sm">
                                     <FaRegClock className="text-primary-600 mt-1 flex-shrink-0"/>
-                                    <div><span className="text-neutral-500 block text-xs">Jam Kumpul</span> {trip.details.jam_kumpul}</div>
+                                    <div><span className="text-neutral-500 block text-xs">{t("pb.show.meet_time")}</span> {trip.details.jam_kumpul}</div>
                                 </li>
                             </ul>
                         </div>
@@ -317,7 +319,7 @@ export default function Show({ trip }) {
                                         <img src={trip.organizer.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
                                         <div className="flex-1">
                                             <p className="text-sm font-semibold flex items-center gap-1">{trip.organizer.name} <FaCheckCircle className="text-primary-500 text-xs"/></p>
-                                            <p className="text-xs text-neutral-500">Penyelenggara</p>
+                                            <p className="text-xs text-neutral-500">{t("pb.show.organizer")}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-2">
@@ -332,7 +334,7 @@ export default function Show({ trip }) {
                                             className="ml-2"
                                             onClick={handleToggleFollow}
                                         >
-                                            {following ? "Mengikuti" : "Ikuti"}
+                                            {following ? t("lb.following") : t("lb.follow")}
                                         </Button>
                                     )}
                                 </div>
@@ -344,7 +346,7 @@ export default function Show({ trip }) {
                                             <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
                                             <div className="flex-1">
                                                 <p className="text-sm font-semibold flex items-center gap-1">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs"/>}</p>
-                                                <p className="text-xs text-neutral-500">{p.seat_label || 'Partisipan'}</p>
+                                                <p className="text-xs text-neutral-500">{p.seat_label || t("pb.show.participant")}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 ml-2">
@@ -353,7 +355,7 @@ export default function Show({ trip }) {
                                             </div>
                                         </div>
                                         {p.username && (
-                                            <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">Lihat Profil</Button>
+                                            <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">{t("common.view_profile")}</Button>
                                         )}
                                     </div>
                                 ))}
@@ -392,7 +394,7 @@ export default function Show({ trip }) {
                                         {origin && (
                                             <Marker position={origin} icon={ORIGIN_ICON}>
                                                 <Popup>
-                                                    <b className="font-bold">Titik Kumpul:</b> <br />
+                                                    <b className="font-bold">{t("pb.show.pickup")}:</b> <br />
                                                     {trip?.details?.titik_kumpul || "Lokasi belum ditentukan"}
                                                 </Popup>
                                             </Marker>
@@ -401,7 +403,7 @@ export default function Show({ trip }) {
                                         {destination && (
                                             <Marker position={destination} icon={DEST_ICON}>
                                                 <Popup>
-                                                    <b className="font-bold">Titik Tujuan:</b> <br />
+                                                    <b className="font-bold">{t("pb.show.destination")}:</b> <br />
                                                     {trip?.details?.titik_tujuan || "Lokasi belum ditentukan"}
                                                 </Popup>
                                             </Marker>
@@ -434,7 +436,7 @@ export default function Show({ trip }) {
                                     </Button>
                                 </div>
                                 <div className="p-5">
-                                    <h4 className="font-bold text-sm mb-3">Estimasi Pembiayaan</h4>
+                                    <h4 className="font-bold text-sm mb-3">{t("pb.show.estimate_title")}</h4>
                                     <div className="space-y-2 text-sm text-neutral-600 mb-4">
                                         {trip.financing_estimates?.length > 0 ? (
                                             <ul className="list-disc list-inside space-y-1">
@@ -448,48 +450,48 @@ export default function Show({ trip }) {
                                     </div>
                                     <div className="bg-warning-50 text-warning-700 p-3 rounded-lg text-xs flex items-start gap-2 mb-4 border border-warning-100">
                                         <FaInfoCircle className="mt-0.5 shrink-0 flex-shrink-0" />
-                                        <p>Estimasi bersifat fleksibel. Teknis pembayaran dan pembagian biaya diserahkan sepenuhnya kepada kesepakatan tiap pihak.</p>
+                                        <p>{t("pb.show.estimate_note")}</p>
                                     </div>
                                 </div>
                             </div>
                             
                             {/* Tombol Aksi / Join */}
                             <div className="bg-white rounded-2xl border border-neutral-200 p-5">
-                                <p className="text-xs text-neutral-500 mb-1">Ikut pergi bareng sekarang</p>
+                                <p className="text-xs text-neutral-500 mb-1">{t("pb.show.join_now")}</p>
                                 <p className="text-sm font-bold mb-4">{trip.title}</p>
 
                                 {!isLoggedIn ? (
                                     <Button isButtonLink href="/login" type="primary" className="w-full justify-center gap-2">
-                                        <FaLock className="text-xs" /> Masuk untuk Ikut
+                                        <FaLock className="text-xs" /> {t("pb.show.login_to_join")}
                                     </Button>
                                 ) : trip.organizer?.is_self ? (
                                     <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-center text-sm text-neutral-600">
-                                        Anda penyelenggara trip ini.
+                                        {t("pb.show.you_organizer")}
                                     </div>
                                 ) : trip.is_participant ? (
                                     <div className="bg-success-50 border border-success-100 rounded-xl p-3 text-center text-sm font-semibold text-success-700">
-                                        Anda sudah tergabung di trip ini.
+                                        {t("pb.show.already_joined")}
                                     </div>
                                 ) : trip.has_requested ? (
                                     <div className="space-y-3">
                                         <div className="bg-warning-50 border border-warning-100 rounded-xl p-3 text-center text-sm font-semibold text-warning-700">
-                                            Permintaan terkirim, menunggu persetujuan penyelenggara.
+                                            {t("pb.show.request_pending")}
                                         </div>
                                         <Button isButtonLink href={`/pergi-bareng/${trip.id}/request-sent`} variant="outline" className="w-full justify-center">
-                                            Lihat Status
+                                            {t("pb.show.view_status")}
                                         </Button>
                                     </div>
                                 ) : isFull ? (
                                     <Button type="neutral" disabled className="w-full justify-center opacity-60 cursor-not-allowed">
-                                        Kuota Penuh
+                                        {t("pb.show.full")}
                                     </Button>
                                 ) : (
                                     <>
                                         {/* Counter kursi */}
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                <p className="font-bold text-neutral-700 text-sm">Jumlah kursi</p>
-                                                <p className="text-xs text-neutral-500">Tersisa {remaining} kuota lagi</p>
+                                                <p className="font-bold text-neutral-700 text-sm">{t("pb.show.seat_count")}</p>
+                                                <p className="text-xs text-neutral-500">{remaining} {t("pb.show.quota_left")}</p>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <button
@@ -518,7 +520,7 @@ export default function Show({ trip }) {
                                             onClick={handleJoin}
                                             disabled={joining}
                                         >
-                                            {joining ? "Memproses..." : <>Ikut Sekarang &rarr;</>}
+                                            {joining ? t("common.processing") : <>{t("pb.show.join_submit")} &rarr;</>}
                                         </Button>
                                     </>
                                 )}

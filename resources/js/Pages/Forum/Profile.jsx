@@ -9,6 +9,7 @@ import { FiHeart } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import UserListModal from "@/Pages/Forum/Partials/UserListModal";
+import { useTranslation } from "@/lib/useTranslation";
 
 function formatRelativeTime(iso) {
     if (!iso) return "";
@@ -193,13 +194,14 @@ function CommentCard({
 }
 
 function RelatedPostHighlighted({ post, onLikePost }) {
+    const { t } = useTranslation();
     const postForCard = toPostCardShape(post);
     if (!postForCard) return null;
 
     return (
         <div className="mt-5 rounded-2xl border border-primary-100 bg-primary-50/40 p-4">
             <div className="text-xs font-semibold text-primary-700 mb-3">
-                Related Post
+                {t("forum.related_post")}
             </div>
             <PostCard
                 post={postForCard}
@@ -231,6 +233,7 @@ function LikedCommentCard({
     onToggleLikeComment,
     onLikePost,
 }) {
+    const { t } = useTranslation();
     const c = item.comment;
     const p = item.post;
     if (!c || !p) return null;
@@ -239,7 +242,7 @@ function LikedCommentCard({
         <article className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
             <div className="p-5">
                 <div className="text-sm text-neutral-500">
-                    Liked a comment • {formatRelativeTime(item.liked_at)}
+                    {t("forum.liked_comment")} • {formatRelativeTime(item.liked_at)}
                 </div>
 
                 <div className="mt-4">
@@ -253,7 +256,7 @@ function LikedCommentCard({
                                 href={`/forum/posts/${p.id}`}
                                 className="text-sm font-medium hover:text-neutral-900 transition cursor-pointer"
                             >
-                                Reply
+                                {t("forum.reply")}
                             </Link>
                         }
                     />
@@ -274,6 +277,7 @@ function ReplyCard({
     const u = reply.user;
     const p = reply.post;
     const parent = reply.parent_comment;
+    const { t } = useTranslation();
 
     if (!p) return null;
 
@@ -302,8 +306,8 @@ function ReplyCard({
                                 </div>
                                 <div className="text-sm text-neutral-500">
                                     {isReplyOnComment
-                                        ? "Replied on Comment"
-                                        : "Replied on Post"}
+                                        ? t("forum.replied_comment")
+                                        : t("forum.replied_post")}
                                 </div>
                             </div>
 
@@ -334,7 +338,7 @@ function ReplyCard({
                                         href={`/forum/posts/${p.id}`}
                                         className="text-sm font-medium hover:text-neutral-900 transition cursor-pointer"
                                     >
-                                        Reply
+                                        {t("forum.reply")}
                                     </Link>
                                 }
                             />
@@ -363,6 +367,7 @@ export default function Profile({
     likes,
     replies,
 }) {
+    const { t } = useTranslation();
     const [optimistic, setOptimistic] = useState({});
 
     // Followers/Following modal state
@@ -388,9 +393,9 @@ export default function Profile({
 
         try {
             await navigator.clipboard.writeText(url);
-            toast.success("Tautan profil disalin!");
+            toast.success(t("forum.copied"));
         } catch {
-            prompt("Copy this profile link:", url);
+            prompt(t("forum.copied"), url);
         }
     };
 
@@ -535,7 +540,7 @@ export default function Profile({
                                 setOpenUserList(true);
                             }}
                         >
-                            {compactNumber(counts?.followers ?? 0)} followers
+                            {compactNumber(counts?.followers ?? 0)} {t("forum.followers")}
                         </button>
 
                         <button
@@ -546,7 +551,7 @@ export default function Profile({
                                 setOpenUserList(true);
                             }}
                         >
-                            {compactNumber(counts?.following ?? 0)} following
+                            {compactNumber(counts?.following ?? 0)} {t("forum.following")}
                         </button>
                     </div>
 
@@ -558,7 +563,7 @@ export default function Profile({
                                 rounded
                                 className="w-full justify-center"
                             >
-                                {isFollowing ? "Berhenti Ikuti" : "Ikuti"}
+                                {isFollowing ? t("common.unfollow") : t("lb.follow")}
                             </Button>
                         ) : null}
 
@@ -569,7 +574,7 @@ export default function Profile({
                             rounded
                             className="w-full justify-center"
                         >
-                            Share Profile
+                            {t("forum.share_profile")}
                         </Button>
                     </div>
                 </div>
@@ -581,19 +586,19 @@ export default function Profile({
                             active={tab === "posts"}
                             onClick={() => setTab("posts")}
                         >
-                            Post
+                            {t("forum.tab_posts")}
                         </TabButton>
                         <TabButton
                             active={tab === "likes"}
                             onClick={() => setTab("likes")}
                         >
-                            Likes
+                            {t("forum.tab_likes")}
                         </TabButton>
                         <TabButton
                             active={tab === "replies"}
                             onClick={() => setTab("replies")}
                         >
-                            Replies
+                            {t("forum.tab_replies")}
                         </TabButton>
                     </div>
 
@@ -626,7 +631,7 @@ export default function Profile({
                                           >
                                               <div className="p-5">
                                                   <div className="text-sm text-neutral-500">
-                                                      Liked a post •{" "}
+                                                      {t("forum.liked_post")} •{" "}
                                                       {formatRelativeTime(
                                                           it.liked_at,
                                                       )}
@@ -686,19 +691,19 @@ export default function Profile({
                         {/* Empty states */}
                         {tab === "posts" && postCards.length === 0 ? (
                             <div className="py-10 text-center text-neutral-500">
-                                No content yet.
+                                {t("forum.no_content")}
                             </div>
                         ) : null}
 
                         {tab === "likes" && likeItems.length === 0 ? (
                             <div className="py-10 text-center text-neutral-500">
-                                No content yet.
+                                {t("forum.no_content")}
                             </div>
                         ) : null}
 
                         {tab === "replies" && replyItems.length === 0 ? (
                             <div className="py-10 text-center text-neutral-500">
-                                No content yet.
+                                {t("forum.no_content")}
                             </div>
                         ) : null}
                     </div>

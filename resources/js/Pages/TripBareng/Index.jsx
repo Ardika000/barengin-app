@@ -6,8 +6,10 @@ import TripSearchForm from "@/Components/TripSearchForm";
 import Pagination from "@/Components/Pagination";
 import Select from "@/Components/Select";
 import MainLayout from "@/Layouts/MainLayout";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Index({ trips, all_trips, filters = {} }) {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState("all");
     const [sortBy, setSortBy]       = useState(filters?.sort ?? "");
 
@@ -49,11 +51,10 @@ export default function Index({ trips, all_trips, filters = {} }) {
             >
                 <Container className="text-center text-white">
                     <h1 className="text-4xl md:text-6xl font-semibold mb-4">
-                        Jelajahi Trip Impianmu
+                        {t("trip.hero.title")}
                     </h1>
                     <p className="text-base md:text-lg mb-0 max-w-3xl mx-auto font-light">
-                        Pilih destinasi favoritmu dan berangkat bareng pemandu
-                        berpengalaman untuk petualangan tak terlupakan.
+                        {t("trip.hero.subtitle")}
                     </p>
                 </Container>
             </header>
@@ -75,10 +76,10 @@ export default function Index({ trips, all_trips, filters = {} }) {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <h2 className="text-2xl md:text-3xl font-bold text-neutral-700">
-                            Cari Trip Terbaikmu
+                            {t("trip.index.heading")}
                         </h2>
                         <p className="text-sm text-neutral-500 mt-1">
-                            {trips?.total ?? tripItems.length} trip tersedia
+                            {trips?.total ?? tripItems.length} {t("trip.index.available")}
                         </p>
                     </div>
 
@@ -90,11 +91,11 @@ export default function Index({ trips, all_trips, filters = {} }) {
                         className="w-48"
                         selectClassName="h-10 bg-white"
                     >
-                        <option value="">Urutkan</option>
-                        <option value="rating">Rating Tertinggi</option>
-                        <option value="price_asc">Harga Termurah</option>
-                        <option value="price_desc">Harga Termahal</option>
-                        <option value="newest">Terbaru</option>
+                        <option value="">{t("trip.sort.default")}</option>
+                        <option value="rating">{t("trip.sort.rating")}</option>
+                        <option value="price_asc">{t("trip.sort.price_asc")}</option>
+                        <option value="price_desc">{t("trip.sort.price_desc")}</option>
+                        <option value="newest">{t("trip.sort.newest")}</option>
                     </Select>
                 </div>
 
@@ -119,7 +120,7 @@ export default function Index({ trips, all_trips, filters = {} }) {
                 ) : (
                     <div className="text-center py-20 bg-white rounded-2xl border border-neutral-200 shadow-sm">
                         <p className="text-neutral-500 text-lg font-medium">
-                            Belum ada trip yang tersedia saat ini.
+                            {t("trip.index.empty")}
                         </p>
                     </div>
                 )}

@@ -24,7 +24,8 @@ class DatabaseSeeder extends Seeder
             FinancingEstimateSeeder::class,
             TripParticipantSeeder::class,
             AdminHistorySeeder::class,
-            ActivityLogSeeder::class,
+            // ActivityLogSeeder dinonaktifkan: log kegiatan kini terisi otomatis dari
+            // aktivitas nyata (login, publish trip, hapus data, dll) via ActivityLog::record().
         ]);
     }
 }

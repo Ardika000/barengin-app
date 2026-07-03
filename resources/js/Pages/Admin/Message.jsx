@@ -3,9 +3,11 @@ import { Head, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Pagination from "@/Components/Pagination";
 import ConfirmModal from "@/Components/ConfirmModal";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiSearch, FiChevronDown, FiTrash2, FiMessageSquare } from "react-icons/fi";
 
-export default function Message({ auth, messages = {}, filters = {} }) {
+export default function Message({ messages = {}, filters = {} }) {
+    const { t } = useTranslation();
     // Pastikan filters berupa objek (Laravel bisa mengirim array kosong []),
     // jika tidak, `filters.filter` bisa menunjuk ke Array.prototype.filter.
     const f = filters && !Array.isArray(filters) ? filters : {};
@@ -75,23 +77,20 @@ export default function Message({ auth, messages = {}, filters = {} }) {
     };
 
     return (
-        <AdminLayout 
-            title="Dasbor - Admin" 
-            subtitle={`Selamat datang, ${auth?.user?.full_name || 'Admin'}!`}
-        >
+        <AdminLayout title="Dasbor - Admin">
             <Head title="Manajemen Pesan" />
 
             <ConfirmModal
                 open={deleteModal.isOpen}
                 onClose={closeDeleteModal}
                 onConfirm={confirmDelete}
-                title="Hapus Pesan?"
-                description={<>Apakah kamu yakin ingin menghapus pesan dari <span className="font-semibold text-neutral-700">{deleteModal.msgName}</span>?</>}
+                title={t("admin.messages.delete_title")}
+                description={<>{t("admin.messages.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.msgName}</span>{t("admin.messages.delete_desc_suffix")}</>}
             />
 
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-neutral-700">Pesan</h1>
-                <p className="text-neutral-500 text-sm">Baca dan dengarkan setiap masukan maupun kritik dari user untuk Barengin</p>
+                <h1 className="text-2xl font-bold text-neutral-700">{t("admin.messages.title")}</h1>
+                <p className="text-neutral-500 text-sm">{t("admin.messages.subtitle")}</p>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-6 md:p-8 flex flex-col">
@@ -100,7 +99,7 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input
                             type="text"
-                            placeholder="Cari pesan... (Tekan Enter)"
+                            placeholder={t("admin.messages.search_ph")}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={handleSearch}
@@ -113,10 +112,10 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                             onChange={handleFilter}
                             className="appearance-none w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
                         >
-                            <option value="all">Semua</option>
-                            <option value="today">Hari Ini</option>
-                            <option value="week">7 Hari Terakhir</option>
-                            <option value="month">30 Hari Terakhir</option>
+                            <option value="all">{t("admin.messages.filter_all")}</option>
+                            <option value="today">{t("admin.messages.filter_today")}</option>
+                            <option value="week">{t("admin.messages.filter_week")}</option>
+                            <option value="month">{t("admin.messages.filter_month")}</option>
                         </select>
                         <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500" />
                     </div>
@@ -145,10 +144,10 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                                 </div>
 
                                 <div className="flex-shrink-0 mt-1">
-                                    <button 
+                                    <button
                                         onClick={() => openDeleteModal(msg.id, msg.name)}
                                         className="w-10 h-10 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
-                                        title="Hapus Pesan"
+                                        title={t("admin.messages.action_delete")}
                                     >
                                         <FiTrash2 className="text-lg" />
                                     </button>
@@ -161,9 +160,9 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                             <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
                                 <FiMessageSquare size={32} className="text-neutral-300" />
                             </div>
-                            <h3 className="text-neutral-600 font-semibold mb-1">Belum ada pesan</h3>
+                            <h3 className="text-neutral-600 font-semibold mb-1">{t("admin.messages.empty_title")}</h3>
                             <p className="text-sm text-center max-w-sm">
-                                Saat ini belum ada masukan atau kritik dari user. Pesan yang dikirim melalui halaman utama akan muncul di sini.
+                                {t("admin.messages.empty_desc")}
                             </p>
                         </div>
                     )}

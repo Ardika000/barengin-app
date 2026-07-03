@@ -1,8 +1,10 @@
 import { useForm } from "@inertiajs/react";
 import Button from "@/Components/Button";
 import AvatarEditor from "./AvatarEditor";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function ProfileEditForm({ profile, onCancel }) {
+    const { t } = useTranslation();
     const { data, setData, put, processing, errors } = useForm({
         full_name: profile.full_name || "",
         username: profile.username || "",
@@ -26,11 +28,11 @@ export default function ProfileEditForm({ profile, onCancel }) {
             <AvatarEditor profile={profile} />
 
             <p className="mt-4 text-xs text-neutral-400">
-                Klik ikon pena untuk mengubah foto profil
+                {t("ph.avatar_hint")}
             </p>
 
             <div className="mt-5 space-y-4">
-                <Field label="Nama Lengkap" error={errors.full_name}>
+                <Field label={t("auth.onboard.full_name")} error={errors.full_name}>
                     <input
                         type="text"
                         value={data.full_name}
@@ -48,15 +50,15 @@ export default function ProfileEditForm({ profile, onCancel }) {
                     />
                 </Field>
 
-                <Field label="Jenis Kelamin" error={errors.gender}>
+                <Field label={t("auth.onboard.gender")} error={errors.gender}>
                     <select
                         value={data.gender}
                         onChange={(e) => setData("gender", e.target.value)}
                         className={inputClass(errors.gender)}
                     >
-                        <option value="male">Laki-laki</option>
-                        <option value="female">Perempuan</option>
-                        <option value="silent">Tidak disebutkan</option>
+                        <option value="male">{t("auth.onboard.male")}</option>
+                        <option value="female">{t("auth.onboard.female")}</option>
+                        <option value="silent">{t("ph.gender_unspecified")}</option>
                     </select>
                 </Field>
 
@@ -69,7 +71,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
                     />
                 </Field>
 
-                <Field label="Email" error={errors.email}>
+                <Field label={t("auth.register.email")} error={errors.email}>
                     <input
                         type="email"
                         value={data.email}
@@ -78,7 +80,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
                     />
                 </Field>
 
-                <Field label="Nomor Telepon" error={errors.phone}>
+                <Field label={t("trip.checkout.phone_label")} error={errors.phone}>
                     <div className="flex">
                         <span className="inline-flex items-center rounded-l-lg border border-r-0 border-neutral-300 bg-neutral-50 px-3 text-sm text-neutral-500">
                             +62
@@ -95,7 +97,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
                     </div>
                 </Field>
 
-                <Field label="Tanggal Lahir" error={errors.birth_date}>
+                <Field label={t("auth.onboard.birth_date")} error={errors.birth_date}>
                     <input
                         type="date"
                         value={data.birth_date}
@@ -113,7 +115,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
                     className="w-full"
                     disabled={processing}
                 >
-                    {processing ? "Menyimpan..." : "Simpan Profil"}
+                    {processing ? t("ph.saving") : t("ph.save_profile")}
                 </Button>
                 <Button
                     type="neutral"
@@ -122,7 +124,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
                     className="w-full"
                     onClick={onCancel}
                 >
-                    Batal
+                    {t("common.cancel")}
                 </Button>
             </div>
         </form>

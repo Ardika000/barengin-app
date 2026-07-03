@@ -16,6 +16,7 @@ L.Icon.Default.mergeOptions({
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
+import { useTranslation } from "@/lib/useTranslation";
 
 import {
     FaMapMarkerAlt,
@@ -37,6 +38,7 @@ import { BsChatText } from "react-icons/bs";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 
 export default function Detail({ trip }) {
+    const { t } = useTranslation();
     const currentTrip = trip;
     const authUser = usePage().props?.auth?.user;
     const isOwner = authUser && Number(authUser.id) === Number(currentTrip?.host?.id);
@@ -212,11 +214,11 @@ export default function Detail({ trip }) {
                                     )}
                                 </div>
                                 <div className="text-xs leading-tight">
-                                    <p className="font-semibold text-white">Wisatawan Terkonfirmasi</p>
+                                    <p className="font-semibold text-white">{t("trip.detail.confirmed")}</p>
                                     <p className="text-white/80 font-medium">
-                                        {currentTrip.joined_count}/{currentTrip.capacity} telah bergabung
+                                        {currentTrip.joined_count}/{currentTrip.capacity} {t("trip.detail.joined")}
                                         {currentTrip.remaining_seats > 0 && (
-                                            <> · sisa {currentTrip.remaining_seats} kursi</>
+                                            <> · {currentTrip.remaining_seats} {t("trip.detail.seats_left")}</>
                                         )}
                                     </p>
                                 </div>
@@ -231,12 +233,12 @@ export default function Detail({ trip }) {
                     <div className="lg:col-span-2 space-y-10">
                         <section>
                             <h2 className="text-2xl font-bold text-neutral-700 mb-4">
-                                Tentang {currentTrip.title}
+                                {t("trip.detail.about")} {currentTrip.title}
                             </h2>
                             <div className="flex items-center gap-2 text-sm text-neutral-700 font-medium mb-5 bg-neutral-50 p-3.5 rounded-xl border border-neutral-200">
                                 <FaRegCalendarAlt className="text-neutral-500 text-lg" />
                                 <span>
-                                    Trip akan berlangsung dari{" "}
+                                    {t("trip.detail.will_run")}{" "}
                                     <strong>{currentTrip.date_range}</strong>
                                 </span>
                             </div>
@@ -300,7 +302,7 @@ export default function Detail({ trip }) {
                         {/* MAP CARD — react-leaflet + Nominatim */}
                         <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
                             <div className="px-4 pt-4 pb-2">
-                                <h3 className="text-[15px] font-bold text-neutral-700">Lokasi Trip</h3>
+                                <h3 className="text-[15px] font-bold text-neutral-700">{t("trip.detail.location")}</h3>
                                 <p className="text-xs text-neutral-500 mt-0.5">{currentTrip.location}</p>
                             </div>
 
@@ -337,7 +339,7 @@ export default function Detail({ trip }) {
                                     }
                                 >
                                     <FaMapMarkerAlt className="inline mr-1" />
-                                    Buka di Google Maps
+                                    {t("common.open_maps")}
                                 </Button>
                             </div>
                         </div>
@@ -366,7 +368,7 @@ export default function Detail({ trip }) {
                             </div>
                             {isOwner ? (
                                 <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
-                                    Trip Anda
+                                    {t("trip.detail.your_trip")}
                                 </span>
                             ) : (
                                 <button type="button" onClick={handleOpenChat} className="w-10 h-10 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 transition-colors shadow-sm">
@@ -377,12 +379,12 @@ export default function Detail({ trip }) {
 
                         {/* Pricing Card */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-200">
-                            <h3 className="text-[17px] font-bold text-neutral-700 mb-2">Total Harga</h3>
+                            <h3 className="text-[17px] font-bold text-neutral-700 mb-2">{t("trip.detail.total_price")}</h3>
                             <div className="flex items-end gap-1 mb-6">
                                 <span className="text-3xl font-bold text-primary-600">
                                     Rp {currentTrip.price.toLocaleString("id-ID")}
                                 </span>
-                                <span className="text-sm text-neutral-500 mb-1">/ orang</span>
+                                <span className="text-sm text-neutral-500 mb-1">{t("common.per_person")}</span>
                             </div>
 
                             <div className="space-y-4 mb-6">
@@ -398,7 +400,7 @@ export default function Detail({ trip }) {
                                     })
                                 ) : (
                                     <p className="text-sm text-neutral-500 italic">
-                                        Tidak ada fasilitas khusus (Backpacker Style)
+                                        {t("trip.detail.no_facilities")}
                                     </p>
                                 )}
                             </div>
@@ -406,8 +408,7 @@ export default function Detail({ trip }) {
                             <div className="bg-orange-50 border border-orange-200/60 rounded-xl p-4 flex items-start gap-3">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed font-medium">
-                                    Dapat dikembalikan sepenuhnya (refund) jika dibatalkan 7 hari
-                                    sebelum keberangkatan. Tidak termasuk tiket pesawat.
+                                    {t("trip.detail.refund_note")}
                                 </p>
                             </div>
                         </div>
@@ -419,15 +420,15 @@ export default function Detail({ trip }) {
             <div className="fixed bottom-0 left-0 w-full bg-white border-t border-neutral-200 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] z-[60]">
                 <Container className="py-4 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="hidden md:block">
-                        <p className="text-sm text-neutral-500 mb-0.5 font-medium">Pesan perjalanan anda sekarang</p>
+                        <p className="text-sm text-neutral-500 mb-0.5 font-medium">{t("trip.detail.book_prompt")}</p>
                         <h3 className="text-lg font-bold text-neutral-700">{currentTrip.title}</h3>
                     </div>
                     <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-5 md:gap-8">
                         <div className="text-right">
-                            <p className="text-[13px] text-neutral-500 mb-0.5 font-medium">Mulai dari</p>
+                            <p className="text-[13px] text-neutral-500 mb-0.5 font-medium">{t("trip.detail.starting_from")}</p>
                             <p className="text-xl font-bold text-neutral-700">
                                 Rp {currentTrip.price.toLocaleString("id-ID")}{" "}
-                                <span className="text-sm font-medium text-neutral-500">/ orang</span>
+                                <span className="text-sm font-medium text-neutral-500">{t("common.per_person")}</span>
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -438,7 +439,7 @@ export default function Detail({ trip }) {
                                 size="md"
                                 className="px-6 md:px-8 font-semibold gap-2 shadow-sm rounded-xl"
                             >
-                                Booking Sekarang <FaArrowRight className="text-sm" />
+                                {t("trip.detail.book_now")} <FaArrowRight className="text-sm" />
                             </Button>
                             <button
                                 type="button"

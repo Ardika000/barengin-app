@@ -8,10 +8,12 @@ import ForumFilterAccordion from "./Partials/ForumFilterAccordion";
 import ComposerCard from "./Partials/ComposerCard";
 import PostCard from "./Partials/PostCard";
 import TagPillList from "./Partials/TagPillList";
+import { useTranslation } from "@/lib/useTranslation";
 
 import { FiSearch } from "react-icons/fi";
 
 function ForumIndexPage({ posts, tags, filters }) {
+    const { t } = useTranslation();
     const user = usePage().props.auth?.user;
 
     const composer = useForumComposer();
@@ -207,15 +209,13 @@ function ForumIndexPage({ posts, tags, filters }) {
                 <div className="lg:col-span-8">
                     <header className="mb-8">
                         <h1 className="text-3xl md:text-4xl font-semibold text-neutral-900">
-                            Setiap Perjalanan{" "}
+                            {t("forum.index.heading_1")}{" "}
                             <span className="text-neutral-500">
-                                Harus Selalu Diabadikan
+                                {t("forum.index.heading_2")}
                             </span>
                         </h1>
                         <p className="mt-3 text-sm md:text-base text-neutral-700 max-w-2xl">
-                            Ceritakan pengalaman Anda, karena setiap detail
-                            kecil bisa menjadi inspirasi besar bagi mereka yang
-                            baru ingin memulai
+                            {t("forum.index.subtitle")}
                         </p>
                     </header>
 
@@ -249,10 +249,10 @@ function ForumIndexPage({ posts, tags, filters }) {
 
                     <div className="py-6 text-center text-sm text-neutral-500">
                         {isLoadingMore
-                            ? "Memuat..."
+                            ? t("forum.loading")
                             : nextUrl
-                              ? "Scroll untuk memuat lebih banyak"
-                              : "Tidak ada post lagi"}
+                              ? t("forum.scroll_more")
+                              : t("forum.no_more")}
                     </div>
                 </div>
 
@@ -260,7 +260,7 @@ function ForumIndexPage({ posts, tags, filters }) {
                     <div className="lg:sticky lg:top-24 space-y-4">
                         <div className="rounded-2xl border border-neutral-200 bg-white p-4">
                             <Input
-                                placeholder="Cari topik favoritmu..."
+                                placeholder={t("lb.search_ph")}
                                 leftIcon={<FiSearch />}
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}

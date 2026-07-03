@@ -148,7 +148,7 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
 }
 
 Beranda.layout = (page) => (
-    <AdminLayout title="Dasbor - Admin" subtitle="Selamat datang!">
+    <AdminLayout title="Dasbor - Admin">
         {page}
     </AdminLayout>
 );

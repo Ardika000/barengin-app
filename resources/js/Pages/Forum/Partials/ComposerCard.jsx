@@ -1,7 +1,9 @@
 import React from "react";
 import Button from "@/Components/Button";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function ComposerCard({ avatar, onOpen }) {
+    const { t } = useTranslation();
     return (
         <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
             <div className="p-5">
@@ -18,7 +20,7 @@ export default function ComposerCard({ avatar, onOpen }) {
                             onClick={onOpen}
                             className="flex-1 text-left p-0 text-neutral-500 cursor-text w-full flex items-center"
                         >
-                            Apa yang baru?
+                            {t("forum.whats_new")}
                         </button>
 
                         {/* mobile */}
@@ -30,7 +32,7 @@ export default function ComposerCard({ avatar, onOpen }) {
                                 rounded={true}
                                 className="w-full h-12"
                             >
-                                Post
+                                {t("forum.post")}
                             </Button>
                         </div>
                     </div>
@@ -44,7 +46,7 @@ export default function ComposerCard({ avatar, onOpen }) {
                             rounded={true}
                             className="px-10"
                         >
-                            Post
+                            {t("forum.post")}
                         </Button>
                     </div>
                 </div>

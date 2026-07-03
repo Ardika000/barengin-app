@@ -173,7 +173,10 @@ class AdminPergiBarengController extends Controller
     public function destroy($id)
     {
         $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+        $tripName = $trip->name;
         $trip->delete();
+
+        \App\Models\ActivityLog::record('Menghapus pergi bareng: ' . $tripName);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Pergi bareng berhasil dihapus.']);
     }
@@ -240,6 +243,8 @@ class AdminPergiBarengController extends Controller
         // Undang user ke grup chat pergi bareng
         $this->ensureGroupAndAttach($trip, $req->user_id);
 
+        \App\Models\ActivityLog::record('Menyetujui permintaan pergi bareng: ' . $trip->name);
+
         return back()->with('flash', [
             'type' => 'success',
             'message' => 'Permintaan disetujui & pengguna ditambahkan ke grup chat.',
@@ -253,6 +258,8 @@ class AdminPergiBarengController extends Controller
         PergiBarengRequest::where('pergi_bareng_id', $trip->id)
             ->where('id', $requestId)
             ->delete();
+
+        \App\Models\ActivityLog::record('Menolak permintaan pergi bareng: ' . $trip->name);
 
         return back()->with('flash', ['type' => 'info', 'message' => 'Permintaan ditolak.']);
     }

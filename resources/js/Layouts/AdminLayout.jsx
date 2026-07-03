@@ -3,7 +3,7 @@ import { Head } from "@inertiajs/react";
 import AdminSidebar from "@/Components/AdminSidebar"; // Sesuaikan path import-mu
 import AdminNavbar from "@/Components/AdminNavbar";   // Sesuaikan path import-mu
 
-export default function AdminLayout({ children, title = "Dasbor - Home", subtitle = "Selamat datang, Pemandu!" }) {
+export default function AdminLayout({ children, title = "Dasbor - Home", subtitle }) {
     // State untuk Desktop Sidebar (Lebar vs Menyusut)
     const [isCollapsed, setIsCollapsed] = useState(false);
     // State untuk Mobile Sidebar (Sembunyi vs Muncul)

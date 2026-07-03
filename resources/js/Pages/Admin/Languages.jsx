@@ -1,29 +1,36 @@
 import React from "react";
 import { Head, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiGlobe } from "react-icons/fi";
 
-export default function Languages({ languages = [] }) {
+export default function Languages({ manageLanguages = [] }) {
+    const { t } = useTranslation();
+    const languages = manageLanguages;
     const toggle = (lang) => {
         if (lang.is_default) return;
         router.post(`/admin/languages/${lang.id}/toggle`, {}, { preserveScroll: true });
     };
 
     return (
+        <>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-neutral-700">{t("admin.nav.languages")}</h1>
+                <p className="text-neutral-500 text-sm">{t("admin.languages.subtitle")}</p>
+            </div>
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title="Manajemen Bahasa" />
 
             <div className="p-4 sm:p-6 border-b border-neutral-100">
                 <p className="text-sm text-neutral-500">
-                    Aktifkan atau nonaktifkan bahasa yang bisa dipilih pengguna. Bahasa yang
-                    dinonaktifkan tidak akan muncul di pemilih bahasa.
+                    {t("admin.languages.desc")}
                 </p>
             </div>
 
             <div className="divide-y divide-neutral-100">
                 {languages.map((lang) => (
                     <div
-                        key={lang.id}
+                        key={lang.id ?? lang.code}
                         className="flex items-center justify-between gap-4 p-4 sm:px-6"
                     >
                         <div className="flex items-center gap-4 min-w-0">
@@ -40,14 +47,14 @@ export default function Languages({ languages = [] }) {
                                     </span>
                                     {lang.is_default && (
                                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-primary-700">
-                                            Default
+                                            {t("admin.languages.default_badge")}
                                         </span>
                                     )}
                                 </div>
                                 <p className="text-xs text-neutral-500">
                                     {lang.native_name || lang.name}
                                     {" · "}
-                                    {lang.is_active ? "Aktif" : "Nonaktif"}
+                                    {lang.is_active ? t("admin.languages.active") : t("admin.languages.inactive")}
                                 </p>
                             </div>
                         </div>
@@ -59,10 +66,10 @@ export default function Languages({ languages = [] }) {
                             disabled={lang.is_default}
                             title={
                                 lang.is_default
-                                    ? "Bahasa default tidak bisa dinonaktifkan"
+                                    ? t("admin.languages.toggle_disabled_title")
                                     : lang.is_active
-                                        ? "Nonaktifkan bahasa"
-                                        : "Aktifkan bahasa"
+                                        ? t("admin.languages.toggle_disable_title")
+                                        : t("admin.languages.toggle_enable_title")
                             }
                             className={`relative h-6 w-12 shrink-0 rounded-full p-1 transition-colors duration-300 ease-in-out ${
                                 lang.is_active ? "bg-primary-700" : "bg-neutral-300"
@@ -79,20 +86,17 @@ export default function Languages({ languages = [] }) {
 
                 {languages.length === 0 && (
                     <div className="py-12 text-center text-neutral-500 text-sm">
-                        Belum ada bahasa yang terdaftar.
+                        {t("admin.languages.empty")}
                     </div>
                 )}
             </div>
         </div>
+        </>
     );
 }
 
 Languages.layout = (page) => (
-    <AdminLayout title="Dasbor - Admin" subtitle="Selamat datang, Admin!">
-        <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-700">Manajemen Bahasa</h1>
-            <p className="text-neutral-500 text-sm">Kelola bahasa yang tersedia di aplikasi.</p>
-        </div>
+    <AdminLayout title="Dasbor - Admin">
         {page}
     </AdminLayout>
 );
