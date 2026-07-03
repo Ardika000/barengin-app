@@ -65,9 +65,9 @@ class AuthController extends Controller
                 "sometimes",
                 "boolean"
             ]
-        ], [
-            "username.regex" => "Username hanya boleh berisi karakter alfanumerik, garis bawah (_), dan titik (.).",
         ]);
+        // Pesan kustom (mis. username.regex) diambil dari lang/{locale}/validation.php
+        // sehingga otomatis mengikuti bahasa yang dipilih pengguna.
 
 
         $user = User::create([
@@ -107,7 +107,7 @@ class AuthController extends Controller
 
             return back()->with('flash', [
                 'type' => 'error', // three category yaa ada error, success, info
-                'message' => 'Kredensial tersebut tidak sesuai dengan catatan kami.',
+                'message' => __('auth.failed'),
             ]);
         }
 
@@ -117,7 +117,7 @@ class AuthController extends Controller
 
         return redirect()->intended('/')->with('flash', [
             'type' => 'success',
-            'message' => 'Selamat datang kembali, ' . Auth::user()->full_name . '!',
+            'message' => __('auth.welcome_back', ['name' => Auth::user()->full_name]),
         ]);
     }
 

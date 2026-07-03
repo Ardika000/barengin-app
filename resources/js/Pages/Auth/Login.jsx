@@ -5,6 +5,7 @@ import Button from "@/Components/Button.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import Input from "@/Components/Input.jsx";
 import Checkbox from "@/Components/Checkbox.jsx";
+import AuthAlert from "@/Components/AuthAlert.jsx";
 import { FcGoogle } from "react-icons/fc";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -46,6 +47,8 @@ export default function Login() {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
+                            <AuthAlert />
+
                             <Input
                                 id="login"
                                 type="text"

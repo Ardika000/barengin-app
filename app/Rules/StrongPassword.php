@@ -24,9 +24,8 @@ class StrongPassword implements ValidationRule
             preg_match('/[0-9]/', $password);
 
         if (!($isLongEnough || $isComplexEnough)) {
-            $fail(
-                "Password must be at least 15 characters OR at least 8 characters including a number and a lowercase letter."
-            );
+            // Pesan mengikuti bahasa aktif (lang/{locale}/validation.php)
+            $fail(__('validation.custom.password.strong'));
         }
     }
 }

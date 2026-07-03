@@ -109,7 +109,7 @@ class TripsController extends Controller
                 'price' => (float) $trip->price,
                 'guide_id' => $trip->guider_id, 
                 'guide' => $trip->guide_name,
-                'guide_avatar' => $trip->profile_image ?? '/assets/default-profile.png',
+                'guide_avatar' => $this->resolveAvatar($trip->profile_image),
                 'guide_rating' => $guiderRating ? number_format($guiderRating, 1) : '0',
                 'guide_reviews' => $guiderReviews,
                 'guide_badge' => 'Expert Guide',

@@ -32,6 +32,31 @@ const getRandomBg = (id) => {
     return colors[safeId % colors.length];
 };
 
+// Avatar pengguna: tampilkan foto profil asli bila ada, jika tidak (atau gagal
+// dimuat) fallback ke inisial berwarna. `avatar` berasal dari accessor
+// public_profile_image, yang mengembalikan default-profile.png bila belum di-set.
+const UserAvatar = ({ avatar, initials, bg, sizeClass = "w-9 h-9 text-xs" }) => {
+    const [failed, setFailed] = useState(false);
+    const isDefault = !avatar || avatar.includes("default-profile");
+
+    if (isDefault || failed) {
+        return (
+            <div className={`${sizeClass} rounded-full flex items-center justify-center font-bold shrink-0 ${bg}`}>
+                {initials}
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={avatar}
+            alt={initials}
+            onError={() => setFailed(true)}
+            className={`${sizeClass} rounded-full object-cover border border-neutral-200 shrink-0`}
+        />
+    );
+};
+
 export default function ManagementUser({ users = [] }) {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState("");
@@ -69,6 +94,7 @@ export default function ManagementUser({ users = [] }) {
                 verified: user.is_verified === 1 || user.is_verified === true,
                 initials: getInitials(user.full_name),
                 bg: getRandomBg(user.id),
+                avatar: user.public_profile_image,
                 roles: userRoles,
             };
         });
@@ -220,9 +246,12 @@ export default function ManagementUser({ users = [] }) {
                                     <tr key={user.id} className="hover:bg-neutral-50/50 transition duration-150">
                                         <td className="py-3 px-5">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${user.bg}`}>
-                                                    {user.initials}
-                                                </div>
+                                                <UserAvatar
+                                                    avatar={user.avatar}
+                                                    initials={user.initials}
+                                                    bg={user.bg}
+                                                    sizeClass="w-9 h-9 text-xs"
+                                                />
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="font-bold text-neutral-700 text-sm">
                                                         {user.name}
@@ -283,9 +312,12 @@ export default function ManagementUser({ users = [] }) {
                         paginatedUsers.map((user) => (
                             <div key={user.id} className="p-4 bg-white hover:bg-neutral-50 transition-colors">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className={`w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${user.bg}`}>
-                                        {user.initials}
-                                    </div>
+                                    <UserAvatar
+                                        avatar={user.avatar}
+                                        initials={user.initials}
+                                        bg={user.bg}
+                                        sizeClass="w-12 h-12 text-sm"
+                                    />
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
                                             <span className="font-bold text-neutral-700 text-base truncate">

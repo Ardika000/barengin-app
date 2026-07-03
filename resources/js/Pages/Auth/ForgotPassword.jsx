@@ -1,6 +1,7 @@
 import { Link, useForm } from "@inertiajs/react";
 import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
+import AuthAlert from "@/Components/AuthAlert.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import { FaArrowLeft } from "react-icons/fa";
 import { useTranslation } from "@/lib/useTranslation";
@@ -44,6 +45,8 @@ export default function ForgotPassword() {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
+                            <AuthAlert />
+
                             <Input
                                 id="email"
                                 type="email"

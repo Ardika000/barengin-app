@@ -138,7 +138,7 @@ export default function EditUser({ user }) {
                 {/* --- Profile Picture --- */}
                 <div className="flex items-center gap-6 mb-8">
                     <img
-                        src={safeUser.profile_image || "/assets/default-profile.png"}
+                        src={safeUser.public_profile_image || "/assets/default-profile.png"}
                         alt="Profile"
                         className="w-20 h-20 rounded-2xl object-cover border border-neutral-200"
                         onError={(e) => { e.target.src = "/assets/default-profile.png"; }}

@@ -3,6 +3,7 @@ import { Link, useForm } from "@inertiajs/react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
+import AuthAlert from "@/Components/AuthAlert.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -46,6 +47,8 @@ export default function ResetPassword({ token, email }) {
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
+                            <AuthAlert />
+
                             {/* Keep these hidden for reset flow */}
                             <input type="hidden" value={data.email} readOnly />
                             <input type="hidden" value={data.token} readOnly />

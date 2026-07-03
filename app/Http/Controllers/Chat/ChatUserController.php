@@ -29,7 +29,9 @@ class ChatUserController extends Controller
                 'id' => $u->id,
                 'name' => $u->full_name,
                 'username' => $u->username ?? null,
-                'avatar' => $u->profile_image ?? asset('assets/default-profile.png'),
+                // Gunakan accessor public_profile_image agar path storage (mis. hasil unggah
+                // kamera: "profile-images/xxx.jpg") diubah jadi URL /storage/... yang valid.
+                'avatar' => $u->public_profile_image ?? asset('assets/default-profile.png'),
             ]);
 
         return response()->json([

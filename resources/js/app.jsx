@@ -22,8 +22,12 @@ createInertiaApp({
 // Jembatan flash Laravel -> toast (otomatis untuk SEMUA halaman & aksi)
 let lastFlashKey = null;
 router.on('success', (event) => {
-    const flash = event?.detail?.page?.props?.flash;
+    const page = event?.detail?.page;
+    const flash = page?.props?.flash;
     if (!flash || !flash.message) return;
+    // Halaman auth menampilkan pesan sebagai alert box di atas form (bukan toast),
+    // karena toast sulit terlihat pada layout dua kolom (form kiri, gambar kanan).
+    if (typeof page.component === 'string' && page.component.startsWith('Auth/')) return;
     const key = `${flash.type}|${flash.message}`;
     if (key === lastFlashKey) return; // hindari duplikat
     lastFlashKey = key;
