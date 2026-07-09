@@ -11,21 +11,34 @@ export default function Edit({ item, categories = [] }) {
 
     const form = useForm({
         name: item.name || "",
-        brand: item.brand || "",
-        category: item.category || "",
+        jastip_category_id: item.jastip_category_id || "",
         description: item.description || "",
-        variants: item.variants?.length
-            ? item.variants.map((v) => ({
-                name: v.name || "",
-                options: v.options?.length ? v.options.map((o) => ({ value: o.value || "", price: o.price ?? "" })) : [{ value: "", price: "" }],
-            }))
-            : [emptyVariant()],
+        pickup_province: item.pickup_province || "",
+        pickup_city: item.pickup_city || "",
+        pickup_address: item.pickup_address || "",
+        purchase_province: item.purchase_province || "",
+        purchase_city: item.purchase_city || "",
+        purchase_address: item.purchase_address || "",
         base_price: item.base_price ?? "",
         jastip_fee: item.jastip_fee ?? "",
+        has_variants: Boolean(item.has_variants),
         max_slot: item.max_slot ?? "",
         min_buy: item.min_buy ?? "1",
+        variants: item.variants?.length
+            ? item.variants.map((v) => ({
+                value: v.value || "",
+                price: v.price ?? "",
+                stock: v.stock ?? "",
+                min_buy: v.min_buy ?? "1",
+                image: null,
+                image_url: v.image_url || null,
+                image_name: v.image_name || null,
+            }))
+            : [emptyVariant()],
         start_date: item.start_date || "",
         end_date: item.end_date || "",
+        pickup_start_date: item.pickup_start_date || "",
+        pickup_end_date: item.pickup_end_date || "",
         images: [],
         removed_images: [],
         publish: item.status === "published" ? 1 : 0,
@@ -36,8 +49,14 @@ export default function Edit({ item, categories = [] }) {
         form.setData("removed_images", [...form.data.removed_images, id]);
     };
 
-    const submit = (publish) => {
-        form.transform((d) => ({ ...d, publish: publish ? 1 : 0 }));
+    // #14: hanya menyimpan sebagai draft; publish dari halaman manajemen.
+    const saveDraft = () => {
+        form.transform((d) => ({
+            ...d,
+            publish: 0,
+            has_variants: d.has_variants ? 1 : 0,
+            variants: d.has_variants ? d.variants : [],
+        }));
         form.post(`/admin/jastip/${item.id}`, { forceFormData: true });
     };
 
@@ -64,8 +83,7 @@ export default function Edit({ item, categories = [] }) {
                 categories={categories}
                 existingImages={existingImages}
                 onRemoveExisting={removeExisting}
-                onSaveDraft={() => submit(false)}
-                onPublish={() => submit(true)}
+                onSaveDraft={saveDraft}
             />
         </>
     );

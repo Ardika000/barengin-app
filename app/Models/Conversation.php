@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Conversation extends Model
 {
     protected $fillable = [
-        'trip_id', 'pergi_bareng_id', 'is_group'
+        'trip_id', 'pergi_bareng_id', 'jastip_item_id', 'is_group'
     ];
 
     public function trip(){
@@ -16,6 +16,10 @@ class Conversation extends Model
 
     public function pergi_bareng(){
         return $this->belongsTo(PergiBareng::class);
+    }
+
+    public function jastip_item(){
+        return $this->belongsTo(JastipItem::class);
     }
 
     public function messages(){

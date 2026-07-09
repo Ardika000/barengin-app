@@ -12,13 +12,13 @@ import ProfileEditForm from "./Partials/ProfileEditForm";
 import TransactionCard from "./Partials/TransactionCard";
 import JalanBarengCard from "./Partials/JalanBarengCard";
 import ReviewModal from "./Partials/ReviewModal";
+import JastipCard from "@/Pages/Home/Cards/JastipCard";
 import { useTranslation } from "@/lib/useTranslation";
-// import JastipFavoriteCard from "./Partials/JastipFavoriteCard"; // Jastip dinonaktifkan sementara
 
 import {
     FaReceipt,
     FaRoute,
-    // FaUtensils, // Jastip dinonaktifkan sementara
+    FaShoppingBag,
     FaMapMarkedAlt,
     FaCarSide,
 } from "react-icons/fa";
@@ -26,16 +26,17 @@ import {
 const TABS = [
     { key: "transactions", labelKey: "ph.tab_transactions", pageParam: "tx_page", icon: FaReceipt },
     { key: "history", labelKey: "ph.tab_history", pageParam: "jb_page", icon: FaRoute },
-    // Jastip dinonaktifkan sementara (fitur jastip kemungkinan dihapus)
-    // { key: "jastip", label: "Jastip Kesukaan", pageParam: "jastip_page", icon: FaUtensils },
+    { key: "jastip_history", labelKey: "ph.tab_jastip_history", pageParam: "jh_page", icon: FaShoppingBag },
     { key: "trips", labelKey: "ph.tab_trips", pageParam: "trip_page", icon: FaMapMarkedAlt },
-    { key: "pergi", labelKey: "nav.pergi_bareng", pageParam: "pb_page", icon: FaCarSide },
+    { key: "pergi", labelKey: "ph.tab_pergi_fav", pageParam: "pb_page", icon: FaCarSide },
+    { key: "jastip", labelKey: "ph.tab_jastip_fav", pageParam: "jastip_page", icon: FaShoppingBag },
 ];
 
 export default function ProfileHistory({
     profile,
     transactions,
     jalan_bareng,
+    jastip_history,
     trip_favorites,
     pergi_barengs,
     jastip_favorites,
@@ -93,7 +94,7 @@ export default function ProfileHistory({
 
     return (
         <Container className="min-h-screen py-8">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_1fr]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
                 {/* ===== Left: Profile ===== */}
                 <aside className="lg:sticky lg:top-24 lg:self-start">
                     {editing ? (
@@ -110,9 +111,11 @@ export default function ProfileHistory({
                 </aside>
 
                 {/* ===== Right: Tabbed content ===== */}
-                <section className="rounded-3xl border border-neutral-200 bg-white p-5 sm:p-7">
-                    {/* Tab nav */}
-                    <div className="mb-6 flex flex-wrap gap-x-4 gap-y-1 border-b border-neutral-200 sm:gap-x-6">
+                {/* min-w-0 wajib: tanpa ini track grid 1fr melebar mengikuti isi tab,
+                    sehingga overflow-x-auto pada nav tidak aktif dan halaman meluber. */}
+                <section className="min-w-0 rounded-3xl border border-neutral-200 bg-white p-5 sm:p-7">
+                    {/* Tab nav — scroll horizontal tanpa wrap, scrollbar disembunyikan */}
+                    <div className="mb-6 flex flex-nowrap gap-x-4 overflow-x-auto border-b border-neutral-200 sm:gap-x-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {TABS.map((item) => {
                             const isActive = activeTab === item.key;
                             return (
@@ -180,29 +183,49 @@ export default function ProfileHistory({
                         </TabSection>
                     )}
 
-                    {/* Jastip Kesukaan dinonaktifkan sementara (fitur jastip kemungkinan dihapus)
+                    {/* Riwayat pembelian Jastip — beri ulasan untuk jastiper */}
+                    {activeTab === "jastip_history" && (
+                        <TabSection
+                            paginator={jastip_history}
+                            pageParam="jh_page"
+                            onPageChange={goToPage}
+                            empty={{
+                                icon: <FaShoppingBag className="h-12 w-12" />,
+                                title: t("ph.empty_jastip_history_title"),
+                                desc: t("ph.empty_jastip_history_desc"),
+                            }}
+                        >
+                            <div className="space-y-4">
+                                {jastip_history.data.map((item) => (
+                                    <JalanBarengCard
+                                        key={item.key}
+                                        item={item}
+                                        onReview={setReviewTarget}
+                                    />
+                                ))}
+                            </div>
+                        </TabSection>
+                    )}
+
+                    {/* Jastip Kesukaan — item yang di-like (kartu sama dgn etalase) */}
                     {activeTab === "jastip" && (
                         <TabSection
                             paginator={jastip_favorites}
                             pageParam="jastip_page"
                             onPageChange={goToPage}
                             empty={{
-                                icon: <FaUtensils className="h-12 w-12" />,
-                                title: "Belum ada jastip kesukaan",
-                                desc: "Jelajahi jastip dan temukan barang favorit Anda.",
+                                icon: <FaShoppingBag className="h-12 w-12" />,
+                                title: t("ph.empty_jastip_fav_title"),
+                                desc: t("ph.empty_jastip_fav_desc"),
                             }}
                         >
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                 {jastip_favorites.data.map((product) => (
-                                    <JastipFavoriteCard
-                                        key={product.id}
-                                        product={product}
-                                    />
+                                    <JastipCard key={product.id} product={product} />
                                 ))}
                             </div>
                         </TabSection>
                     )}
-                    */}
 
                     {activeTab === "trips" && (
                         <TabSection

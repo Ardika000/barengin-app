@@ -10,23 +10,39 @@ export default function Create({ categories = [] }) {
 
     const form = useForm({
         name: "",
-        brand: "",
-        category: "",
+        jastip_category_id: "",
         description: "",
-        variants: [emptyVariant()],
+        pickup_province: "",
+        pickup_city: "",
+        pickup_address: "",
+        purchase_province: "",
+        purchase_city: "",
+        purchase_address: "",
         base_price: "",
         jastip_fee: "",
+        has_variants: false,
         max_slot: "",
         min_buy: "1",
+        // Kosong saat awal; varian "Original" dibuat otomatis saat checkbox dicentang (#9)
+        variants: [],
         start_date: "",
         end_date: "",
+        pickup_start_date: "",
+        pickup_end_date: "",
         images: [],
         removed_images: [],
         publish: 0,
     });
 
-    const submit = (publish) => {
-        form.transform((d) => ({ ...d, publish: publish ? 1 : 0 }));
+    // #14: form hanya menyimpan draft; publish dilakukan dari halaman manajemen.
+    const saveDraft = () => {
+        form.transform((d) => ({
+            ...d,
+            publish: 0,
+            has_variants: d.has_variants ? 1 : 0,
+            // Kirim varian hanya bila diaktifkan (hindari validasi baris kosong)
+            variants: d.has_variants ? d.variants : [],
+        }));
         form.post("/admin/jastip", { forceFormData: true });
     };
 
@@ -51,8 +67,8 @@ export default function Create({ categories = [] }) {
                 errors={form.errors}
                 processing={form.processing}
                 categories={categories}
-                onSaveDraft={() => submit(false)}
-                onPublish={() => submit(true)}
+                autoLocate
+                onSaveDraft={saveDraft}
             />
         </>
     );

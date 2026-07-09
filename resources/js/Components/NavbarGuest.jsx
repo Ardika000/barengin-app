@@ -56,7 +56,7 @@ export default function NavbarGuest() {
                         menuWidthClass="w-60"
                         withDividers
                     />
-                    {/* <NavLink href="/jastip">Jastip</NavLink> */}
+                    <NavLink href="/jastip">{t("nav.jastip")}</NavLink>
                     <NavLink href="/forum">{t("nav.forum")}</NavLink>
                     <NavLink href="/leaderboard">{t("nav.leaderboard")}</NavLink>
                 </nav>
@@ -146,7 +146,7 @@ export default function NavbarGuest() {
                         </NavDropdownMobile>
 
                         <NavLinkMobile href="/jastip" onClick={closeAll}>
-                            Jastip
+                            {t("nav.jastip")}
                         </NavLinkMobile>
                         <NavLinkMobile href="/forum" onClick={closeAll}>
                             {t("nav.forum")}

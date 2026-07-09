@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Chat;
 
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
+use App\Models\JastipItem;
 use App\Models\PergiBareng;
 use App\Models\Trip;
 use App\Models\User;
@@ -153,6 +154,64 @@ class ChatConversationController extends Controller
             $conv->participants()->attach($uid, ['last_read_at' => now()]);
         }
         
+        return redirect("/chat/{$conversationId}?tab=groups");
+    }
+
+    /**
+     * Grup chat jastip: jastiper (pemilik produk) mengobrol dengan semua pembeli
+     * yang sudah membayar produk jastip ini. (#15)
+     */
+    public function openOrCreateJastipGroup(Request $request, $id)
+    {
+        $item = JastipItem::findOrFail($id);
+        $me = $request->user();
+
+        // Semua pembeli yang sudah membayar produk ini
+        $buyerIds = DB::table('jastip_order_items')
+            ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
+            ->join('transactions', 'jastip_orders.transaction_id', '=', 'transactions.id')
+            ->where('jastip_order_items.jastip_item_id', $item->id)
+            ->where('jastip_orders.order_status', 'paid')
+            ->pluck('transactions.user_id')
+            ->unique()
+            ->values();
+
+        $isOwner = (int) $item->user_id === (int) $me->id;
+        $isBuyer = $buyerIds->contains((int) $me->id);
+
+        abort_unless($isOwner || $isBuyer, 403, 'Kamu tidak punya akses ke grup jastip ini');
+
+        $conversationId = Conversation::query()
+            ->where('is_group', true)
+            ->where('jastip_item_id', $item->id)
+            ->value('id');
+
+        if (! $conversationId) {
+            $conversation = DB::transaction(function () use ($item) {
+                return Conversation::create([
+                    'trip_id'         => null,
+                    'pergi_bareng_id' => null,
+                    'jastip_item_id'  => $item->id,
+                    'is_group'        => true,
+                ]);
+            });
+
+            $conversationId = $conversation->id;
+        }
+
+        $memberIds = $buyerIds
+            ->push($item->user_id)
+            ->unique()
+            ->filter()
+            ->values();
+
+        $conv = Conversation::findOrFail($conversationId);
+        $existingIds = $conv->participants()->pluck('users.id');
+
+        foreach ($memberIds->diff($existingIds) as $uid) {
+            $conv->participants()->attach($uid, ['last_read_at' => now()]);
+        }
+
         return redirect("/chat/{$conversationId}?tab=groups");
     }
 

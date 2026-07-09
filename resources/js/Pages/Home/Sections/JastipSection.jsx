@@ -32,6 +32,8 @@ export default function JastipSection({ products }) {
                         </p>
                         <Button
                             type="primary"
+                            isButtonLink
+                            href="/jastip"
                             className="px-6 py-2 rounded-full text-sm"
                         >
                             {t("common.explore_more")}

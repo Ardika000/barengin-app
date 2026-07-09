@@ -2,6 +2,7 @@ import React from "react";
 import { Head, Link } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SalesChart from "@/Components/SalesChart";
+import AccountPerformanceCard from "@/Components/AccountPerformanceCard";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiShoppingCart, FiTrendingUp, FiUsers, FiStar } from "react-icons/fi";
 
@@ -21,7 +22,7 @@ function StatCard({ icon, label, value, suffix }) {
 
 const FALLBACK_IMG = "/assets/default-image.png";
 
-export default function Analytics({ stats, monthly = [], bestSeller }) {
+export default function Analytics({ stats, monthly = [], bestSeller, rating }) {
     const { t } = useTranslation();
     const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
@@ -72,7 +73,7 @@ export default function Analytics({ stats, monthly = [], bestSeller }) {
                                     )}
                                 </div>
                                 <h4 className="truncate font-bold text-neutral-800">{bestSeller.name}</h4>
-                                <p className="mb-3 truncate text-xs text-neutral-500">{t(`jastip.category.${String(bestSeller.category || "").toLowerCase()}`, bestSeller.category)}</p>
+                                <p className="mb-3 truncate text-xs text-neutral-500">{bestSeller.category}</p>
 
                                 <div className="mb-1.5 flex items-center justify-between text-xs">
                                     <span className="text-neutral-500">{t("jastip.progress")}</span>
@@ -98,6 +99,9 @@ export default function Analytics({ stats, monthly = [], bestSeller }) {
                         )}
                     </div>
                 </div>
+
+                {/* Performa akun jastiper (ring rating + distribusi + ulasan) */}
+                <AccountPerformanceCard rating={rating} />
             </div>
         </>
     );

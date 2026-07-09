@@ -8,6 +8,7 @@ class JastipItemVariant extends Model
 {
     protected $fillable = [
         'jastip_item_id', 'var_name', 'var_value', 'additional_price',
+        'stock', 'min_buy', 'image_name',
     ];
 
     protected function casts()

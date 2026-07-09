@@ -9,12 +9,12 @@ use Illuminate\Validation\Rule;
 class FavoriteController extends Controller
 {
     /**
-     * Toggle like/favorite untuk Trip atau Pergi Bareng.
+     * Toggle like/favorite untuk Trip, Pergi Bareng, atau Jastip.
      */
     public function toggle(Request $request)
     {
         $validated = $request->validate([
-            'type' => ['required', Rule::in([Favorite::TYPE_TRIP, Favorite::TYPE_PERGI_BARENG])],
+            'type' => ['required', Rule::in([Favorite::TYPE_TRIP, Favorite::TYPE_PERGI_BARENG, Favorite::TYPE_JASTIP])],
             'id'   => ['required', 'integer'],
         ]);
 

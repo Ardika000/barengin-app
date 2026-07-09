@@ -266,6 +266,8 @@ class TripsController extends Controller
 
         return Inertia::render('TripBareng/Checkout', [
             'trip' => $trip_check_out,
+            // Client key pasangan MIDTRANS_SERVER_KEY — wajib sama merchant
+            'midtrans_client_key' => config('midtrans.client_key'),
         ]);
     }
 

@@ -85,7 +85,10 @@ export default function Checkout({ trip, midtrans_client_key }) {
 
         const script = document.createElement("script");
         script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-        script.setAttribute("data-client-key", midtrans_client_key || "Mid-client-XtaGQOWVJKpMUwg0");
+        // Fallback = client key merchant M334317500 (pasangan MIDTRANS_SERVER_KEY).
+        // Key lama "Mid-client-XtaGQOWVJKpMUwg0" milik akun lain — popup gagal
+        // bila snap.js dimuat pertama kali dengan key tsb.
+        script.setAttribute("data-client-key", midtrans_client_key || "Mid-client-mGla22pQRRj2Oeks");
         script.onload  = () => setSnapReady(true);
         script.onerror = () => setSnapReady(false);
         document.head.appendChild(script);

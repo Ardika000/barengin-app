@@ -8,10 +8,12 @@ import { useTranslation } from "@/lib/useTranslation";
  * Modal ulasan yang dipakai ulang berdasarkan tipe:
  * - trip         : menilai trip + pemandu (dua rating)
  * - pergi_bareng : menilai pembuat perjalanan (satu rating)
+ * - jastip       : menilai jastiper/penjual (satu rating)
  */
 export default function ReviewModal({ target, onClose }) {
     const { t } = useTranslation();
     const isTrip = target.type === "trip";
+    const isJastip = target.type === "jastip";
 
     const { data, setData, post, processing, errors } = useForm({
         type: target.type,
@@ -92,7 +94,11 @@ export default function ReviewModal({ target, onClose }) {
                                 {target.user.name}
                             </p>
                             <p className="text-xs text-neutral-500">
-                                {isTrip ? t("ph.trip_guide") : t("ph.trip_creator")}
+                                {isTrip
+                                    ? t("ph.trip_guide")
+                                    : isJastip
+                                        ? t("ph.jastiper")
+                                        : t("ph.trip_creator")}
                             </p>
                         </div>
                     </div>
@@ -106,10 +112,14 @@ export default function ReviewModal({ target, onClose }) {
                         />
                     )}
 
-                    {/* Rating user (pemandu / pembuat) */}
+                    {/* Rating user (pemandu / pembuat / jastiper) */}
                     <RatingRow
                         label={
-                            isTrip ? t("ph.rating_guide") : t("ph.rating_creator")
+                            isTrip
+                                ? t("ph.rating_guide")
+                                : isJastip
+                                    ? t("ph.rating_jastiper")
+                                    : t("ph.rating_creator")
                         }
                         value={data.user_rating}
                         onChange={(v) => setData("user_rating", v)}

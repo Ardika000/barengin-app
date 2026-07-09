@@ -58,6 +58,11 @@ class HandleInertiaRequests extends Middleware
                     return [];
                 }
             },
+            // Jumlah baris item di keranjang jastip (session) — untuk indikator keranjang
+            'jastip_cart_count' => function () use ($request) {
+                $cart = $request->session()->get('jastip_cart', []);
+                return collect($cart)->sum(fn ($line) => (int) ($line['quantity'] ?? 0));
+            },
             // Normalisasi flash dari berbagai pola controller -> {type, message}
             'flash' => function () use ($request) {
                 $s = $request->session();

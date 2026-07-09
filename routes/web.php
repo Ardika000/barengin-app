@@ -19,6 +19,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileHistoryController;
 use App\Http\Controllers\TripsController;
+use App\Http\Controllers\JastipController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminMessageController;
 use App\Http\Controllers\AdminPergiBarengController;
@@ -73,9 +74,65 @@ Route::get('/', function () {
         })
         ->all();
 
+    // Jastip terbaru (published) untuk section beranda — bentuk data = props JastipCard
+    $likedJastipIds = auth()->check()
+        ? \Illuminate\Support\Facades\DB::table('favorites')
+            ->where('user_id', auth()->id())
+            ->where('favoritable_type', 'jastip')
+            ->pluck('favoritable_id')
+            ->flip()
+            ->all()
+        : [];
+
+    $latestJastip = \App\Models\JastipItem::query()
+        ->where('status', \App\Models\JastipItem::STATUS_PUBLISHED)
+        ->activeWindow() // #8: jangan tampilkan jastip yang sudah lewat
+        ->with('jastip_item_images')
+        ->latest('created_at')
+        ->limit(4)
+        ->get()
+        ->map(function ($item) use ($likedJastipIds) {
+            $owner  = \App\Models\User::find($item->user_id);
+            $rating = \Illuminate\Support\Facades\DB::table('user_ratings')
+                ->where('rated_user_id', $item->user_id)
+                ->where('type', 'jastiper')
+                ->avg('rating_amount');
+
+            $now = \Carbon\Carbon::now();
+            if ($item->start_date && $now->lt(\Carbon\Carbon::parse($item->start_date))) {
+                $tag = ['type' => 'upcoming', 'date' => \Carbon\Carbon::parse($item->start_date)->translatedFormat('d M Y')];
+            } elseif ($item->end_date) {
+                $tag = ['type' => 'ongoing', 'date' => \Carbon\Carbon::parse($item->end_date)->translatedFormat('d M Y')];
+            } else {
+                $tag = null;
+            }
+
+            $img = $item->jastip_item_images->first()?->image_name;
+            $image = ! $img
+                ? '/assets/default-image.png'
+                : ((str_starts_with($img, 'http') || str_starts_with($img, '/')) ? $img : asset('storage/' . $img));
+
+            return [
+                'id'     => $item->id,
+                'name'   => $item->name,
+                'price'  => (float) $item->base_price + (float) $item->jastip_fee,
+                'from'   => $item->purchase_city ?: $item->purchase_province,
+                'to'     => $item->pickup_city ?: $item->pickup_province,
+                'tag'    => $tag,
+                'href'   => '/jastip/' . $item->id,
+                'liked'  => isset($likedJastipIds[$item->id]),
+                'image'  => $image,
+                'author' => $owner?->full_name ?? 'Jastiper',
+                'avatar' => $owner?->public_profile_image ?? asset('assets/default-profile.png'),
+                'rating' => number_format((float) ($rating ?? 0), 1),
+            ];
+        })
+        ->all();
+
     return inertia('Home/Index', [
         'galleryImages' => $galleryImages,
         'popularTrips'  => $popularTrips,
+        'latestJastip'  => $latestJastip,
     ]);
     })->name('home');
 
@@ -199,6 +256,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
     Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
     Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
+    Route::post('/chat/jastip/{id}/group', [ChatConversationController::class, 'openOrCreateJastipGroup'])->whereNumber('id')->name('chat.jastip.group.open');
     Route::delete('/chat/{conversation}/participants/{user}', [ChatConversationController::class, 'removeParticipant'])->whereNumber('conversation')->whereNumber('user')->name('chat.participants.remove');
     
     Route::get('/chat/exp', function(){
@@ -220,6 +278,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
     Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'processPayment'])->name('trip-bareng.payment');
     Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
+});
+
+// Jastip (etalase pembeli) — daftar & detail boleh dilihat publik
+Route::get('/jastip', [JastipController::class, 'index'])->name('jastip');
+Route::get('/jastip/{id}', [JastipController::class, 'show'])->whereNumber('id')->name('jastip.show');
+
+// Pembelian jastip wajib login
+Route::middleware('auth')->group(function () {
+    Route::post('/jastip/cart', [JastipController::class, 'addToCart'])->name('jastip.cart.add');
+    Route::post('/jastip/cart/update', [JastipController::class, 'updateCart'])->name('jastip.cart.update');
+    Route::get('/jastip/checkout', [JastipController::class, 'checkout'])->name('jastip.checkout');
+    Route::post('/jastip/payment', [JastipController::class, 'processPayment'])->name('jastip.payment');
+    Route::get('/jastip/success/{transaction}', [JastipController::class, 'success'])->name('jastip.success');
 });
 
 // Management User

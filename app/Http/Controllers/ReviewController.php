@@ -10,15 +10,16 @@ use Illuminate\Validation\Rule;
 class ReviewController extends Controller
 {
     /**
-     * Simpan ulasan untuk Trip Bareng / Pergi Bareng.
+     * Simpan ulasan untuk Trip Bareng / Pergi Bareng / Jastip.
      *
      * - trip         : nilai untuk trip (user_trip_ratings) + pemandu (user_ratings:trip_bareng)
      * - pergi_bareng : nilai untuk pembuat perjalanan (user_ratings:pergi_bareng)
+     * - jastip       : nilai untuk jastiper/penjual (user_ratings:jastiper); id = user id jastiper
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'type'        => ['required', Rule::in(['trip', 'pergi_bareng'])],
+            'type'        => ['required', Rule::in(['trip', 'pergi_bareng', 'jastip'])],
             'id'          => ['required', 'integer'],
             'user_rating' => ['required', 'integer', 'min:1', 'max:5'],
             'trip_rating' => ['nullable', 'integer', 'min:1', 'max:5', 'required_if:type,trip'],
@@ -63,6 +64,24 @@ class ReviewController extends Controller
                     'comment'       => $comment,
                     'updated_at'    => now(),
                     'created_at'    => now(),
+                ],
+            );
+        } elseif ($validated['type'] === 'jastip') {
+            // id = user id jastiper (penjual) yang diulas
+            $jastiper = DB::table('users')->where('id', $validated['id'])->first();
+            if (! $jastiper) {
+                abort(404);
+            }
+
+            UserRating::updateOrCreate(
+                [
+                    'user_id'       => $user->id,
+                    'rated_user_id' => $jastiper->id,
+                    'type'          => 'jastiper',
+                ],
+                [
+                    'rating_amount' => $validated['user_rating'],
+                    'comment'       => $comment,
                 ],
             );
         } else {

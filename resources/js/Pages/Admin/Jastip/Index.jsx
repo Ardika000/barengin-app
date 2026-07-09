@@ -25,7 +25,7 @@ export default function Index({ items = [], orders = {} }) {
     const rows = useMemo(() => {
         const q = search.toLowerCase();
         let list = items.filter(
-            (i) => i.name?.toLowerCase().includes(q) || i.brand?.toLowerCase().includes(q),
+            (i) => i.name?.toLowerCase().includes(q) || i.category?.toLowerCase().includes(q),
         );
         if (sortBy === "best") list = [...list].sort((a, b) => b.sold - a.sold);
         else if (sortBy === "stock") list = [...list].sort((a, b) => (b.max_slot - b.sold) - (a.max_slot - a.sold));
@@ -123,6 +123,7 @@ export default function Index({ items = [], orders = {} }) {
                         manage
                         onEdit={() => router.visit(`/admin/jastip/${item.id}/edit`)}
                         onPublish={() => setPublishModal({ open: true, id: item.id, name: item.name })}
+                        onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}
                         onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name })}
                     />
                 ))}

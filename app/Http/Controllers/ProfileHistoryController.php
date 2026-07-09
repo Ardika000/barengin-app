@@ -35,6 +35,7 @@ class ProfileHistoryController extends Controller
             'profile'           => $this->profilePayload($user),
             'transactions'      => $this->transactions($user),
             'jalan_bareng'      => $this->jalanBarengHistory($user),
+            'jastip_history'    => $this->jastipHistory($user),
             'trip_favorites'    => $this->tripFavorites($user),
             'pergi_barengs'     => $this->pergiBarengs($user),
             'jastip_favorites'  => $this->jastipFavorites($user),
@@ -508,26 +509,26 @@ class ProfileHistoryController extends Controller
     }
 
     /**
-     * Jastip "kesukaan" -> item jastip yang pernah dipesan user.
+     * Jastip "kesukaan" -> item jastip yang di-like user (tabel favorites).
+     * Bentuk data disesuaikan dengan props JastipCard.
      */
     private function jastipFavorites(User $user)
     {
-        $items = DB::table('jastip_order_items')
-            ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
-            ->join('transactions', 'jastip_orders.transaction_id', '=', 'transactions.id')
-            ->join('jastip_items', 'jastip_order_items.jastip_item_id', '=', 'jastip_items.id')
-            ->join('jastips', 'jastip_items.jastip_id', '=', 'jastips.id')
-            ->where('transactions.user_id', $user->id)
+        $likedIds = DB::table('favorites')
+            ->where('user_id', $user->id)
+            ->where('favoritable_type', 'jastip')
+            ->pluck('favoritable_id');
+
+        $items = DB::table('jastip_items')
+            ->join('users', 'jastip_items.user_id', '=', 'users.id')
+            ->whereIn('jastip_items.id', $likedIds)
+            ->where('jastip_items.status', 'published')
             ->select(
-                'jastip_items.id',
-                'jastip_items.name',
-                'jastip_items.category',
-                'jastip_items.base_price',
-                'jastips.origin_city',
-                'jastips.destination_city',
+                'jastip_items.*',
+                'users.full_name as owner_name',
+                'users.profile_image as owner_image',
             )
-            ->distinct()
-            ->orderByDesc('jastip_items.id')
+            ->orderByDesc('jastip_items.created_at')
             ->paginate(6, ['*'], 'jastip_page')
             ->withQueryString();
 
@@ -536,18 +537,115 @@ class ProfileHistoryController extends Controller
                 ->where('jastip_item_id', $item->id)
                 ->value('image_name');
 
+            $rating = DB::table('user_ratings')
+                ->where('rated_user_id', $item->user_id)
+                ->where('type', 'jastiper')
+                ->avg('rating_amount');
+
             return [
                 'id'       => $item->id,
                 'name'     => $item->name,
-                'category' => $item->category,
-                'price'    => (float) $item->base_price,
-                'from'     => $item->origin_city,
-                'to'       => $item->destination_city,
+                'price'    => (float) $item->base_price + (float) $item->jastip_fee,
+                'from'     => $item->purchase_city ?: $item->purchase_province,
+                'to'       => $item->pickup_city ?: $item->pickup_province,
                 'image'    => $this->resolveImage($image, '/assets/default-image.png'),
+                'href'     => '/jastip/' . $item->id,
+                'liked'    => true,
+                'author'   => $item->owner_name,
+                'avatar'   => $this->resolveImage($item->owner_image, asset('assets/default-profile.png')),
+                'rating'   => number_format((float) ($rating ?? 0), 1),
             ];
         });
 
         return $items;
+    }
+
+    /**
+     * Riwayat pembelian jastip (order berbayar) untuk memberi ulasan jastiper.
+     * Satu baris per jastiper per order; reviewed = sudah menilai jastiper tsb.
+     */
+    private function jastipHistory(User $user)
+    {
+        $avatarFallback = asset('assets/default-profile.png');
+
+        $rows = DB::table('jastip_order_items')
+            ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
+            ->join('transactions', 'jastip_orders.transaction_id', '=', 'transactions.id')
+            ->join('jastip_items', 'jastip_order_items.jastip_item_id', '=', 'jastip_items.id')
+            ->join('users as sellers', 'jastip_items.user_id', '=', 'sellers.id')
+            ->where('transactions.user_id', $user->id)
+            ->where('jastip_orders.order_status', 'paid')
+            ->select(
+                'jastip_orders.id as order_id',
+                'jastip_orders.created_at as order_date',
+                'jastip_items.id as item_id',
+                'jastip_items.name as item_name',
+                'jastip_items.pickup_city',
+                'jastip_items.pickup_province',
+                'jastip_items.purchase_city',
+                'jastip_items.purchase_province',
+                'sellers.id as seller_id',
+                'sellers.full_name as seller_name',
+                'sellers.profile_image as seller_image',
+            )
+            ->orderByDesc('jastip_orders.created_at')
+            ->get()
+            // Satu baris per (order, jastiper) — item pertama mewakili
+            ->unique(fn ($r) => $r->order_id . '-' . $r->seller_id)
+            ->values()
+            ->map(function ($r) use ($user, $avatarFallback) {
+                $reviewed = DB::table('user_ratings')
+                    ->where('user_id', $user->id)
+                    ->where('rated_user_id', $r->seller_id)
+                    ->where('type', 'jastiper')
+                    ->exists();
+
+                $image = DB::table('jastip_item_images')
+                    ->where('jastip_item_id', $r->item_id)
+                    ->value('image_name');
+                $image = $this->resolveImage($image, '/assets/default-image.png');
+
+                $from = $r->purchase_city ?: $r->purchase_province;
+                $to   = $r->pickup_city ?: $r->pickup_province;
+
+                return [
+                    'key'        => 'jastip-' . $r->order_id . '-' . $r->seller_id,
+                    'type'       => 'jastip',
+                    'type_label' => 'Jastip',
+                    'title'      => $r->item_name,
+                    'subtitle'   => $from && $to ? ($from . ' → ' . $to) : ($to ?: $from ?: '-'),
+                    'image'      => $image,
+                    'date_label' => Carbon::parse($r->order_date)->translatedFormat('d M Y'),
+                    'sort_date'  => Carbon::parse($r->order_date)->timestamp,
+                    'reviewed'   => $reviewed,
+                    'user'       => [
+                        'name'   => $r->seller_name,
+                        'avatar' => $this->resolveImage($r->seller_image, $avatarFallback),
+                    ],
+                    // id = user id jastiper (dinilai sebagai 'jastiper')
+                    'review_target' => [
+                        'type'  => 'jastip',
+                        'id'    => $r->seller_id,
+                        'title' => $r->item_name,
+                        'image' => $image,
+                        'user'  => [
+                            'id'     => $r->seller_id,
+                            'name'   => $r->seller_name,
+                            'avatar' => $this->resolveImage($r->seller_image, $avatarFallback),
+                        ],
+                    ],
+                ];
+            });
+
+        $perPage = 5;
+        $page    = max(1, (int) request()->query('jh_page', 1));
+        $items   = $rows->forPage($page, $perPage)->values();
+
+        return new LengthAwarePaginator($items, $rows->count(), $perPage, $page, [
+            'path'     => request()->url(),
+            'pageName' => 'jh_page',
+            'query'    => request()->query(),
+        ]);
     }
 
     private function resolveImage(?string $path, string $fallback): string

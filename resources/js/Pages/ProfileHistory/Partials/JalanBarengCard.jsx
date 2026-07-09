@@ -1,9 +1,9 @@
-import { FaMapMarkerAlt, FaRegCalendarAlt, FaRoute, FaCarSide, FaCheck, FaStar } from "react-icons/fa";
+import { FaMapMarkerAlt, FaRegCalendarAlt, FaRoute, FaCarSide, FaCheck, FaStar, FaShoppingBag } from "react-icons/fa";
 import Button from "@/Components/Button";
 import { useTranslation } from "@/lib/useTranslation";
 
 /**
- * Kartu horizontal riwayat "Jalan Bareng" (Trip Bareng / Pergi Bareng)
+ * Kartu horizontal riwayat (Trip Bareng / Pergi Bareng / Jastip)
  * dengan tombol "Beri Ulasan".
  */
 export default function JalanBarengCard({ item, onReview }) {
@@ -21,7 +21,9 @@ export default function JalanBarengCard({ item, onReview }) {
     } = item;
 
     const isTrip = type === "trip";
-    const TypeIcon = isTrip ? FaRoute : FaCarSide;
+    const isJastip = type === "jastip";
+    const TypeIcon = isTrip ? FaRoute : isJastip ? FaShoppingBag : FaCarSide;
+    const badgeColor = isTrip ? "bg-primary-700" : isJastip ? "bg-warning-600" : "bg-success-600";
 
     return (
         <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center">
@@ -36,9 +38,7 @@ export default function JalanBarengCard({ item, onReview }) {
                     }}
                 />
                 <span
-                    className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${
-                        isTrip ? "bg-primary-700" : "bg-success-600"
-                    }`}
+                    className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${badgeColor}`}
                 >
                     <TypeIcon className="h-2.5 w-2.5" />
                     {type_label}

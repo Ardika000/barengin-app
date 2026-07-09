@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('trip_id')->nullable()->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('pergi_bareng_id')->nullable()->constrained()->onDelete('cascade')->onUpdate('cascade');
+            // Grup chat jastip: jastiper <-> semua pembeli produk ini
+            $table->foreignId('jastip_item_id')->nullable()->constrained('jastip_items')->onDelete('cascade')->onUpdate('cascade');
             $table->boolean('is_group')->default(false);
             $table->timestamps();
         });

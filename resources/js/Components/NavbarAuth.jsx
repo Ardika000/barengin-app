@@ -91,7 +91,7 @@ export default function NavbarAuth() {
                         withDividers
                     />
 
-                    {/* <NavLink href="/jastip">Jastip</NavLink> */}
+                    <NavLink href="/jastip">{t("nav.jastip")}</NavLink>
                     <NavLink href="/forum">{t("nav.forum")}</NavLink>
                     <NavLink href="/leaderboard">{t("nav.leaderboard")}</NavLink>
                 </nav>
@@ -289,7 +289,7 @@ export default function NavbarAuth() {
                         </NavDropdownMobile>
 
                         <NavLinkMobile href="/jastip" onClick={closeAll}>
-                            Jastip
+                            {t("nav.jastip")}
                         </NavLinkMobile>
                         <NavLinkMobile href="/forum" onClick={closeAll}>
                             {t("nav.forum")}

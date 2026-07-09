@@ -1,5 +1,5 @@
 import React from "react";
-import { FiEdit2, FiTrash2, FiUploadCloud } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
 const STATUS_STYLE = {
@@ -11,12 +11,12 @@ const STATUS_STYLE = {
 const FALLBACK_IMG = "/assets/default-image.png";
 
 // Kartu produk jastip. `manage` menampilkan aksi (edit/publish/hapus) saat hover.
-export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete }) {
+export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat }) {
     const { t } = useTranslation();
 
     const pct = item.max_slot > 0 ? Math.min(100, (item.sold / item.max_slot) * 100) : 0;
     const statusCls = STATUS_STYLE[item.status] || STATUS_STYLE.draft;
-    const catLabel = t(`jastip.category.${String(item.category || "").toLowerCase()}`, item.category);
+    const catLabel = item.category || "";
 
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
@@ -34,14 +34,17 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
 
                 {manage && (
                     <div className="absolute left-2.5 top-2.5 flex gap-1.5 opacity-0 transition group-hover:opacity-100">
-                        <button
-                            type="button"
-                            onClick={onEdit}
-                            title={t("jastip.action_edit")}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-amber-600 shadow-sm hover:bg-white"
-                        >
-                            <FiEdit2 size={15} />
-                        </button>
+                        {/* #14: produk yang sudah dipublish tidak dapat diedit lagi */}
+                        {item.is_draft && (
+                            <button
+                                type="button"
+                                onClick={onEdit}
+                                title={t("jastip.action_edit")}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-amber-600 shadow-sm hover:bg-white"
+                            >
+                                <FiEdit2 size={15} />
+                            </button>
+                        )}
                         {item.is_draft && (
                             <button
                                 type="button"
@@ -50,6 +53,17 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-primary-700 shadow-sm hover:bg-white"
                             >
                                 <FiUploadCloud size={15} />
+                            </button>
+                        )}
+                        {/* #15: chat grup dengan semua pembeli produk ini (hanya setelah publish) */}
+                        {!item.is_draft && onGroupChat && (
+                            <button
+                                type="button"
+                                onClick={onGroupChat}
+                                title={t("jastip.action_group_chat")}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-primary-700 shadow-sm hover:bg-white"
+                            >
+                                <FiUsers size={15} />
                             </button>
                         )}
                         <button

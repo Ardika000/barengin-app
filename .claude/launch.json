@@ -42,7 +42,9 @@
       "runtimeExecutable": "php",
       "runtimeArgs": [
         "artisan",
-        "serve"
+        "serve",
+        "--port",
+        "8000"
       ],
       "autoPort": true,
       "port": 8000

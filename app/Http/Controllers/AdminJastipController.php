@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\JastipCategory;
 use App\Models\JastipItem;
 use App\Models\JastipItemImage;
 use App\Models\JastipItemVariant;
@@ -15,8 +16,6 @@ use Inertia\Inertia;
 
 class AdminJastipController extends Controller
 {
-    private const CATEGORIES = ['Fashion', 'Skincare', 'Food', 'Merchandise'];
-
     // ── Manajemen Jastip (list produk + aktivitas penjualan) ─────────────
     public function index(Request $request)
     {
@@ -24,7 +23,7 @@ class AdminJastipController extends Controller
 
         $items = JastipItem::query()
             ->where('user_id', $userId)
-            ->with('jastip_item_images')
+            ->with(['jastip_item_images', 'category'])
             ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
             ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'))
             ->latest('jastip_items.created_at')
@@ -75,7 +74,7 @@ class AdminJastipController extends Controller
     public function create()
     {
         return Inertia::render('Admin/Jastip/Create', [
-            'categories' => self::CATEGORIES,
+            'categories' => $this->categoriesPayload(),
         ]);
     }
 
@@ -98,34 +97,52 @@ class AdminJastipController extends Controller
             ->with(['jastip_item_variants', 'jastip_item_images'])
             ->findOrFail($id);
 
-        // Kelompokkan varian per var_name menjadi grup + opsi
-        $variants = $item->jastip_item_variants
-            ->groupBy('var_name')
-            ->map(fn ($rows, $name) => [
-                'name' => $name,
-                'options' => $rows->map(fn ($r) => [
-                    'value' => $r->var_value,
-                    'price' => (float) $r->additional_price,
-                ])->values(),
-            ])->values();
+        // #14: produk yang sudah dipublish tidak dapat diedit lagi
+        if (! $item->isDraft()) {
+            return redirect()->route('admin.jastip.index')->with('flash', [
+                'type' => 'info',
+                'message' => 'Produk yang sudah dipublish tidak dapat diedit lagi.',
+            ]);
+        }
+
+        // Varian datar (satu tingkat) — masing-masing punya stok & gambar sendiri
+        $variants = $item->jastip_item_variants->map(fn ($v) => [
+            'value'      => $v->var_value,
+            'price'      => (float) $v->additional_price,
+            'stock'      => (int) $v->stock,
+            'min_buy'    => (int) $v->min_buy,
+            'image_name' => $v->image_name,                 // path tersimpan (untuk dipertahankan)
+            'image_url'  => $v->image_name ? $this->resolveImageUrl($v->image_name) : null,
+        ])->values();
+
+        // Untuk mode tanpa varian, ambil stok/min dari varian "Original"
+        $original = $item->jastip_item_variants->first();
 
         return Inertia::render('Admin/Jastip/Edit', [
-            'categories' => self::CATEGORIES,
+            'categories' => $this->categoriesPayload(),
             'item' => [
-                'id'           => $item->id,
-                'name'         => $item->name,
-                'brand'        => $item->brand,
-                'category'     => $item->category,
-                'description'  => $item->description,
-                'base_price'   => (float) $item->base_price,
-                'jastip_fee'   => (float) $item->jastip_fee,
-                'max_slot'     => $item->max_slot,
-                'min_buy'      => $item->min_buy,
-                'start_date'   => optional($item->start_date)->format('Y-m-d'),
-                'end_date'     => optional($item->end_date)->format('Y-m-d'),
-                'status'       => $item->status,
-                'variants'     => $variants,
-                'existing_images' => $item->jastip_item_images->map(fn ($img) => [
+                'id'                 => $item->id,
+                'name'               => $item->name,
+                'jastip_category_id' => $item->jastip_category_id,
+                'description'        => $item->description,
+                'pickup_province'    => $item->pickup_province,
+                'pickup_city'        => $item->pickup_city,
+                'pickup_address'     => $item->pickup_address,
+                'purchase_province'  => $item->purchase_province,
+                'purchase_city'      => $item->purchase_city,
+                'purchase_address'   => $item->purchase_address,
+                'base_price'         => (float) $item->base_price,
+                'jastip_fee'         => (float) $item->jastip_fee,
+                'has_variants'       => (bool) $item->has_variants,
+                'max_slot'           => (int) ($original->stock ?? $item->max_slot),
+                'min_buy'            => (int) ($original->min_buy ?? $item->min_buy),
+                'start_date'         => optional($item->start_date)->format('Y-m-d'),
+                'end_date'           => optional($item->end_date)->format('Y-m-d'),
+                'pickup_start_date'  => optional($item->pickup_start_date)->format('Y-m-d'),
+                'pickup_end_date'    => optional($item->pickup_end_date)->format('Y-m-d'),
+                'status'             => $item->status,
+                'variants'           => $variants,
+                'existing_images'    => $item->jastip_item_images->map(fn ($img) => [
                     'id' => $img->id,
                     'url' => $this->resolveImageUrl($img->image_name),
                 ])->values(),
@@ -136,6 +153,15 @@ class AdminJastipController extends Controller
     public function update(Request $request, $id)
     {
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
+
+        // #14: produk yang sudah dipublish terkunci, tidak dapat diperbarui
+        if (! $item->isDraft()) {
+            return redirect()->route('admin.jastip.index')->with('flash', [
+                'type' => 'info',
+                'message' => 'Produk yang sudah dipublish tidak dapat diedit lagi.',
+            ]);
+        }
+
         $data = $this->validateItem($request);
         $this->persistItem($item, $request, $data);
 
@@ -149,11 +175,14 @@ class AdminJastipController extends Controller
 
     public function destroy($id)
     {
-        $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
+        $item = JastipItem::where('user_id', Auth::id())->with('jastip_item_variants')->findOrFail($id);
         $name = $item->name;
 
         foreach ($item->jastip_item_images as $img) {
             $this->deleteStoredImage($img->image_name);
+        }
+        foreach ($item->jastip_item_variants as $v) {
+            $this->deleteStoredImage($v->image_name);
         }
         $item->delete();
 
@@ -177,7 +206,6 @@ class AdminJastipController extends Controller
     {
         $userId = Auth::id();
 
-        // Baris order item berbayar milik produk jastiper ini
         $paidItems = DB::table('jastip_order_items')
             ->join('jastip_items', 'jastip_order_items.jastip_item_id', '=', 'jastip_items.id')
             ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
@@ -201,22 +229,17 @@ class AdminJastipController extends Controller
 
         $rating = $this->accountRating($userId, 'jastiper');
 
-        // Grafik penjualan 6 bulan terakhir (jumlah produk terjual per bulan)
         $monthly = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::now()->startOfMonth()->subMonths($i);
             $qty = $rows
                 ->filter(fn ($r) => Carbon::parse($r->created_at)->isSameMonth($month))
                 ->sum('quantity');
-            $monthly[] = [
-                'label' => $month->translatedFormat('M'),
-                'value' => (int) $qty,
-            ];
+            $monthly[] = ['label' => $month->translatedFormat('M'), 'value' => (int) $qty];
         }
 
-        // Produk terlaris
         $best = JastipItem::where('user_id', $userId)
-            ->with('jastip_item_images')
+            ->with(['jastip_item_images', 'category'])
             ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
             ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'))
             ->orderByDesc('sold_count')
@@ -231,10 +254,16 @@ class AdminJastipController extends Controller
             ],
             'monthly'    => $monthly,
             'bestSeller' => $best ? $this->formatCard($best) : null,
+            'rating'     => $rating,
         ]);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    private function categoriesPayload()
+    {
+        return JastipCategory::orderBy('name')->get(['id', 'name', 'slug']);
+    }
 
     private function soldSubquery()
     {
@@ -253,8 +282,7 @@ class AdminJastipController extends Controller
         return [
             'id'          => $item->id,
             'name'        => $item->name,
-            'brand'       => $item->brand,
-            'category'    => $item->category,
+            'category'    => $item->category?->name,
             'base_price'  => (float) $item->base_price,
             'jastip_fee'  => (float) $item->jastip_fee,
             'total_price' => $item->totalPrice(),
@@ -271,23 +299,36 @@ class AdminJastipController extends Controller
     private function validateItem(Request $request): array
     {
         return $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'brand'       => ['nullable', 'string', 'max:255'],
-            'category'    => ['required', 'string', 'in:' . implode(',', self::CATEGORIES)],
-            'description' => ['nullable', 'string'],
-            'base_price'  => ['required', 'numeric', 'min:0'],
-            'jastip_fee'  => ['nullable', 'numeric', 'min:0'],
-            'max_slot'    => ['required', 'integer', 'min:1'],
-            'min_buy'     => ['required', 'integer', 'min:1'],
+            'name'               => ['required', 'string', 'max:255'],
+            'jastip_category_id' => ['required', 'integer', 'exists:jastip_categories,id'],
+            'description'        => ['nullable', 'string'],
+            // Lokasi
+            'pickup_province'    => ['nullable', 'string', 'max:100'],
+            'pickup_city'        => ['nullable', 'string', 'max:100'],
+            'pickup_address'     => ['nullable', 'string', 'max:500'],
+            'purchase_province'  => ['nullable', 'string', 'max:100'],
+            'purchase_city'      => ['nullable', 'string', 'max:100'],
+            'purchase_address'   => ['nullable', 'string', 'max:500'],
+            'base_price'         => ['required', 'numeric', 'min:0'],
+            'jastip_fee'         => ['nullable', 'numeric', 'min:0'],
+            'has_variants'       => ['required', 'boolean'],
+            // Tanpa varian: stok & min pembelian di tingkat produk
+            'max_slot'           => ['required_if:has_variants,0,false', 'nullable', 'integer', 'min:1'],
+            'min_buy'            => ['required_if:has_variants,0,false', 'nullable', 'integer', 'min:1'],
+            // Dengan varian: daftar varian datar, masing-masing punya stok
+            'variants'                 => ['required_if:has_variants,1,true', 'array'],
+            'variants.*.value'         => ['required_with:variants', 'string', 'max:100'],
+            'variants.*.stock'         => ['required_with:variants', 'integer', 'min:0'],
+            'variants.*.price'         => ['nullable', 'numeric', 'min:0'],
+            'variants.*.min_buy'       => ['nullable', 'integer', 'min:1'],
+            'variants.*.image'         => ['nullable', 'image', 'max:4096'],
+            'variants.*.image_name'    => ['nullable', 'string'],
             'start_date'  => ['nullable', 'date'],
             'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
+            // Jendela pengambilan barang (#7)
+            'pickup_start_date' => ['nullable', 'date'],
+            'pickup_end_date'   => ['nullable', 'date', 'after_or_equal:pickup_start_date'],
             'publish'     => ['sometimes', 'boolean'],
-            // Varian opsional — grup/opsi yang kosong diabaikan saat menyimpan.
-            'variants'                 => ['nullable', 'array'],
-            'variants.*.name'          => ['nullable', 'string', 'max:100'],
-            'variants.*.options'       => ['nullable', 'array'],
-            'variants.*.options.*.value' => ['nullable', 'string', 'max:100'],
-            'variants.*.options.*.price' => ['nullable', 'numeric', 'min:0'],
             'images'      => ['nullable', 'array'],
             'images.*'    => ['image', 'max:4096'],
             'removed_images' => ['nullable', 'array'],
@@ -296,44 +337,84 @@ class AdminJastipController extends Controller
 
     private function persistItem(JastipItem $item, Request $request, array $data): JastipItem
     {
-        DB::transaction(function () use ($item, $request, $data) {
+        $hasVariants = filter_var($data['has_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        DB::transaction(function () use ($item, $request, $data, $hasVariants) {
+            // Susun daftar varian yang akan disimpan
+            if ($hasVariants) {
+                $variantInputs = array_values($data['variants'] ?? []);
+            } else {
+                // Tanpa varian: buat satu varian "Original" dari stok & min di inventaris
+                $variantInputs = [[
+                    'value'      => 'Original',
+                    'price'      => 0,
+                    'stock'      => (int) ($data['max_slot'] ?? 0),
+                    'min_buy'    => (int) ($data['min_buy'] ?? 1),
+                    'image_name' => null,
+                ]];
+            }
+
+            $totalStock = array_sum(array_map(fn ($v) => (int) ($v['stock'] ?? 0), $variantInputs));
+            $minBuy     = min(array_map(fn ($v) => max(1, (int) ($v['min_buy'] ?? 1)), $variantInputs) ?: [1]);
+
             $item->fill([
-                'name'        => $data['name'],
-                'brand'       => $data['brand'] ?? null,
-                'category'    => $data['category'],
-                'description' => $data['description'] ?? null,
-                'base_price'  => $data['base_price'],
-                'jastip_fee'  => $data['jastip_fee'] ?? 0,
-                'max_slot'    => $data['max_slot'],
-                'min_buy'     => $data['min_buy'],
-                'start_date'  => $data['start_date'] ?? null,
-                'end_date'    => $data['end_date'] ?? null,
-                'status'      => ! empty($data['publish']) ? JastipItem::STATUS_PUBLISHED : JastipItem::STATUS_DRAFT,
+                'name'               => $data['name'],
+                'jastip_category_id' => $data['jastip_category_id'],
+                'description'        => $data['description'] ?? null,
+                'pickup_province'    => $data['pickup_province'] ?? null,
+                'pickup_city'        => $data['pickup_city'] ?? null,
+                'pickup_address'     => $data['pickup_address'] ?? null,
+                'purchase_province'  => $data['purchase_province'] ?? null,
+                'purchase_city'      => $data['purchase_city'] ?? null,
+                'purchase_address'   => $data['purchase_address'] ?? null,
+                'base_price'         => $data['base_price'],
+                'jastip_fee'         => $data['jastip_fee'] ?? 0,
+                'has_variants'       => $hasVariants,
+                'max_slot'           => $totalStock,
+                'min_buy'            => $minBuy,
+                'start_date'         => $data['start_date'] ?? null,
+                'end_date'           => $data['end_date'] ?? null,
+                'pickup_start_date'  => $data['pickup_start_date'] ?? null,
+                'pickup_end_date'    => $data['pickup_end_date'] ?? null,
+                'status'             => ! empty($data['publish']) ? JastipItem::STATUS_PUBLISHED : JastipItem::STATUS_DRAFT,
             ]);
             $item->save();
 
-            // Varian — ganti seluruhnya (paling sederhana & konsisten).
-            // Lewati grup tanpa nama atau opsi tanpa nilai.
+            // Ganti seluruh varian. Simpan path gambar lama untuk pembersihan orphan.
+            $oldImages = $item->jastip_item_variants()->pluck('image_name')->filter()->all();
             $item->jastip_item_variants()->delete();
-            foreach ($data['variants'] ?? [] as $group) {
-                $groupName = trim((string) ($group['name'] ?? ''));
-                if ($groupName === '') {
+
+            $keptImages = [];
+            foreach ($variantInputs as $idx => $v) {
+                if (trim((string) ($v['value'] ?? '')) === '') {
                     continue;
                 }
-                foreach ($group['options'] ?? [] as $opt) {
-                    if (trim((string) ($opt['value'] ?? '')) === '') {
-                        continue;
-                    }
-                    JastipItemVariant::create([
-                        'jastip_item_id'   => $item->id,
-                        'var_name'         => $groupName,
-                        'var_value'        => $opt['value'],
-                        'additional_price' => $opt['price'] ?? 0,
-                    ]);
+                $imgPath = $v['image_name'] ?? null; // gambar varian yang sudah ada
+                $file = $request->file("variants.$idx.image");
+                if ($file) {
+                    $imgPath = $file->store('jastip-images', 'public');
                 }
+                if ($imgPath) {
+                    $keptImages[] = $imgPath;
+                }
+
+                JastipItemVariant::create([
+                    'jastip_item_id'   => $item->id,
+                    'var_name'         => 'Varian',
+                    'var_value'        => $v['value'],
+                    'additional_price' => $v['price'] ?? 0,
+                    'stock'            => (int) ($v['stock'] ?? 0),
+                    'min_buy'          => max(1, (int) ($v['min_buy'] ?? 1)),
+                    'image_name'       => $imgPath,
+                ]);
             }
 
-            // Hapus gambar yang ditandai
+            // Hapus gambar varian lama yang tidak dipakai lagi
+            foreach (array_diff($oldImages, $keptImages) as $orphan) {
+                $this->deleteStoredImage($orphan);
+            }
+
+            // Gambar produk (base)
             foreach ((array) $request->input('removed_images', []) as $imgId) {
                 $img = $item->jastip_item_images()->find($imgId);
                 if ($img) {
@@ -341,8 +422,6 @@ class AdminJastipController extends Controller
                     $img->delete();
                 }
             }
-
-            // Tambah gambar baru
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
                     $path = $file->store('jastip-images', 'public');

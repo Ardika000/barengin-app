@@ -1,6 +1,7 @@
 import NavbarAuth from "@/Components/NavbarAuth";
 import NavbarGuest from "@/Components/NavbarGuest";
 import Footer from "@/Components/Footer";
+import FloatingCart from "@/Components/FloatingCart";
 
 import { Head, usePage } from "@inertiajs/react";
 
@@ -57,6 +58,9 @@ export default function MainLayout({ children }) {
             </div>
 
             {!hideLayout && !hideFooter && <Footer />}
+
+            {/* Indikator keranjang jastip (tampil bila ada item) */}
+            {!hideLayout && user && <FloatingCart />}
         </>
     );
 }
