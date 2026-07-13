@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
 import Button from "@/Components/Button";
@@ -23,8 +24,33 @@ export default function ChatIndex({conversations = []}) {
     const [filter, setFilter] = useState("all");
     const [openNewChat, setOpenNewChat] = useState(false);
 
+    // Polling fallback: perbarui daftar chat (chat baru, pesan terakhir, unread)
+    // tanpa refresh, walau WebSocket/Pusher tidak tersedia (shared hosting).
+    const [list, setList] = useState(conversations ?? []);
+    useEffect(() => setList(conversations ?? []), [conversations]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const tick = async () => {
+            if (document.hidden) return;
+            try {
+                const { data } = await axios.get("/chat/poll");
+                if (!cancelled && Array.isArray(data.conversations)) {
+                    setList(data.conversations);
+                }
+            } catch {
+                /* diamkan */
+            }
+        };
+        const interval = setInterval(tick, 12000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, []);
+
     const filtered = useMemo(() => {
-        return (conversations ?? [])
+        return (list ?? [])
             .filter((c) => {
                 if (tab === "groups") return !!c.is_group;
                 return !c.is_group;
@@ -37,7 +63,7 @@ export default function ChatIndex({conversations = []}) {
                 if (filter === "unread") return Number(c.unread ?? 0) > 0;
                 return true;
             });
-    }, [conversations, q, filter, tab]);
+    }, [list, q, filter, tab]);
 
     const formatTime = (iso) =>
         iso

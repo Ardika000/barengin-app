@@ -249,6 +249,10 @@ Route::post('/midtrans/notification', [MidtransController::class, 'notification'
 // Chat — hanya untuk user yang sudah login
 Route::middleware('auth')->group(function () {
     Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
+    // Fallback polling (tanpa WebSocket) — daftar & pesan baru. Didaftarkan sebelum
+    // /chat/{conversation} agar "poll" tidak tertangkap sebagai id percakapan.
+    Route::get('/chat/poll', [ChatController::class, 'pollConversations'])->name('chat.poll');
+    Route::get('/chat/{conversation}/poll', [ChatController::class, 'pollMessages'])->whereNumber('conversation')->name('chat.messages.poll');
     Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
     Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
     Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');

@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SetLocale::class,
             HandleInertiaRequests::class,
             \App\Http\Middleware\UpdateStreak::class,
+            \App\Http\Middleware\TrackLastSeen::class,
         ]);
 
         // Alias middleware role-based access

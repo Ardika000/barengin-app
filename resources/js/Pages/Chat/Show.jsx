@@ -22,6 +22,15 @@ function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
+// Id numerik pesan tertinggi (abaikan pesan optimistik "tmp-..."). Dipakai
+// sebagai penanda "after" saat polling pesan baru.
+function maxRealId(list) {
+    return (list ?? []).reduce((mx, m) => {
+        const n = Number(m?.id);
+        return Number.isFinite(n) && n > mx ? n : mx;
+    }, 0);
+}
+
 export default function ChatShow({
     conversations = [],
     conversation,
@@ -103,6 +112,16 @@ export default function ChatShow({
 
     const [localMessages, setLocalMessages] = useState(messages ?? []);
     useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
+
+    // Referensi pesan terkini untuk menghitung id terakhir saat polling.
+    const messagesRef = useRef(localMessages);
+    useEffect(() => {
+        messagesRef.current = localMessages;
+    }, [localMessages]);
+
+    // Online lawan menurut polling (fallback saat WebSocket/Pusher tidak jalan).
+    const [pollPeerOnline, setPollPeerOnline] = useState(false);
+    useEffect(() => setPollPeerOnline(false), [conversation?.id]);
 
     const [peerLastReadAt, setPeerLastReadAt] = useState(
         conversation?.peer_last_read_at ?? null,
@@ -288,13 +307,76 @@ export default function ChatShow({
         };
     }, []);
 
+    // ── Fallback POLLING (bekerja tanpa WebSocket, penting untuk shared hosting) ──
+    // Pesan baru dari lawan bicara + status baca + online lawan.
+    useEffect(() => {
+        if (!conversation?.id) return;
+        let cancelled = false;
+
+        const tick = async () => {
+            if (document.hidden) return;
+            try {
+                const after = maxRealId(messagesRef.current);
+                const { data } = await axios.get(`/chat/${conversation.id}/poll`, {
+                    params: { after },
+                });
+                if (cancelled) return;
+
+                const incoming = data.messages ?? [];
+                const existing = new Set(
+                    (messagesRef.current ?? []).map((m) => m.id),
+                );
+                const toAdd = incoming.filter((m) => !existing.has(m.id));
+                if (toAdd.length) {
+                    setLocalMessages((prev) => [...(prev ?? []), ...toAdd]);
+                    markAsRead();
+                }
+
+                if (data.peer_last_read_at) setPeerLastReadAt(data.peer_last_read_at);
+                setPollPeerOnline(!!data.peer_online);
+            } catch {
+                /* diamkan; coba lagi tick berikutnya */
+            }
+        };
+
+        tick();
+        const interval = setInterval(tick, 5000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation?.id]);
+
+    // Sidebar: chat baru, pesan terakhir & unread tanpa perlu refresh.
+    useEffect(() => {
+        let cancelled = false;
+        const tick = async () => {
+            if (document.hidden) return;
+            try {
+                const { data } = await axios.get("/chat/poll");
+                if (cancelled) return;
+                if (Array.isArray(data.conversations)) {
+                    setSidebarConversations(data.conversations);
+                }
+            } catch {
+                /* diamkan */
+            }
+        };
+        const interval = setInterval(tick, 12000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, []);
+
     const lastSeenAt = peer?.last_seen_at;
     const isOnlineByLastSeen =
         lastSeenAt &&
         Date.now() - new Date(lastSeenAt).getTime() < 2 * 60 * 1000;
 
     const isPeerOnline = peer?.id ? onlineIds.has(peer.id) : false;
-    const showOnline = isPeerOnline || isOnlineByLastSeen;
+    const showOnline = isPeerOnline || pollPeerOnline || isOnlineByLastSeen;
 
     const [text, setText] = useState("");
     const sendingRef = useRef(false);

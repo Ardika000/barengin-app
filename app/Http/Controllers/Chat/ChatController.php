@@ -13,6 +13,10 @@ use Illuminate\Support\Carbon;
 
 class ChatController extends Controller
 {
+    // Ambang "online": user dianggap online bila last_seen_at dalam rentang ini.
+    // Sedikit lebih besar dari irama heartbeat/poll agar toleran jitter jaringan.
+    private const ONLINE_WINDOW_SECONDS = 90;
+
     public function index()
     {
         /** @var \App\Models\User $user */
@@ -65,24 +69,7 @@ class ChatController extends Controller
             ->with('sender:id,full_name,profile_image')
             ->orderBy('created_at')
             ->get()
-            ->map(fn ($m) => [
-                'id' => $m->id,
-                'conversation_id' => $m->conversation_id,
-                'sender_id' => $m->sender_id,
-                'text' => $m->message_text,
-                'created_at' => $m->created_at?->toISOString(),
-                'attachment_url' => $m->attachment_path
-                    ? asset('storage/'.$m->attachment_path)
-                    : null,
-                'attachment_type' => $m->attachment_type,
-                'attachment_name' => $m->attachment_name,
-                'attachment_size' => $m->attachment_size,
-                'sender' => [
-                    'id' => $m->sender?->id,
-                    'name' => $m->sender?->full_name,
-                    'avatar' => $m->sender?->public_profile_image ?? asset('assets/default-profile.png'),
-                ],
-            ]);
+            ->map(fn ($m) => $this->mapMessage($m));
 
         $headerAvatar = $conversation->is_group
             ? ($this->groupAvatar($conversation) ?? asset('assets/default-profile.png'))
@@ -188,6 +175,107 @@ class ChatController extends Controller
         broadcast(new MessageSent($message))->toOthers();
 
         return back();
+    }
+
+    /**
+     * Fallback polling untuk pesan baru (dipakai bila WebSocket/Pusher tidak
+     * tersedia, mis. di shared hosting). Mengembalikan pesan dari LAWAN BICARA
+     * dengan id > `after` (mirror `->toOthers()` agar tak menduplikasi pesan
+     * optimistik pengirim), plus status baca & online lawan.
+     */
+    public function pollMessages(Request $request, Conversation $conversation)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        abort_unless(
+            $conversation->participants()->where('users.id', $user->id)->exists(),
+            403,
+            'Kamu bukan partisipan pada percakapan ini'
+        );
+
+        // Poll sekaligus jadi heartbeat kehadiran (agar lawan melihat kita online).
+        $this->touchLastSeen($user);
+
+        $afterId = (int) $request->query('after', 0);
+
+        $messages = $conversation->messages()
+            ->where('id', '>', $afterId)
+            ->where('sender_id', '!=', $user->id)
+            ->with('sender:id,full_name,profile_image')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($m) => $this->mapMessage($m));
+
+        // Presence & read-receipt lawan (khusus chat personal).
+        $peer = $conversation->is_group
+            ? null
+            : $conversation->participants()->where('users.id', '!=', $user->id)->first();
+
+        $peerLastRead = $peer?->pivot?->last_read_at
+            ? Carbon::parse($peer->pivot->last_read_at)->toISOString()
+            : null;
+
+        return response()->json([
+            'messages' => $messages->values(),
+            'peer_last_read_at' => $peerLastRead,
+            'peer_online' => $this->isOnline($peer?->last_seen_at),
+            'peer_last_seen_at' => $peer?->last_seen_at
+                ? Carbon::parse($peer->last_seen_at)->toISOString()
+                : null,
+        ]);
+    }
+
+    /**
+     * Fallback polling untuk daftar percakapan (sidebar): memunculkan chat baru,
+     * pesan terakhir, dan jumlah belum dibaca tanpa perlu refresh manual.
+     */
+    public function pollConversations()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $this->touchLastSeen($user);
+
+        return response()->json([
+            'conversations' => $this->sidebarConversations($user),
+        ]);
+    }
+
+    /** Perbarui last_seen_at dengan throttle agar tidak menulis DB tiap poll. */
+    private function touchLastSeen($user): void
+    {
+        if (! $user->last_seen_at || $user->last_seen_at->lt(now()->subSeconds(15))) {
+            $user->forceFill(['last_seen_at' => now()])->saveQuietly();
+        }
+    }
+
+    private function isOnline($lastSeenAt): bool
+    {
+        return $lastSeenAt
+            && Carbon::parse($lastSeenAt)->gt(now()->subSeconds(self::ONLINE_WINDOW_SECONDS));
+    }
+
+    /** Bentuk data pesan yang konsisten untuk render awal & polling. */
+    private function mapMessage(Message $m): array
+    {
+        return [
+            'id' => $m->id,
+            'conversation_id' => $m->conversation_id,
+            'sender_id' => $m->sender_id,
+            'text' => $m->message_text,
+            'created_at' => $m->created_at?->toISOString(),
+            'attachment_url' => $m->attachment_path
+                ? asset('storage/'.$m->attachment_path)
+                : null,
+            'attachment_type' => $m->attachment_type,
+            'attachment_name' => $m->attachment_name,
+            'attachment_size' => $m->attachment_size,
+            'sender' => [
+                'id' => $m->sender?->id,
+                'name' => $m->sender?->full_name,
+                'avatar' => $m->sender?->public_profile_image ?? asset('assets/default-profile.png'),
+            ],
+        ];
     }
 
     private function sidebarConversations($user)
