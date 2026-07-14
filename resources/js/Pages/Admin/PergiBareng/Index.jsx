@@ -7,6 +7,7 @@ import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
+import { DEFAULT_IMAGE } from "@/lib/images";
 import { FiSearch, FiTrash2, FiPlus, FiUsers, FiRefreshCw } from "react-icons/fi";
 import { FaCarSide } from "react-icons/fa";
 import { BsChatDotsFill } from "react-icons/bs";
@@ -116,7 +117,7 @@ export default function Index({ trips = {}, filters = {} }) {
                                                     src={t.image}
                                                     alt={t.name}
                                                     className="w-11 h-11 rounded-lg object-cover border border-neutral-200"
-                                                    onError={(e) => (e.target.src = "/assets/pergi-bareng/PergiBarengHeader.avif")}
+                                                    onError={(e) => (e.target.src = DEFAULT_IMAGE)}
                                                 />
                                                 <span className="font-semibold text-neutral-700 text-sm max-w-[220px] break-words">{t.name}</span>
                                             </div>

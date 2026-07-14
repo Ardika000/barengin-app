@@ -647,6 +647,7 @@ class JastipController extends Controller
                 ->leftJoinSub($this->soldByVariantSubquery(), 'sv', 'sv.jastip_item_variant_id', '=', 'jastip_item_variants.id')
                 ->where('jastip_items.id', $itemId)
                 ->where('jastip_items.status', JastipItem::STATUS_PUBLISHED)
+                ->whereNull('jastip_items.deleted_at') // item terhapus tidak bisa dibeli
                 ->select(
                     'jastip_items.id',
                     'jastip_items.name',

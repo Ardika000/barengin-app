@@ -1,13 +1,15 @@
 import React, { useState } from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
+import FormModal from "@/Components/FormModal";
 import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
-import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle, FiMapPin } from "react-icons/fi";
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
+import { FaStar } from "react-icons/fa";
 
 const STATUS_STYLES = {
     draft: "bg-blue-100 text-blue-700",
@@ -25,6 +27,24 @@ export default function Index({ trips = {}, filters = {} }) {
     });
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
+    const [retripModal, setRetripModal] = useState({ open: false, id: null, name: "" });
+    const [expandedId, setExpandedId] = useState(null); // baris riwayat yang terbuka
+
+    // Form re-trip: tanggal baru untuk trip yang sudah selesai
+    const retripForm = useForm({ start_date: "", end_date: "" });
+
+    const openRetrip = (trip) => {
+        retripForm.reset();
+        retripForm.clearErrors();
+        setRetripModal({ open: true, id: trip.id, name: trip.name });
+    };
+
+    const submitRetrip = () => {
+        retripForm.post(`/admin/trip/${retripModal.id}/retrip`, {
+            preserveScroll: true,
+            onSuccess: () => setRetripModal({ open: false, id: null, name: "" }),
+        });
+    };
 
     const confirmDelete = () => {
         router.delete(`/admin/trip/${deleteModal.id}`, {
@@ -72,6 +92,48 @@ export default function Index({ trips = {}, filters = {} }) {
                 confirmLabel={translate("admin.trip.publish_confirm")}
                 confirmType="primary"
             />
+            {/* Re-trip: buka ulang trip selesai dengan tanggal baru (baris yang sama) */}
+            <FormModal
+                open={retripModal.open}
+                onClose={() => setRetripModal({ open: false, id: null, name: "" })}
+                onSubmit={submitRetrip}
+                processing={retripForm.processing}
+                icon={<FiRefreshCw size={24} />}
+                iconClass="bg-green-100 text-green-600"
+                title={translate("admin.trip.retrip_title")}
+                description={<>{translate("admin.trip.retrip_desc_prefix")} <span className="font-semibold text-neutral-700">{retripModal.name}</span>. {translate("admin.trip.retrip_desc")}</>}
+                confirmLabel={translate("admin.trip.retrip_confirm")}
+                confirmType="primary"
+            >
+                <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
+                        {translate("admin.trip.retrip_start")}
+                    </label>
+                    <input
+                        type="date"
+                        value={retripForm.data.start_date}
+                        onChange={(e) => retripForm.setData("start_date", e.target.value)}
+                        className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
+                    />
+                    {retripForm.errors.start_date && (
+                        <p className="mt-1 text-xs text-danger-700">{retripForm.errors.start_date}</p>
+                    )}
+                </div>
+                <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
+                        {translate("admin.trip.retrip_end")}
+                    </label>
+                    <input
+                        type="date"
+                        value={retripForm.data.end_date}
+                        onChange={(e) => retripForm.setData("end_date", e.target.value)}
+                        className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
+                    />
+                    {retripForm.errors.end_date && (
+                        <p className="mt-1 text-xs text-danger-700">{retripForm.errors.end_date}</p>
+                    )}
+                </div>
+            </FormModal>
 
             {/* Toolbar */}
             <div className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -104,7 +166,7 @@ export default function Index({ trips = {}, filters = {} }) {
 
             {/* Tabel (struktur konsisten dengan halaman dashboard lain) */}
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[820px]">
+                <table className="w-full text-left border-collapse min-w-[900px]">
                     <thead>
                         <tr className="bg-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
                             <th className="py-3 px-5">{translate("admin.trip.col_trip")}</th>
@@ -112,6 +174,7 @@ export default function Index({ trips = {}, filters = {} }) {
                             <th className="py-3 px-5">{translate("admin.trip.col_date")}</th>
                             <th className="py-3 px-5">{translate("admin.trip.col_price")}</th>
                             <th className="py-3 px-5">{translate("admin.trip.col_seats")}</th>
+                            <th className="py-3 px-5">{translate("admin.trip.col_rating")}</th>
                             <th className="py-3 px-5">{translate("admin.trip.col_status")}</th>
                             <th className="py-3 px-5 text-center">{translate("admin.trip.col_action")}</th>
                         </tr>
@@ -131,6 +194,17 @@ export default function Index({ trips = {}, filters = {} }) {
                                     <td className="py-3.5 px-5 text-sm text-neutral-700 whitespace-nowrap">{t.date_label}</td>
                                     <td className="py-3.5 px-5 text-sm font-semibold text-neutral-700 whitespace-nowrap">{rupiah(t.price)}</td>
                                     <td className="py-3.5 px-5 text-sm font-semibold text-primary-700 whitespace-nowrap">{t.joined}/{t.capacity}</td>
+                                    <td className="py-3.5 px-5 text-sm whitespace-nowrap">
+                                        {t.rating_avg != null ? (
+                                            <span className="inline-flex items-center gap-1.5 text-neutral-700">
+                                                <FaStar className="text-warning-500" size={13} />
+                                                <span className="font-bold">{Number(t.rating_avg).toFixed(1)}</span>
+                                                <span className="text-xs text-neutral-400">({t.rating_count})</span>
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-neutral-400">—</span>
+                                        )}
+                                    </td>
                                     <td className="py-3.5 px-5">
                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_STYLES[t.status] || "bg-neutral-100 text-neutral-600"}`}>
                                             {t.status_label}
@@ -159,15 +233,61 @@ export default function Index({ trips = {}, filters = {} }) {
                                                     <FiExternalLink size={16} />
                                                 </Link>
                                             ) : (
-                                                <span className="text-xs text-neutral-400">—</span>
+                                                <button onClick={() => openRetrip(t)} title={translate("admin.trip.action_retrip")}
+                                                    className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
+                                                    <FiRefreshCw size={16} />
+                                                </button>
+                                            )}
+                                            {/* Riwayat run sebelumnya (hasil re-trip) */}
+                                            {t.histories?.length > 0 && (
+                                                <button
+                                                    onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
+                                                    title={translate("admin.trip.history_title")}
+                                                    className="p-2 bg-neutral-100 text-neutral-500 hover:bg-neutral-200 rounded-lg transition-colors"
+                                                >
+                                                    <FiChevronDown size={16} className={`transition-transform ${expandedId === t.id ? "rotate-180" : ""}`} />
+                                                </button>
                                             )}
                                         </div>
                                     </td>
                                 </tr>
-                            ))
+                            )).flatMap((row, i) => {
+                                const t = rows[i];
+                                if (expandedId !== t.id || !t.histories?.length) return [row];
+                                return [
+                                    row,
+                                    <tr key={`${t.id}-history`} className="bg-neutral-50/70">
+                                        <td colSpan="8" className="px-5 py-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                                                <FiClock size={13} /> {translate("admin.trip.history_title")}
+                                            </p>
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                                                        <th className="py-1.5 pr-4">{translate("admin.trip.history_period")}</th>
+                                                        <th className="py-1.5 pr-4">{translate("admin.trip.history_joined")}</th>
+                                                        <th className="py-1.5 pr-4">{translate("admin.trip.history_revenue")}</th>
+                                                        <th className="py-1.5">{translate("admin.trip.history_completed")}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-neutral-100">
+                                                    {t.histories.map((h) => (
+                                                        <tr key={h.id} className="text-sm text-neutral-600">
+                                                            <td className="py-2 pr-4 whitespace-nowrap">{h.period_label}</td>
+                                                            <td className="py-2 pr-4 font-semibold text-primary-700">{h.joined}</td>
+                                                            <td className="py-2 pr-4 whitespace-nowrap">{rupiah(h.revenue)}</td>
+                                                            <td className="py-2 whitespace-nowrap">{h.completed_label}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>,
+                                ];
+                            })
                         ) : (
                             <tr>
-                                <td colSpan="7">
+                                <td colSpan="8">
                                     <EmptyState icon={<FiMapPin size={30} />} title={translate("admin.trip.empty_title")} description={translate("admin.trip.empty_desc")} />
                                 </td>
                             </tr>

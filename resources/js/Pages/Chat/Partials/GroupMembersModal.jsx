@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { FiX, FiUserX } from "react-icons/fi";
+import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
 function MemberRow({ member, isOwner, canManage, isSelf, onRemove, removing }) {
+    const { t } = useTranslation();
     return (
         <div className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-neutral-100">
             <img
@@ -19,13 +21,13 @@ function MemberRow({ member, isOwner, canManage, isSelf, onRemove, removing }) {
                     {member.name}
                     {isSelf ? (
                         <span className="ml-1 text-xs font-normal text-neutral-500">
-                            (Kamu)
+                            ({t("chat.you")})
                         </span>
                     ) : null}
                 </div>
                 {isOwner ? (
                     <div className="text-xs font-medium text-primary-700">
-                        Pemilik Grup
+                        {t("chat.group_owner")}
                     </div>
                 ) : null}
             </div>
@@ -41,7 +43,7 @@ function MemberRow({ member, isOwner, canManage, isSelf, onRemove, removing }) {
                     )}
                 >
                     <FiUserX className="h-4 w-4" />
-                    {removing ? "..." : "Keluarkan"}
+                    {removing ? "..." : t("chat.remove_member")}
                 </button>
             ) : null}
         </div>
@@ -58,6 +60,7 @@ export default function GroupMembersModal({
     authUserId,
     onRemoved,
 }) {
+    const { t } = useTranslation();
     const [removingId, setRemovingId] = useState(null);
     const [error, setError] = useState("");
 
@@ -67,7 +70,7 @@ export default function GroupMembersModal({
         if (removingId) return;
         if (
             !window.confirm(
-                `Keluarkan ${member.name} dari grup ini?`,
+                t("chat.remove_confirm").replace(":name", member.name),
             )
         ) {
             return;
@@ -83,7 +86,7 @@ export default function GroupMembersModal({
         } catch (err) {
             setError(
                 err?.response?.data?.message ??
-                    "Gagal mengeluarkan anggota.",
+                    t("chat.remove_failed"),
             );
         } finally {
             setRemovingId(null);
@@ -96,13 +99,13 @@ export default function GroupMembersModal({
                 type="button"
                 className="absolute inset-0 bg-black/40"
                 onClick={onClose}
-                aria-label="Close modal"
+                aria-label={t("chat.close")}
             />
 
             <div className="relative mx-auto mt-24 w-[92%] max-w-lg rounded-2xl bg-white shadow-xl">
                 <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
                     <div className="text-base font-semibold text-neutral-700">
-                        Anggota Grup
+                        {t("chat.members")}
                         <span className="ml-1 text-sm font-normal text-neutral-500">
                             ({members.length})
                         </span>
@@ -111,7 +114,7 @@ export default function GroupMembersModal({
                         type="button"
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl hover:bg-neutral-100"
                         onClick={onClose}
-                        aria-label="Close"
+                        aria-label={t("chat.close")}
                     >
                         <FiX className="h-5 w-5" />
                     </button>

@@ -36,6 +36,10 @@ class TripSeeder extends Seeder
     {
         $faker = Faker::create('id_ID');
 
+        // Admin juga guider: pegang minimal satu trip selesai agar punya
+        // rating trip_bareng & label "Trip Guider" di halaman profil.
+        $adminId = DB::table('users')->where('email', 'admin@barengin.com')->value('id');
+
         // 1. Buat 5 User Guider
         $guiderIds = [];
         for ($i = 0; $i < 5; $i++) {
@@ -83,6 +87,12 @@ class TripSeeder extends Seeder
             $price      = $faker->randomElement([1500000, 2500000, 3800000]);
             $customerId = $faker->randomElement($customerIds);
             $guiderId   = $faker->randomElement($guiderIds);
+
+            // Trip pertama yang sudah selesai dipandu admin (agar admin
+            // menerima ulasan trip_bareng), sisanya guider acak.
+            if ($i === 0 && $adminId) {
+                $guiderId = $adminId;
+            }
 
             // Gambar per destinasi: kartu (-1) & aktivitas (-1..-3)
             $cardImage = "/assets/trips/{$dest['slug']}-1.jpg";
@@ -155,16 +165,20 @@ class TripSeeder extends Seeder
             }
 
             // D. Ulasan pemandu (hanya trip yang sudah selesai yang wajar diulas)
+            //    2-4 ulasan dari customer berbeda agar rata-rata terasa nyata.
             if ($status === Trip::STATUS_DONE) {
-                DB::table('user_ratings')->insert([
-                    'user_id' => $customerId,
-                    'rated_user_id' => $guiderId,
-                    'type' => 'trip_bareng',
-                    'rating_amount' => $faker->randomFloat(2, 4.0, 5.0),
-                    'comment' => $faker->randomElement(['Guide sangat ramah dan seru!', 'Perjalanan aman dan menyenangkan.', 'Sangat direkomendasikan untuk trip bareng.', 'Itinerary jelas dan on-time.']),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                $raters = $faker->randomElements($customerIds, $faker->numberBetween(2, 4));
+                foreach ($raters as $raterId) {
+                    DB::table('user_ratings')->insert([
+                        'user_id' => $raterId,
+                        'rated_user_id' => $guiderId,
+                        'type' => 'trip_bareng',
+                        'rating_amount' => $faker->randomFloat(2, 4.0, 5.0),
+                        'comment' => $faker->randomElement(['Guide sangat ramah dan seru!', 'Perjalanan aman dan menyenangkan.', 'Sangat direkomendasikan untuk trip bareng.', 'Itinerary jelas dan on-time.']),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
     }

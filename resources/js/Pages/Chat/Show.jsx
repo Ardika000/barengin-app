@@ -16,6 +16,7 @@ import GroupMembersModal from "./Partials/GroupMembersModal";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
 import { FiArrowLeft, FiChevronRight, FiFilter, FiPaperclip, FiSend, FiX, FiCornerUpLeft } from "react-icons/fi";
+import { useTranslation } from "@/lib/useTranslation";
 
 import axios from "axios";
 
@@ -37,6 +38,7 @@ export default function ChatShow({
     conversation,
     messages = [],
 }) {
+    const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
 
     const getConversationPeer = (c) =>
@@ -166,9 +168,9 @@ export default function ChatShow({
         if (payload.text) return payload.text;
 
         const first = (payload.attachments ?? [])[0];
-        if (first?.type?.startsWith("image/")) return "Foto";
-        if (first?.type === "application/pdf") return "PDF";
-        if (first) return "Lampiran";
+        if (first?.type?.startsWith("image/")) return t("chat.photo");
+        if (first?.type === "application/pdf") return t("chat.pdf");
+        if (first) return t("chat.attachment");
 
         return "";
     };
@@ -403,9 +405,9 @@ export default function ChatShow({
     const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
 
     const attachmentLabel = (type, hasFile) => {
-        if (type?.startsWith("image/")) return "Foto";
-        if (type === "application/pdf") return "PDF";
-        return hasFile ? "Lampiran" : "";
+        if (type?.startsWith("image/")) return t("chat.photo");
+        if (type === "application/pdf") return t("chat.pdf");
+        return hasFile ? t("chat.attachment") : "";
     };
 
     const openLightbox = (images, index) =>
@@ -545,7 +547,7 @@ export default function ChatShow({
             });
         });
 
-        setAttachError(hasOversize ? "File gagal diupload - Maksimal 5MB per file." : "");
+        setAttachError(hasOversize ? t("chat.attach_oversize") : "");
         if (accepted.length) {
             setPendingAttachments((prev) => [...prev, ...accepted].slice(0, 10));
         }
@@ -569,14 +571,14 @@ export default function ChatShow({
                     <aside className="hidden h-full min-h-0 overflow-y-auto border-r border-neutral-200 bg-white px-8 py-8 md:block">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-neutral-700">
-                                Chat Messages
+                                {t("chat.title")}
                             </h3>
 
                             <button
                                 type="button"
                                 onClick={() => setOpenNewChat(true)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
-                                aria-label="New Chat"
+                                aria-label={t("chat.new_chat")}
                             >
                                 <BiMessageSquareAdd className="text-3xl" />
                             </button>
@@ -590,7 +592,7 @@ export default function ChatShow({
                             <InputField
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
-                                placeholder="Search Chat..."
+                                placeholder={t("chat.search_placeholder")}
                                 leftIcon={<BiSearch className="text-xl" />}
                                 rounded
                                 size="md"
@@ -609,7 +611,7 @@ export default function ChatShow({
                                             : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
                                     )}
                                 >
-                                    Semua
+                                    {t("chat.filter_all")}
                                 </button>
 
                                 <button
@@ -622,7 +624,7 @@ export default function ChatShow({
                                             : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
                                     )}
                                 >
-                                    Belum Dibaca
+                                    {t("chat.filter_unread")}
                                 </button>
                             </div>
                         </div>
@@ -648,7 +650,7 @@ export default function ChatShow({
                             <Link
                                 href="/chat"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-neutral-100 md:hidden"
-                                aria-label="Back"
+                                aria-label={t("chat.back")}
                             >
                                 <FiArrowLeft className="h-5 w-5 text-neutral-700" />
                             </Link>
@@ -660,14 +662,17 @@ export default function ChatShow({
                                     type="button"
                                     onClick={() => setOpenMembers(true)}
                                     className="group flex min-w-0 items-center gap-2 rounded-xl px-2 py-1 -ml-2 text-left transition hover:bg-neutral-100"
-                                    title="Lihat anggota grup"
+                                    title={t("chat.view_group_members")}
                                 >
                                     <div className="min-w-0">
                                         <div className="truncate text-lg font-semibold text-neutral-700">
                                             {headerTitle}
                                         </div>
                                         <div className="text-sm text-neutral-500">
-                                            {`${participants?.length ?? 0} Anggota`}
+                                            {t("chat.members_count").replace(
+                                                ":count",
+                                                participants?.length ?? 0,
+                                            )}
                                         </div>
                                     </div>
                                     <FiChevronRight className="h-5 w-5 shrink-0 text-neutral-400 transition group-hover:text-neutral-600" />
@@ -685,7 +690,7 @@ export default function ChatShow({
                                                     showOnline ? "bg-success-700" : "bg-neutral-500",
                                                 )}
                                             />
-                                            {showOnline ? "Online" : "Offline"}
+                                            {showOnline ? t("chat.online") : t("chat.offline")}
                                         </span>
                                     </div>
                                 </div>
@@ -705,9 +710,9 @@ export default function ChatShow({
                                     // Status pesan sendiri: Mengirim… → Terkirim → Dibaca.
                                     let statusText = "";
                                     if (isMine) {
-                                        if (isRead) statusText = "Dibaca";
-                                        else if (m.optimistic && !m.sent) statusText = "Mengirim…";
-                                        else statusText = "Terkirim";
+                                        if (isRead) statusText = t("chat.status_read");
+                                        else if (m.optimistic && !m.sent) statusText = t("chat.status_sending");
+                                        else statusText = t("chat.status_sent");
                                     }
 
                                     // Balas hanya untuk pesan yang sudah tersimpan (punya id numerik).
@@ -748,11 +753,12 @@ export default function ChatShow({
                                     <FiCornerUpLeft className="h-4 w-4 shrink-0 text-neutral-400" />
                                     <div className="min-w-0 flex-1">
                                         <div className="text-xs font-semibold text-neutral-700">
-                                            {`Membalas ${
+                                            {t("chat.replying_to").replace(
+                                                ":name",
                                                 Number(replyingTo.sender_id) === Number(authUser?.id)
-                                                    ? "diri sendiri"
-                                                    : replyingTo.sender?.name ?? ""
-                                            }`}
+                                                    ? t("chat.yourself")
+                                                    : replyingTo.sender?.name ?? "",
+                                            )}
                                         </div>
                                         <div className="truncate text-sm text-neutral-500">
                                             {replyingTo.text ||
@@ -766,7 +772,7 @@ export default function ChatShow({
                                         type="button"
                                         onClick={() => setReplyingTo(null)}
                                         className="shrink-0 text-neutral-400 hover:text-neutral-700"
-                                        aria-label="Batal balas"
+                                        aria-label={t("chat.cancel_reply")}
                                     >
                                         <FiX className="h-4 w-4" />
                                     </button>
@@ -796,7 +802,7 @@ export default function ChatShow({
                                                 type="button"
                                                 onClick={() => removePendingAttachment(idx)}
                                                 className="absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
-                                                aria-label="Hapus lampiran"
+                                                aria-label={t("chat.remove_attachment")}
                                             >
                                                 <FiX className="h-3 w-3" />
                                             </button>
@@ -831,8 +837,8 @@ export default function ChatShow({
                                         onChange={(e) => setText(e.target.value)}
                                         placeholder={
                                             pendingAttachments.length > 0
-                                                ? "Tambahkan keterangan (opsional)..."
-                                                : "Your Messages"
+                                                ? t("chat.caption_placeholder")
+                                                : t("chat.message_placeholder")
                                         }
                                         className={cn(
                                             "h-14 w-full rounded-full border border-neutral-300 bg-white pl-12 pr-4 text-sm text-neutral-700 placeholder:text-neutral-500",
@@ -844,7 +850,7 @@ export default function ChatShow({
                                 <button
                                     type="submit"
                                     className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary-700 text-white hover:opacity-90"
-                                    aria-label="Send"
+                                    aria-label={t("chat.send")}
                                 >
                                     <FiSend className="h-6 w-6" />
                                 </button>

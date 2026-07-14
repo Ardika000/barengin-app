@@ -64,6 +64,23 @@ abstract class Controller
     }
 
     /**
+     * Resolusi path gambar tersimpan menjadi URL, dengan gambar default
+     * generik sebagai fallback saat tidak ada gambar yang diunggah.
+     */
+    protected function resolveStoredImage(?string $path, string $fallback = '/assets/default-image.png'): string
+    {
+        if (! $path) {
+            return $fallback;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return $path;
+        }
+
+        return '/storage/' . $path;
+    }
+
+    /**
      * Ubah nilai kolom profile_image menjadi URL yang valid untuk ditampilkan.
      */
     protected function resolveAvatarUrl(?string $path): string

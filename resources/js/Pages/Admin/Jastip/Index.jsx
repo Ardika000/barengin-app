@@ -13,6 +13,7 @@ const STATUS_BADGE = {
     paid: "bg-blue-100 text-primary-700",
     pending: "bg-amber-100 text-amber-700",
     unpaid: "bg-neutral-100 text-neutral-500",
+    refunded: "bg-red-100 text-red-600",
 };
 
 // Badge status siklus hidup jastip (jastiper): draft/published/buy_time/finished
@@ -25,7 +26,7 @@ const JASTIPER_STATUS_BADGE = {
 
 export default function Index({ items = {}, orders = {}, filters = {} }) {
     const { t } = useTranslation();
-    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
+    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "", hasPaidOrders: false });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
     const [reopenModal, setReopenModal] = useState({ open: false, id: null, name: "" });
 
@@ -38,6 +39,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
     const paramsRef = useRef({
         search: filters.search ?? "",
         sort: filters.sort ?? "latest",
+        status: filters.status ?? "all",
         page: undefined,
         orders_search: filters.orders_search ?? "",
         orders_page: undefined,
@@ -45,6 +47,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
     const [ui, setUi] = useState({
         search: filters.search ?? "",
         sort: filters.sort ?? "latest",
+        status: filters.status ?? "all",
         orders_search: filters.orders_search ?? "",
     });
     const timer = useRef(null);
@@ -54,6 +57,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
         const out = {};
         if (p.search) out.search = p.search;
         if (p.sort && p.sort !== "latest") out.sort = p.sort;
+        if (p.status && p.status !== "all") out.status = p.status;
         if (p.page && p.page > 1) out.page = p.page;
         if (p.orders_search) out.orders_search = p.orders_search;
         if (p.orders_page && p.orders_page > 1) out.orders_page = p.orders_page;
@@ -75,7 +79,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
     const confirmDelete = () =>
         router.delete(`/admin/jastip/${deleteModal.id}`, {
             preserveScroll: true,
-            onSuccess: () => setDeleteModal({ open: false, id: null, name: "" }),
+            onSuccess: () => setDeleteModal({ open: false, id: null, name: "", hasPaidOrders: false }),
         });
 
     const confirmPublish = () =>
@@ -94,12 +98,21 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
         <>
             <ConfirmModal
                 open={deleteModal.open}
-                onClose={() => setDeleteModal({ open: false, id: null, name: "" })}
+                onClose={() => setDeleteModal({ open: false, id: null, name: "", hasPaidOrders: false })}
                 onConfirm={confirmDelete}
                 icon={<FiAlertCircle size={26} />}
                 iconClass="bg-red-100 text-red-500"
                 title={t("jastip.delete_title")}
-                description={<>{t("jastip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{t("jastip.delete_desc_suffix")}</>}
+                description={
+                    <>
+                        {t("jastip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{t("jastip.delete_desc_suffix")}
+                        {deleteModal.hasPaidOrders && (
+                            <span className="mt-2 block rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
+                                {t("jastip.delete_refund_warning")}
+                            </span>
+                        )}
+                    </>
+                }
                 confirmLabel={t("jastip.delete_confirm")}
                 confirmType="danger"
             />
@@ -165,6 +178,37 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                 </div>
             </div>
 
+            {/* Filter status jastip (draft/published/buy_time/finished) */}
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+                {[
+                    { value: "all", label: t("jastip.filter_status_all") },
+                    { value: "draft", label: t("jastip.jastiper_status.draft") },
+                    { value: "published", label: t("jastip.jastiper_status.published") },
+                    { value: "buy_time", label: t("jastip.jastiper_status.buy_time") },
+                    { value: "finished", label: t("jastip.jastiper_status.finished") },
+                ].map((opt) => {
+                    const active = ui.status === opt.value;
+                    const activeClass =
+                        opt.value === "all"
+                            ? "bg-primary-700 text-white border-primary-700"
+                            : `${JASTIPER_STATUS_BADGE[opt.value]} border-current`;
+                    return (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => update({ status: opt.value }, { resetPage: true })}
+                            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                                active
+                                    ? activeClass
+                                    : "border-neutral-300 bg-white text-neutral-500 hover:border-neutral-400 hover:text-neutral-700"
+                            }`}
+                        >
+                            {opt.label}
+                        </button>
+                    );
+                })}
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {pagedRows.map((item) => (
                     <JastipProductCard
@@ -176,7 +220,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                         onPublish={() => setPublishModal({ open: true, id: item.id, name: item.name })}
                         onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}
                         onReopen={() => setReopenModal({ open: true, id: item.id, name: item.name })}
-                        onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name })}
+                        onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name, hasPaidOrders: item.has_paid_orders })}
                     />
                 ))}
 

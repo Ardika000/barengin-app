@@ -13,12 +13,14 @@ import NewChatModal from "./Partials/NewChatModal";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
 import { FiFilter } from "react-icons/fi";
+import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
 export default function ChatIndex({ conversations = [] }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState("personal");
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
@@ -82,14 +84,14 @@ export default function ChatIndex({ conversations = [] }) {
                     <aside className="border-neutral-200 bg-white px-6 py-6 sm:px-8 sm:py-8 md:border-r">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-neutral-700">
-                                Chat Messages
+                                {t("chat.title")}
                             </h3>
 
                             <button
                                 type="button"
                                 onClick={() => setOpenNewChat(true)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
-                                aria-label="New Chat"
+                                aria-label={t("chat.new_chat")}
                             >
                                 <BiMessageSquareAdd className="text-xl" />
                             </button>
@@ -103,7 +105,7 @@ export default function ChatIndex({ conversations = [] }) {
                             <InputField
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
-                                placeholder="Search Chat..."
+                                placeholder={t("chat.search_placeholder")}
                                 leftIcon={<BiSearch className="text-xl" />}
                                 rounded
                                 size="md"
@@ -122,7 +124,7 @@ export default function ChatIndex({ conversations = [] }) {
                                             : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
                                     )}
                                 >
-                                    Semua
+                                    {t("chat.filter_all")}
                                 </button>
 
                                 <button
@@ -135,7 +137,7 @@ export default function ChatIndex({ conversations = [] }) {
                                             : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
                                     )}
                                 >
-                                    Belum Dibaca
+                                    {t("chat.filter_unread")}
                                 </button>
                             </div>
                         </div>
@@ -144,8 +146,8 @@ export default function ChatIndex({ conversations = [] }) {
                             {filtered.length === 0 ? (
                                 <div className="py-10 text-center text-sm text-neutral-500">
                                     {tab === "groups"
-                                        ? "Belum ada group chat."
-                                        : "Belum ada chat personal."}
+                                        ? t("chat.empty_groups")
+                                        : t("chat.empty_personal")}
                                 </div>
                             ) : null}
 
@@ -167,10 +169,10 @@ export default function ChatIndex({ conversations = [] }) {
                     <section className="hidden items-center justify-center bg-white md:flex">
                         <div className="text-center">
                             <div className="text-lg font-semibold text-neutral-700">
-                                Belum ada chat yang dibuka
+                                {t("chat.none_open_title")}
                             </div>
                             <div className="mt-2 text-sm text-neutral-500">
-                                Pilih percakapan untuk mulai mengobrol.
+                                {t("chat.none_open_subtitle")}
                             </div>
                         </div>
                     </section>

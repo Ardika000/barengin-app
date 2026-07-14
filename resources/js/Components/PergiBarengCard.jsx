@@ -15,11 +15,12 @@ import {
 import { MdVerified } from "react-icons/md";
 import { BsLightningFill, BsChatDots } from "react-icons/bs";
 import { useTranslation } from "@/lib/useTranslation";
+import { DEFAULT_IMAGE } from "@/lib/images";
 
 export default function PergiBarengCard({ data }) {
     const { t } = useTranslation();
     const {
-        image = "/assets/pergi-bareng/PergiBarengHeader.avif",
+        image = DEFAULT_IMAGE,
         title = "Terminal Cibubur",
         address = "Gang. Siliwangi No 5, Jakarta Timur",
         date = "31 Jan 26",
@@ -89,8 +90,7 @@ export default function PergiBarengCard({ data }) {
                     alt={title}
                     className="h-44 w-full object-cover"
                     onError={(e) => {
-                        e.target.src =
-                            "/assets/pergi-bareng/PergiBarengHeader.avif";
+                        e.target.src = DEFAULT_IMAGE;
                     }}
                 />
 

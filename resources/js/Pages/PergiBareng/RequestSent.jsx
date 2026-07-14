@@ -5,6 +5,7 @@ import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import { useTranslation } from "@/lib/useTranslation";
 import { FaRegClock, FaCalendarAlt } from "react-icons/fa";
+import { DEFAULT_IMAGE } from "@/lib/images";
 
 export default function RequestSent({ trip }) {
     const { t } = useTranslation();
@@ -38,10 +39,10 @@ export default function RequestSent({ trip }) {
 
                     <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-xl border border-neutral-100">
                         <img
-                            src={trip.img_name ? `/storage/${trip.img_name}` : "/assets/pergi-bareng/PergiBarengHeader.avif"}
+                            src={trip.img_name ? `/storage/${trip.img_name}` : DEFAULT_IMAGE}
                             className="w-14 h-14 rounded-lg object-cover"
                             alt={trip.title}
-                            onError={(e) => (e.target.src = "/assets/pergi-bareng/PergiBarengHeader.avif")}
+                            onError={(e) => (e.target.src = DEFAULT_IMAGE)}
                         />
                         <div className="flex-1">
                             <h4 className="font-bold text-sm text-neutral-700">{trip.title}</h4>

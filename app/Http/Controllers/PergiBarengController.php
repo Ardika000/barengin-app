@@ -319,22 +319,12 @@ class PergiBarengController extends Controller
 
     /**
      * Ubah path gambar pergi bareng dari DB menjadi URL untuk <img>.
-     * - kosong  -> gambar header default
+     * - kosong  -> gambar default generik
      * - http/absolut (/assets/..) -> dipakai apa adanya
      * - relatif -> diarahkan ke storage link
      */
     private function resolvePergiImage(?string $path): string
     {
-        $fallback = '/assets/pergi-bareng/PergiBarengHeader.avif';
-
-        if (! $path) {
-            return $fallback;
-        }
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
-            return $path;
-        }
-
-        return '/storage/' . $path;
+        return $this->resolveStoredImage($path);
     }
 }

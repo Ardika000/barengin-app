@@ -15,22 +15,25 @@ class PergiBarengSeeder extends Seeder
      */
     public function run(): void
     {
-        // Gambar berbeda-beda untuk tiap pergi bareng (aset publik yang ada)
+        // Gambar relevan dengan destinasi tiap pergi bareng (aset publik yang ada;
+        // dipetakan per index agar foto sesuai suasana tujuan perjalanan).
         $images = [
-            '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg',
-            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-1.jpg',
-            '/assets/trip-bareng/list-trip/candi_borobudur/trip_bareng-candi_borobudur-1.jpg',
-            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-2.jpg',
-            '/assets/trip-bareng/list-trip/c3076436a3227fcc40c253e4e7782a31.jpg',
-            '/assets/home/hero-bg.jpg',
-            '/assets/home/gallery.jpg',
-            '/assets/home/trip-card-image.jpg',
-            '/assets/home/about-us.jpg',
-            '/assets/pergi-bareng/PergiBarengHeader.avif',
+            '/assets/trips/bandung-1.jpg',    // 0: ke Bandung
+            '/assets/trips/bandung-2.jpg',    // 1: Puncak, Bogor (pegunungan Jabar)
+            '/assets/trips/bandung-3.jpg',    // 2: Bandung Factory Outlet
+            '/assets/trips/bali-2.jpg',       // 3: Pelabuhan Ratu (pantai)
+            '/assets/trips/toba-2.jpg',       // 4: Cianjur agro wisata (alam hijau)
+            '/assets/trips/bali-1.jpg',       // 5: Anyer (pantai)
+            '/assets/trips/yogyakarta-1.jpg', // 6: Cirebon (kuliner & budaya)
+            '/assets/trips/ijen-2.jpg',       // 7: Krakatau (vulkanik)
+            '/assets/trips/bunaken-1.jpg',    // 8: Carita (pantai)
+            '/assets/trips/bali-3.jpg',       // 9: Tanjung Lesung (resort pantai)
         ];
 
-        // Get beberapa user untuk jadi initiator
-        $users = User::where('id', '>=', 1)->take(5)->get();
+        // Get beberapa user untuk jadi initiator (urut id agar deterministik:
+        // users[0] = admin → jadi initiator pergi bareng index 0 yang sudah
+        // selesai, sehingga admin menerima rating type pergi_bareng).
+        $users = User::where('id', '>=', 1)->orderBy('id')->take(5)->get();
 
         if ($users->isEmpty()) {
             if(method_exists(User::class, 'factory')){
@@ -169,6 +172,7 @@ class PergiBarengSeeder extends Seeder
 
             // Peserta (selain penyelenggara) — agar muncul di riwayat & bisa diulas saat selesai
             $candidates = array_values(array_filter($allUserIds, fn ($id) => $id !== $pb->initiator_id));
+            $participantIds = [];
             if (! empty($candidates)) {
                 shuffle($candidates);
                 $count = min(count($candidates), rand(1, min(4, (int) $pb->people_amount - 1)));
@@ -179,6 +183,29 @@ class PergiBarengSeeder extends Seeder
                         'quantity'        => 1,
                         'created_at'      => now(),
                         'updated_at'      => now(),
+                    ]);
+                    $participantIds[] = $uid;
+                }
+            }
+
+            // Ulasan penyelenggara utk pergi bareng yang sudah selesai:
+            // peserta menilai initiator (type: pergi_bareng).
+            if ($index < 3 && ! empty($participantIds)) {
+                $pbComments = [
+                    'Driver ramah dan tepat waktu, perjalanan nyaman!',
+                    'Barengannya seru, mobil bersih. Mantap!',
+                    'Komunikasi lancar, janjian gampang. Recommended!',
+                    'Perjalanan aman dan santai, next ikut lagi.',
+                ];
+                foreach ($participantIds as $uid) {
+                    DB::table('user_ratings')->insert([
+                        'user_id'       => $uid,
+                        'rated_user_id' => $pb->initiator_id,
+                        'type'          => 'pergi_bareng',
+                        'rating_amount' => rand(40, 50) / 10,
+                        'comment'       => $pbComments[array_rand($pbComments)],
+                        'created_at'    => $pb->time_appointment->copy()->addDays(1),
+                        'updated_at'    => now(),
                     ]);
                 }
             }

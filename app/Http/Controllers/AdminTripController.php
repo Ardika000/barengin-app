@@ -6,6 +6,7 @@ use App\Models\Facility;
 use App\Models\ImageActivity;
 use App\Models\Trip;
 use App\Models\TripActivity;
+use App\Models\TripHistory;
 use App\Support\FuzzySearch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -26,16 +27,21 @@ class AdminTripController extends Controller
         $search = trim((string) $request->query('search', ''));
         $sort   = (string) $request->query('sort', 'latest');
 
-        // Jumlah peserta (paid) sebagai subquery agar bisa di-sort & dipaginasi di server
+        // Jumlah peserta (paid) sebagai subquery agar bisa di-sort & dipaginasi
+        // di server — hanya pesanan pada run aktif (setelah re-trip terakhir).
         $joinedSub = DB::table('trip_orders')
-            ->where('order_status', 'paid')
-            ->groupBy('trip_id')
-            ->select('trip_id', DB::raw('COUNT(DISTINCT user_id) as joined'));
+            ->join('trips as jt', 'jt.id', '=', 'trip_orders.trip_id')
+            ->where('trip_orders.order_status', 'paid')
+            ->whereRaw('(jt.current_run_started_at IS NULL OR trip_orders.created_at >= jt.current_run_started_at)')
+            ->groupBy('trip_orders.trip_id')
+            ->select('trip_orders.trip_id', DB::raw('COUNT(DISTINCT trip_orders.user_id) as joined'));
 
         $query = Trip::query()
-            ->with('detail_trips')
+            ->with(['detail_trips', 'histories'])
             ->leftJoinSub($joinedSub, 'j', 'j.trip_id', '=', 'trips.id')
             ->where('trips.guider_id', Auth::id())
+            ->withAvg('ratings as rating_avg', 'rating_amount')
+            ->withCount('ratings as rating_count')
             ->select('trips.*', DB::raw('COALESCE(j.joined, 0) as joined_count'));
 
         if ($search !== '') {
@@ -58,9 +64,21 @@ class AdminTripController extends Controller
                 'date_label' => Carbon::parse($trip->start_date)->translatedFormat('d M Y'),
                 'joined' => (int) $trip->joined_count,
                 'capacity' => $trip->people_amount,
+                'rating_avg' => $trip->rating_avg !== null ? round((float) $trip->rating_avg, 1) : null,
+                'rating_count' => (int) $trip->rating_count,
                 'status' => $trip->status,
                 'status_label' => $trip->statusLabel(),
                 'is_draft' => $trip->status === Trip::STATUS_DRAFT,
+                'is_done' => $trip->status === Trip::STATUS_DONE,
+                // Riwayat run sebelumnya (hasil re-trip) — baris anak di tabel
+                'histories' => $trip->histories->map(fn ($h) => [
+                    'id' => $h->id,
+                    'period_label' => Carbon::parse($h->start_date)->translatedFormat('d M Y')
+                        . ' – ' . Carbon::parse($h->end_date)->translatedFormat('d M Y'),
+                    'joined' => (int) $h->joined_count,
+                    'revenue' => (float) $h->revenue,
+                    'completed_label' => Carbon::parse($h->completed_at)->translatedFormat('d M Y'),
+                ])->values(),
             ]);
 
         return Inertia::render('Admin/Trip/Index', [
@@ -226,6 +244,60 @@ class AdminTripController extends Controller
         \App\Models\ActivityLog::record('Mempublikasikan trip: ' . $trip->name);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Trip berhasil dipublish dan tampil di halaman Trip Bareng.']);
+    }
+
+    /**
+     * Re-trip: buka ulang trip yang sudah selesai TANPA membuat data baru —
+     * run yang selesai diarsipkan ke trip_histories, lalu tanggal & status
+     * baris trip yang sama diperbarui. Kursi terisi di-reset lewat
+     * current_run_started_at (pesanan lama tidak dihitung lagi).
+     */
+    public function retrip(Request $request, $id)
+    {
+        $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
+
+        if ($trip->status !== Trip::STATUS_DONE) {
+            return back()->with('flash', ['type' => 'error', 'message' => 'Hanya trip yang sudah selesai yang bisa dibuka ulang.']);
+        }
+
+        $validated = $request->validate([
+            'start_date' => 'required|date|after:today',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+        ], [
+            'start_date.after' => 'Tanggal mulai baru harus setelah hari ini.',
+        ]);
+
+        DB::transaction(function () use ($trip, $validated) {
+            $runStart = $trip->current_run_started_at ?? '1970-01-01 00:00:00';
+
+            // Arsipkan run yang baru saja selesai (peserta & pendapatan run itu)
+            $stats = DB::table('trip_orders')
+                ->where('trip_id', $trip->id)
+                ->where('order_status', 'paid')
+                ->where('created_at', '>=', $runStart)
+                ->selectRaw('COUNT(DISTINCT user_id) as joined, COALESCE(SUM(total), 0) as revenue')
+                ->first();
+
+            TripHistory::create([
+                'trip_id'      => $trip->id,
+                'start_date'   => $trip->start_date,
+                'end_date'     => $trip->end_date,
+                'joined_count' => (int) ($stats->joined ?? 0),
+                'revenue'      => (float) ($stats->revenue ?? 0),
+                'completed_at' => now(),
+            ]);
+
+            $trip->update([
+                'start_date' => $validated['start_date'],
+                'end_date'   => $validated['end_date'],
+                'status'     => Trip::statusFromDates($validated['start_date'], $validated['end_date']),
+                'current_run_started_at' => now(),
+            ]);
+        });
+
+        \App\Models\ActivityLog::record('Membuka ulang trip: ' . $trip->name);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Trip berhasil dibuka ulang dengan jadwal baru.']);
     }
 
     public function analytics()

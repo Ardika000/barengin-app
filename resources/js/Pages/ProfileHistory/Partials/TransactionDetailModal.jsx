@@ -12,6 +12,7 @@ const STATUS_LABEL = {
     completed: "ph.status_completed",
     waiting_payment: "ph.status_waiting",
     in_progress: "ph.status_progress",
+    refunded: "ph.status_refunded",
 };
 
 export default function TransactionDetailModal({ transaction, onClose, onReview }) {

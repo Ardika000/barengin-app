@@ -88,6 +88,7 @@ class LeaderboardController extends Controller
             ->join('users', 'jastip_items.user_id', '=', 'users.id')
             ->leftJoinSub($ratingSub, 'r', 'r.rated_user_id', '=', 'users.id')
             ->where('jastip_items.status', 'published')
+            ->whereNull('jastip_items.deleted_at')
             ->groupBy('users.id', 'users.full_name', 'users.username', 'users.profile_image', 'r.avg_rating')
             ->select('users.id', 'users.full_name', 'users.username', 'users.profile_image', DB::raw('COUNT(jastip_items.id) as cnt'), DB::raw('COALESCE(r.avg_rating, 0) as rating'))
             ->orderByDesc('cnt')

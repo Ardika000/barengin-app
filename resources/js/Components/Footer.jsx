@@ -1,21 +1,10 @@
 import React from "react";
 import Container from "@/Components/Container";
 import { useTranslation } from "@/lib/useTranslation";
-import {
-    FaFacebookF,
-    FaLinkedinIn,
-    FaYoutube,
-    FaInstagram,
-} from "react-icons/fa";
+import { socialLinks } from "@/lib/socialLinks";
 
 export default function Footer() {
     const { t } = useTranslation();
-    const socials = [
-        { label: "Facebook", href: "#", Icon: FaFacebookF },
-        { label: "LinkedIn", href: "#", Icon: FaLinkedinIn },
-        { label: "YouTube", href: "#", Icon: FaYoutube },
-        { label: "Instagram", href: "#", Icon: FaInstagram },
-    ];
 
     return (
         <footer className="bg-white pt-16 mt-auto w-full flex flex-col border-t border-neutral-300">
@@ -36,11 +25,13 @@ export default function Footer() {
                 </p>
 
                 <div className="flex gap-4 mt-8">
-                    {socials.map(({ label, href, Icon }) => (
+                    {socialLinks.map(({ label, href, Icon }) => (
                         <a
                             key={label}
                             href={href}
                             aria-label={label}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-800 hover:bg-neutral-200 transition"
                         >
                             <Icon className="text-lg" />

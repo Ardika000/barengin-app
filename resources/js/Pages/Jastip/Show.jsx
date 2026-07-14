@@ -89,6 +89,17 @@ export default function Show({ product, related = [] }) {
             { onFinish: () => setAdding(false) });
     };
 
+    // Kembali ke etalase pada kondisi sebelumnya (halaman & filter dipertahankan
+    // lewat riwayat browser). Bila produk dibuka langsung tanpa riwayat di dalam
+    // app, fallback ke /jastip agar tidak keluar situs.
+    const handleBack = () => {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+            window.history.back();
+        } else {
+            router.visit("/jastip");
+        }
+    };
+
     const descLong = (product.description || "").length > 180;
     const descText = showFullDesc || !descLong ? product.description : product.description.slice(0, 180) + "...";
 
@@ -98,10 +109,14 @@ export default function Show({ product, related = [] }) {
         <div className="min-h-screen bg-white pb-16 pt-6">
             <Head title={`${product.name} - Barengin`} />
             <Container>
-                <Link href="/jastip" className="mb-6 inline-flex items-start gap-3 text-2xl font-bold text-neutral-700 transition hover:text-primary-700">
+                <button
+                    type="button"
+                    onClick={handleBack}
+                    className="mb-6 inline-flex cursor-pointer items-start gap-3 text-left text-2xl font-bold text-neutral-700 transition hover:text-primary-700"
+                >
                     <FaChevronLeft className="mt-1 text-xl" />
                     <span className="max-w-3xl">{product.name}</span>
-                </Link>
+                </button>
 
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
                     {/* LEFT: gallery + info */}

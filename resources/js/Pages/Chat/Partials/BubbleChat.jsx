@@ -1,16 +1,17 @@
 import React from "react";
 import Avatar from "./Avatar";
 import { FiCornerUpLeft } from "react-icons/fi";
+import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
-function replyPreviewText(reply) {
+function replyPreviewText(reply, t) {
     if (reply?.text) return reply.text;
-    if (reply?.attachment_type?.startsWith("image/")) return "Foto";
-    if (reply?.attachment_type === "application/pdf") return "PDF";
-    if (reply?.has_attachment) return "Lampiran";
+    if (reply?.attachment_type?.startsWith("image/")) return t("chat.photo");
+    if (reply?.attachment_type === "application/pdf") return t("chat.pdf");
+    if (reply?.has_attachment) return t("chat.attachment");
     return "";
 }
 
@@ -40,6 +41,7 @@ export default function Bubble({
     onReply,
     onReplyQuoteClick,
 }) {
+    const { t } = useTranslation();
     const showSenderName = isGroup && !mine && senderName;
 
     const list = Array.isArray(attachments) ? attachments : [];
@@ -53,8 +55,8 @@ export default function Bubble({
                 type="button"
                 onClick={onReply}
                 className="mb-2 shrink-0 rounded-full p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-primary-700"
-                aria-label="Balas pesan"
-                title="Balas"
+                aria-label={t("chat.reply_message")}
+                title={t("chat.reply")}
             >
                 <FiCornerUpLeft className="h-4 w-4" />
             </button>
@@ -99,7 +101,7 @@ export default function Bubble({
                                     {reply.sender_name}
                                 </span>
                                 <span className="block truncate text-xs text-neutral-500">
-                                    {replyPreviewText(reply)}
+                                    {replyPreviewText(reply, t)}
                                 </span>
                             </span>
                         </button>
@@ -152,7 +154,7 @@ export default function Bubble({
                                     rel="noreferrer"
                                     className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm text-primary-700 hover:bg-primary-50"
                                 >
-                                    📄 <span className="truncate">{a.name ?? "Dokumen"}</span>
+                                    📄 <span className="truncate">{a.name ?? t("chat.document")}</span>
                                 </a>
                             ))}
                         </div>

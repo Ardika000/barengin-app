@@ -25,6 +25,8 @@ use App\Http\Controllers\AdminMessageController;
 use App\Http\Controllers\AdminPergiBarengController;
 use App\Http\Controllers\AdminTripController;
 use App\Http\Controllers\AdminJastipController;
+use App\Http\Controllers\AdminJastipTripController;
+use App\Http\Controllers\JastipRequestController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LocaleController;
@@ -284,10 +286,15 @@ Route::middleware('auth')->group(function () {
 
 // Jastip (etalase pembeli) — daftar & detail boleh dilihat publik
 Route::get('/jastip', [JastipController::class, 'index'])->name('jastip');
+// Request Titipan: didaftarkan SEBELUM /jastip/{id} agar tidak tertelan wildcard
+Route::get('/jastip/requests', [JastipRequestController::class, 'browse'])->name('jastip.requests.browse');
 Route::get('/jastip/{id}', [JastipController::class, 'show'])->whereNumber('id')->name('jastip.show');
 
 // Pembelian jastip wajib login
 Route::middleware('auth')->group(function () {
+    Route::post('/jastip/requests', [JastipRequestController::class, 'store'])->name('jastip.requests.store');
+    Route::post('/jastip/requests/{id}/pay', [JastipRequestController::class, 'pay'])->whereNumber('id')->name('jastip.requests.pay');
+    Route::post('/jastip/requests/{id}/cancel', [JastipRequestController::class, 'cancel'])->whereNumber('id')->name('jastip.requests.cancel');
     Route::post('/jastip/cart', [JastipController::class, 'addToCart'])->name('jastip.cart.add');
     Route::post('/jastip/cart/update', [JastipController::class, 'updateCart'])->name('jastip.cart.update');
     Route::get('/jastip/checkout', [JastipController::class, 'checkout'])->name('jastip.checkout');
@@ -330,6 +337,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/{id}/edit', [AdminTripController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::post('/{id}', [AdminTripController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminTripController::class, 'publish'])->whereNumber('id')->name('publish');
+        Route::post('/{id}/retrip', [AdminTripController::class, 'retrip'])->whereNumber('id')->name('retrip');
         Route::delete('/{id}', [AdminTripController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 
@@ -352,6 +360,16 @@ Route::prefix('admin')->group(function () {
         Route::get('/', [AdminJastipController::class, 'index'])->name('index');
         Route::get('/create', [AdminJastipController::class, 'create'])->name('create');
         Route::get('/analytics', [AdminJastipController::class, 'analytics'])->name('analytics');
+
+        // Destinasi jastip + request titipan masuk (fitur Request Titipan)
+        Route::get('/trips', [AdminJastipTripController::class, 'index'])->name('trips.index');
+        Route::post('/trips', [AdminJastipTripController::class, 'store'])->name('trips.store');
+        Route::post('/trips/{id}', [AdminJastipTripController::class, 'update'])->whereNumber('id')->name('trips.update');
+        Route::delete('/trips/{id}', [AdminJastipTripController::class, 'destroy'])->whereNumber('id')->name('trips.destroy');
+        Route::get('/requests', [AdminJastipTripController::class, 'requests'])->name('requests.index');
+        Route::post('/requests/{id}/quote', [AdminJastipTripController::class, 'quote'])->whereNumber('id')->name('requests.quote');
+        Route::post('/requests/{id}/reject', [AdminJastipTripController::class, 'reject'])->whereNumber('id')->name('requests.reject');
+
         Route::post('/', [AdminJastipController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [AdminJastipController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::post('/{id}', [AdminJastipController::class, 'update'])->whereNumber('id')->name('update');

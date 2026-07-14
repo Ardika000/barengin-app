@@ -102,14 +102,17 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 <FiRefreshCw size={15} />
                             </button>
                         )}
-                        <button
-                            type="button"
-                            onClick={onDelete}
-                            title={t("jastip.action_delete")}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-red-500 shadow-sm hover:bg-white"
-                        >
-                            <FiTrash2 size={15} />
-                        </button>
+                        {/* Hapus diblokir mulai H-1 batas pemesanan (can_delete dari server) */}
+                        {(item.can_delete ?? true) && (
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                title={t("jastip.action_delete")}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-red-500 shadow-sm hover:bg-white"
+                            >
+                                <FiTrash2 size={15} />
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

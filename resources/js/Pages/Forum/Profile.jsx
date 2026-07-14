@@ -6,7 +6,7 @@ import ForumLayout from "@/Layouts/ForumLayout";
 import PostCard from "@/Pages/Forum/Partials/PostCard";
 import Button from "@/Components/Button";
 import { FiHeart } from "react-icons/fi";
-import { FaHeart } from "react-icons/fa";
+import { FaHeart, FaStar, FaRoute } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import UserListModal from "@/Pages/Forum/Partials/UserListModal";
 import { useTranslation } from "@/lib/useTranslation";
@@ -494,6 +494,20 @@ export default function Profile({
     const likeItems = useMemo(() => likes?.data ?? [], [likes]);
     const replyItems = useMemo(() => replies?.data ?? [], [replies]);
 
+    // Rating per kategori; tampilkan hanya yang punya ulasan ("if any").
+    const ratingChips = useMemo(() => {
+        const r = profileUser.ratings ?? {};
+        return [
+            { key: "jastip", label: t("nav.jastip"), ...(r.jastip ?? {}) },
+            {
+                key: "pergi_bareng",
+                label: t("nav.pergi_bareng"),
+                ...(r.pergi_bareng ?? {}),
+            },
+            { key: "trip", label: t("nav.trip_bareng"), ...(r.trip ?? {}) },
+        ].filter((chip) => Number(chip.count ?? 0) > 0);
+    }, [profileUser.ratings, t]);
+
     return (
         <Container className="py-10">
             <div className="max-w-5xl mx-auto">
@@ -554,6 +568,31 @@ export default function Profile({
                             {compactNumber(counts?.following ?? 0)} {t("forum.following")}
                         </button>
                     </div>
+
+                    {ratingChips.length || profileUser.is_trip_guider ? (
+                        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs justify-center xs:justify-start">
+                            {profileUser.is_trip_guider ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 font-semibold text-primary-700">
+                                    <FaRoute size={10} />
+                                    {t("forum.trip_guider")}
+                                </span>
+                            ) : null}
+
+                            {ratingChips.map((chip) => (
+                                <span
+                                    key={chip.key}
+                                    title={`${chip.count} ${t("common.reviews")}`}
+                                    className="inline-flex items-center gap-1 text-neutral-600"
+                                >
+                                    <FaStar className="text-warning-500" size={11} />
+                                    <span className="font-bold text-neutral-800">
+                                        {Number(chip.average ?? 0).toFixed(1)}
+                                    </span>
+                                    {chip.label}
+                                </span>
+                            ))}
+                        </div>
+                    ) : null}
 
                     <div className="mt-6 flex flex-col md:flex-row gap-3">
                         {!isMe ? (

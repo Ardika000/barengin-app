@@ -430,7 +430,7 @@ class ChatController extends Controller
             $img = $conversation->pergi_bareng->img_name;
 
             if (! $img) {
-                return asset('assets/pergi-bareng/PergiBarengHeader.avif');
+                return asset('assets/default-image.png');
             }
 
             if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://') || str_starts_with($img, '/')) {

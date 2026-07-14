@@ -13,6 +13,7 @@ export default function LocationInput({
     placeholder,
     className = "",
     prioritizeIndonesia = true,
+    countryCodes = "", // kode ISO alpha-2 (mis. "id") — batasi hasil hanya pada negara ini
 }) {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);
@@ -65,6 +66,10 @@ export default function LocationInput({
                     limit: "10",
                     q,
                 });
+                // Batasi hasil hanya pada negara terpilih (mis. "id" = Indonesia).
+                if (countryCodes) {
+                    params.set("countrycodes", countryCodes);
+                }
 
                 const res = await fetch(
                     `https://nominatim.openstreetmap.org/search?${params.toString()}`,
@@ -90,7 +95,7 @@ export default function LocationInput({
         }, 350);
 
         return () => clearTimeout(handle);
-    }, [query, prioritizeIndonesia]);
+    }, [query, prioritizeIndonesia, countryCodes]);
 
     const handleSelect = (item) => {
         // Pakai alamat lengkap (display_name), bukan hanya judulnya

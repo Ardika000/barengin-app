@@ -75,10 +75,11 @@ class TripsController extends Controller
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
-            // Peserta = user unik yang sudah membayar (trip_orders)
+            // Peserta = user unik yang sudah membayar pada run aktif
             $joined = DB::table('trip_orders')
                 ->where('trip_id', $trip->id)
                 ->where('order_status', 'paid')
+                ->when($trip->current_run_started_at, fn ($q) => $q->where('created_at', '>=', $trip->current_run_started_at))
                 ->distinct()
                 ->count('user_id');
 
@@ -144,11 +145,12 @@ class TripsController extends Controller
         if (!$trip) abort(404);
         if ($trip->status === 'draft') abort(404); // draft belum dipublish
 
-        // Peserta = user unik yang sudah membayar (trip_orders)
+        // Peserta = user unik yang sudah membayar pada run aktif (bukan run lama)
         $participants = DB::table('trip_orders')
             ->join('users', 'trip_orders.user_id', '=', 'users.id')
             ->where('trip_orders.trip_id', $trip->id)
             ->where('trip_orders.order_status', 'paid')
+            ->when($trip->current_run_started_at, fn ($q) => $q->where('trip_orders.created_at', '>=', $trip->current_run_started_at))
             ->select('users.id', 'users.full_name', 'users.profile_image')
             ->distinct()
             ->get()
@@ -438,9 +440,14 @@ class TripsController extends Controller
      */
     private function joinedCount($tripId): int
     {
+        // Hanya pesanan pada run aktif — pesanan run lama (sebelum re-trip)
+        // tidak lagi menghitung kursi terisi.
+        $runStart = DB::table('trips')->where('id', $tripId)->value('current_run_started_at');
+
         return (int) DB::table('trip_orders')
             ->where('trip_id', $tripId)
             ->where('order_status', 'paid')
+            ->when($runStart, fn ($q) => $q->where('created_at', '>=', $runStart))
             ->distinct()
             ->count('user_id');
     }

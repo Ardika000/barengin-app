@@ -22,7 +22,7 @@ class UsersSeeder extends Seeder
             'phone'     => '081234567890',
             'gender'    => 'male',
             'is_admin'  => true,
-            'is_guider' => false,        ]);
+            'is_guider' => true,        ]);
 
         User::create([
             'full_name' => 'Budi Penumpang',

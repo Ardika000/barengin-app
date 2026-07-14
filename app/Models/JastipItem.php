@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class JastipItem extends Model
 {
+    use SoftDeletes;
+
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PUBLISHED = 'published';
 
@@ -66,6 +69,25 @@ class JastipItem extends Model
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;
+    }
+
+    /**
+     * Jastip boleh dihapus selama belum memasuki H-1 batas pemesanan.
+     * Draft selalu boleh; published diblokir mulai (end_date - 1 hari),
+     * yang sekaligus memblokir fase buy_time/finished.
+     */
+    public function canBeDeleted(): bool
+    {
+        if ($this->isDraft()) {
+            return true;
+        }
+        if (! $this->end_date) {
+            return false;
+        }
+
+        return \Carbon\Carbon::today()->lt(
+            \Carbon\Carbon::parse($this->end_date)->subDay()->startOfDay()
+        );
     }
 
     /** Harga total = harga dasar + biaya jastip (belum termasuk varian). */
@@ -143,6 +165,41 @@ class JastipItem extends Model
             return 'closed';
         }
         return 'ongoing';
+    }
+
+    /**
+     * Filter status jastiper (draft/published/buy_time/finished) di SQL.
+     * Harus mencerminkan jastiperStatusOf() persis, termasuk kasus tanggal NULL:
+     * published butuh end_date terisi dan >= hari ini; item published dengan
+     * end_date NULL jatuh ke buy_time/finished — sama seperti versi PHP.
+     */
+    public function scopeJastiperStatus($query, ?string $status)
+    {
+        $today = \Carbon\Carbon::today();
+
+        return match ($status) {
+            'draft' => $query->where('jastip_items.status', self::STATUS_DRAFT),
+            'published' => $query
+                ->where('jastip_items.status', self::STATUS_PUBLISHED)
+                ->whereNotNull('end_date')
+                ->whereDate('end_date', '>=', $today),
+            'buy_time' => $query
+                ->where('jastip_items.status', self::STATUS_PUBLISHED)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('end_date')->orWhereDate('end_date', '<', $today);
+                })
+                ->whereNotNull('pickup_start_date')
+                ->whereDate('pickup_start_date', '>', $today),
+            'finished' => $query
+                ->where('jastip_items.status', self::STATUS_PUBLISHED)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('end_date')->orWhereDate('end_date', '<', $today);
+                })
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('pickup_start_date')->orWhereDate('pickup_start_date', '<=', $today);
+                }),
+            default => $query,
+        };
     }
 
     /** Hanya jastip yang masih relevan: sedang berlangsung atau akan dibuka (bukan yang sudah lewat). */

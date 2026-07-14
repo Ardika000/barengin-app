@@ -1,15 +1,17 @@
 import React from "react";
+import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
 export default function Segment({ value, onChange }) {
+    const { t } = useTranslation();
     return (
         <div className="flex w-full rounded-full border border-neutral-300 bg-white p-1">
             {[
-                { value: "personal", label: "Personal" },
-                { value: "groups", label: "Groups" },
+                { value: "personal", label: t("chat.tab_personal") },
+                { value: "groups", label: t("chat.tab_groups") },
             ].map((it) => {
                 const active = it.value === value;
                 return (

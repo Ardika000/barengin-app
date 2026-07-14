@@ -39,6 +39,44 @@ class ForumProfileController extends Controller
         }
     }
 
+    /**
+     * Payload user profil termasuk rating yang DITERIMA per kategori
+     * (jastip, pergi bareng, trip) — cara ambil ratingnya sama seperti
+     * di halaman dashboard (tabel user_ratings, kolom type).
+     */
+    private function profileUserPayload(User $profileUser): array
+    {
+        $ratingFor = function (string $type) use ($profileUser) {
+            $avg   = $profileUser->receivedRatingAvg($type);
+            $count = $profileUser->receivedRatingCount($type);
+
+            return [
+                'average' => $avg ? round((float) $avg, 1) : 0,
+                'count'   => (int) $count,
+            ];
+        };
+
+        // Seseorang dianggap "Trip Guider" bila pernah menjadi guider trip.
+        $isTripGuider = DB::table('trips')
+            ->where('guider_id', $profileUser->id)
+            ->exists();
+
+        return [
+            'id' => $profileUser->id,
+            'full_name' => $profileUser->full_name,
+            'username' => $profileUser->username,
+            'bio' => $profileUser->bio,
+            'public_profile_image' => $profileUser->public_profile_image,
+            'verified' => (bool) $profileUser->is_verified,
+            'is_trip_guider' => $isTripGuider,
+            'ratings' => [
+                'jastip'       => $ratingFor('jastiper'),
+                'pergi_bareng' => $ratingFor('pergi_bareng'),
+                'trip'         => $ratingFor('trip_bareng'),
+            ],
+        ];
+    }
+
     public function me(Request $request)
     {
         $user = Auth::user();
@@ -73,6 +111,8 @@ class ForumProfileController extends Controller
 
         $followersCount = $profileUser->followers()->count();
         $followingCount = $profileUser->followings()->count();
+
+        $profileUserPayload = $this->profileUserPayload($profileUser);
 
         $postToPayload = function (Post $post, array $likedByMeLookup) {
             return [
@@ -234,14 +274,7 @@ class ForumProfileController extends Controller
             $replies->setCollection($repliesTransformed->getCollection());
 
             return Inertia::render('Forum/Profile', [
-                'profileUser' => [
-                    'id' => $profileUser->id,
-                    'full_name' => $profileUser->full_name,
-                    'username' => $profileUser->username,
-                    'bio' => $profileUser->bio,
-                    'public_profile_image' => $profileUser->public_profile_image,
-                    'verified' => (bool) $profileUser->is_verified,
-                ],
+                'profileUser' => $profileUserPayload,
                 'counts' => [
                     'followers' => $followersCount,
                     'following' => $followingCount,
@@ -403,14 +436,7 @@ class ForumProfileController extends Controller
             $likedPage->setCollection($likesTransformed);
 
             return Inertia::render('Forum/Profile', [
-                'profileUser' => [
-                    'id' => $profileUser->id,
-                    'full_name' => $profileUser->full_name,
-                    'username' => $profileUser->username,
-                    'bio' => $profileUser->bio,
-                    'public_profile_image' => $profileUser->public_profile_image,
-                    'verified' => (bool) $profileUser->is_verified,
-                ],
+                'profileUser' => $profileUserPayload,
                 'counts' => [
                     'followers' => $followersCount,
                     'following' => $followingCount,
@@ -456,14 +482,7 @@ class ForumProfileController extends Controller
         $posts->setCollection($postsTransformed->getCollection());
 
         return Inertia::render('Forum/Profile', [
-            'profileUser' => [
-                'id' => $profileUser->id,
-                'full_name' => $profileUser->full_name,
-                'username' => $profileUser->username,
-                'bio' => $profileUser->bio,
-                'public_profile_image' => $profileUser->public_profile_image,
-                'verified' => (bool) $profileUser->is_verified,
-            ],
+            'profileUser' => $profileUserPayload,
             'counts' => [
                 'followers' => $followersCount,
                 'following' => $followingCount,

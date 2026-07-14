@@ -6,6 +6,7 @@ import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import { useTranslation } from "@/lib/useTranslation";
+import { DEFAULT_IMAGE } from "@/lib/images";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -246,7 +247,7 @@ export default function Show({ trip }) {
                                 <img
                                     src={
                                         !trip.img_name
-                                            ? "/assets/pergi-bareng/PergiBarengHeader.avif"
+                                            ? DEFAULT_IMAGE
                                             : trip.img_name.startsWith("/") || trip.img_name.startsWith("http")
                                                 ? trip.img_name
                                                 : `/storage/${trip.img_name}`
@@ -254,7 +255,7 @@ export default function Show({ trip }) {
                                     alt={trip.title}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                        e.target.src = '/assets/pergi-bareng/PergiBarengHeader.avif';
+                                        e.target.src = DEFAULT_IMAGE;
                                     }}
                                 />
                                 <button
@@ -279,7 +280,9 @@ export default function Show({ trip }) {
                                 <span className="p-1.5 bg-neutral-100 rounded-md"><FaInfoCircle className="text-neutral-600 text-sm"/></span>
                                 {t("pb.show.description")}
                             </h3>
-                            <p className="text-neutral-600 text-sm leading-relaxed mb-4">{trip.description}</p>
+                            {trip.description && (
+                                <p className="text-neutral-600 text-sm leading-relaxed mb-4">{trip.description}</p>
+                            )}
 
                             <h4 className="font-semibold text-sm mb-2">{t("pb.show.trip_details")}</h4>
                             <ul className="space-y-3 mt-3">

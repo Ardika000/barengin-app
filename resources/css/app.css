@@ -107,6 +107,14 @@ html {
     color: var(--color-neutral-700);
     font-size: 14.4px;
     overflow-x: clip; /* cegah scroll horizontal tak disengaja di seluruh halaman */
+    scroll-behavior: smooth; /* gulir halus untuk anchor & scrollIntoView */
+}
+
+/* Hormati preferensi pengguna yang meminimalkan animasi. */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
 }
 
 @media (max-width: 640px) {
@@ -145,6 +153,24 @@ html {
 }
 .animate-fade-in-up {
     animation: fade-in-up 0.18s ease-out;
+}
+
+/* Animasi turun untuk bar pencarian tersemat (slide dari balik navbar) */
+@keyframes slide-down {
+    from { opacity: 0; transform: translateY(-100%); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-down {
+    animation: slide-down 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Animasi naik saat bar tersemat menghilang (kebalikan slide-down) */
+@keyframes slide-up {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-100%); }
+}
+.animate-slide-up {
+    animation: slide-up 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 /* Animasi masuk toast dari kanan (slide kiri) */

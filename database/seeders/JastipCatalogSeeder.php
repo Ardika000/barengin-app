@@ -47,23 +47,27 @@ class JastipCatalogSeeder extends Seeder
             ? "/assets/jastip/catalog/item-{$i}-v{$j}.jpg" : null;
 
         $img = fn ($n) => '/assets/jastip/products/p' . str_pad($n, 2, '0', STR_PAD_LEFT) . '.jpg';
-        // Kolam gambar cadangan per kategori (indeks p01..p50)
+        // Kolam gambar cadangan per kategori (indeks p01..p50).
+        // Pemetaan diverifikasi manual per isi foto (bukan sekadar nama file):
+        // p02/p04/p09/p32/p43 sepatu · p03/p10 jam · p07/p08 tas · p11/p12/p34 parfum ·
+        // p13-p19/p38/p39/p48 skincare · p20-p24/p37/p42/p46 makanan-minuman ·
+        // p25-p28/p31/p35/p47 fashion · p01/p05/p29/p30/p41 elektronik · p33/p50 konsol/game.
         $pools = [
-            'Sepatu'                => array_map($img, [2, 4, 9, 31, 33, 44]),
-            'Olahraga'              => array_map($img, [2, 4, 9, 31, 33, 44]),
-            'Jam Tangan'            => array_map($img, [3, 10, 38]),
-            'Perhiasan'             => array_map($img, [3, 10, 38, 6]),
-            'Tas & Dompet'          => array_map($img, [7, 8, 43]),
-            'Fashion'               => array_map($img, [6, 25, 26, 27, 28, 35]),
-            'Skincare & Kecantikan' => array_map($img, [13, 14, 15, 16, 17, 18, 34, 37, 39, 46, 48]),
-            'Kesehatan'             => array_map($img, [13, 17, 34, 39, 48]),
-            'Parfum'                => array_map($img, [11, 12, 40]),
-            'Makanan & Minuman'     => array_map($img, [19, 20, 21, 22, 23, 24, 36, 42, 45, 47, 50]),
-            'Elektronik'            => array_map($img, [1, 5, 30, 32, 41, 49]),
-            'Gadget & Aksesoris'    => array_map($img, [29, 1, 5, 32, 41, 49]),
-            'Hobi & Koleksi'        => array_map($img, [5, 30, 41, 49]),
-            'Mainan & Games'        => array_map($img, [30, 41, 49, 1]),
-            'Ibu & Bayi'            => array_map($img, [34, 17, 13]),
+            'Sepatu'                => array_map($img, [2, 4, 9, 32, 43]),
+            'Olahraga'              => array_map($img, [2, 9, 43, 32]),
+            'Jam Tangan'            => array_map($img, [3, 10]),
+            'Perhiasan'             => array_map($img, [10, 3, 6]),
+            'Tas & Dompet'          => array_map($img, [7, 8]),
+            'Fashion'               => array_map($img, [6, 25, 26, 27, 28, 35, 31, 47]),
+            'Skincare & Kecantikan' => array_map($img, [13, 14, 15, 16, 17, 18, 38, 39, 48, 19]),
+            'Kesehatan'             => array_map($img, [17, 39, 13, 48, 19]),
+            'Parfum'                => array_map($img, [11, 12, 34]),
+            'Makanan & Minuman'     => array_map($img, [20, 21, 22, 23, 24, 42, 46, 37]),
+            'Elektronik'            => array_map($img, [1, 5, 30, 41, 29]),
+            'Gadget & Aksesoris'    => array_map($img, [29, 1, 5, 41, 30, 3]),
+            'Hobi & Koleksi'        => array_map($img, [5, 33, 50, 30]),
+            'Mainan & Games'        => array_map($img, [33, 50]),
+            'Ibu & Bayi'            => array_map($img, [36, 17, 13]),
         ];
 
         // Lokasi pembelian (asal barang) — [wilayah/negara, kota, alamat]

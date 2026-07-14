@@ -39,6 +39,7 @@ class ProfileHistoryController extends Controller
             'trip_favorites'    => $this->tripFavorites($user),
             'pergi_barengs'     => $this->pergiBarengs($user),
             'jastip_favorites'  => $this->jastipFavorites($user),
+            'jastip_requests'   => $this->jastipRequests($user),
             'tab'               => $request->query('tab', 'transactions'),
             'midtrans_client_key' => config('midtrans.client_key'),
         ]);
@@ -57,6 +58,21 @@ class ProfileHistoryController extends Controller
 
     private function profilePayload(User $user): array
     {
+        // Rating yang DITERIMA user per kategori (sama seperti forum profile).
+        $ratingFor = function (string $type) use ($user) {
+            $avg   = $user->receivedRatingAvg($type);
+            $count = $user->receivedRatingCount($type);
+
+            return [
+                'average' => $avg ? round((float) $avg, 1) : 0,
+                'count'   => (int) $count,
+            ];
+        };
+
+        $isTripGuider = DB::table('trips')
+            ->where('guider_id', $user->id)
+            ->exists();
+
         return [
             'id'             => $user->id,
             'full_name'      => $user->full_name,
@@ -77,6 +93,12 @@ class ProfileHistoryController extends Controller
             'has_custom_avatar' => (bool) $user->profile_image,
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->followings()->count(),
+            'is_trip_guider' => $isTripGuider,
+            'ratings'        => [
+                'jastip'       => $ratingFor('jastiper'),
+                'pergi_bareng' => $ratingFor('pergi_bareng'),
+                'trip'         => $ratingFor('trip_bareng'),
+            ],
         ];
     }
 
@@ -250,7 +272,7 @@ class ProfileHistoryController extends Controller
     private function jalanBarengHistory(User $user)
     {
         $tripDefault  = '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg';
-        $pbDefault    = '/assets/pergi-bareng/PergiBarengHeader.avif';
+        $pbDefault    = '/assets/default-image.png';
         $avatarFallback = asset('assets/default-profile.png');
 
         // Trip yang sudah dibayar oleh user
@@ -398,6 +420,11 @@ class ProfileHistoryController extends Controller
             return $kind === 'jastip' ? 'in_progress' : 'completed';
         }
 
+        // Jastip dihapus oleh jastiper → dana dikembalikan (simulasi)
+        if ($orderStatus === 'refunded') {
+            return 'refunded';
+        }
+
         // pending / unpaid / null
         return 'waiting_payment';
     }
@@ -530,7 +557,7 @@ class ProfileHistoryController extends Controller
 
             return [
                 'id'             => $trip->id,
-                'image'          => $this->resolveImage($trip->img_name, '/assets/pergi-bareng/PergiBarengHeader.avif'),
+                'image'          => $this->resolveImage($trip->img_name, '/assets/default-image.png'),
                 'title'          => $trip->name,
                 'address'        => $trip->departure_loc,
                 'date'           => $date?->translatedFormat('d M y'),
@@ -570,6 +597,7 @@ class ProfileHistoryController extends Controller
             ->join('users', 'jastip_items.user_id', '=', 'users.id')
             ->whereIn('jastip_items.id', $likedIds)
             ->where('jastip_items.status', 'published')
+            ->whereNull('jastip_items.deleted_at')
             ->select(
                 'jastip_items.*',
                 'users.full_name as owner_name',
@@ -605,6 +633,50 @@ class ProfileHistoryController extends Controller
         });
 
         return $items;
+    }
+
+    /**
+     * Tab "Titipan Saya" — request titipan milik user beserta status &
+     * penawarannya. Saat quoted, kartu menampilkan tombol bayar (Snap).
+     */
+    private function jastipRequests(User $user)
+    {
+        $requests = \App\Models\JastipRequest::query()
+            ->where('user_id', $user->id)
+            ->with(['jastip.user'])
+            ->latest()
+            ->paginate(5, ['*'], 'req_page')
+            ->withQueryString();
+
+        $requests->getCollection()->transform(function ($req) {
+            $jastiper = $req->jastip?->user;
+
+            return [
+                'id'          => $req->id,
+                'item_name'   => $req->item_name,
+                'description' => $req->description,
+                'quantity'    => (int) $req->quantity,
+                'budget'      => $req->budget !== null ? (float) $req->budget : null,
+                'note'        => $req->note,
+                'image'       => $req->image_name ? $this->resolveImage($req->image_name, '/assets/default-image.png') : null,
+                'status'      => $req->status,
+                'quoted_item_price' => $req->quoted_item_price !== null ? (float) $req->quoted_item_price : null,
+                'quoted_fee'  => $req->quoted_fee !== null ? (float) $req->quoted_fee : null,
+                'quoted_total' => in_array($req->status, ['quoted', 'paid'], true) ? $req->quotedTotal() : null,
+                'created_label' => $req->created_at->translatedFormat('d M Y'),
+                'destination' => $req->jastip?->destination_city,
+                'pickup_city' => $req->jastip?->origin_city,
+                'deadline_label' => optional($req->jastip?->end_date)->translatedFormat('d M Y'),
+                'jastiper'    => [
+                    'id'       => $jastiper?->id,
+                    'name'     => $jastiper?->full_name,
+                    'username' => $jastiper?->username,
+                    'avatar'   => $this->resolveImage($jastiper?->profile_image, asset('assets/default-profile.png')),
+                ],
+            ];
+        });
+
+        return $requests;
     }
 
     /**

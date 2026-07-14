@@ -26,7 +26,7 @@ class Trip extends Model
     protected $fillable = [
         'guider_id', 'name', 'description', 'people_amount',
         'start_date', 'end_date', 'rating', 'price',
-        'image', 'location', 'status',
+        'image', 'location', 'status', 'current_run_started_at',
     ];
 
     protected function casts()
@@ -36,6 +36,7 @@ class Trip extends Model
             'price' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
+            'current_run_started_at' => 'datetime',
         ];
     }
 
@@ -62,6 +63,18 @@ class Trip extends Model
     public function conversations()
     {
         return $this->hasOne(Conversation::class);
+    }
+
+    /** Rating trip dari peserta. FK di tabel user_trip_ratings bernama `trips_id`. */
+    public function ratings()
+    {
+        return $this->hasMany(UserTripRating::class, 'trips_id');
+    }
+
+    /** Arsip run sebelumnya (dibuat saat re-trip). */
+    public function histories()
+    {
+        return $this->hasMany(TripHistory::class)->orderByDesc('completed_at');
     }
 
     public function statusLabel(): string

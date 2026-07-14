@@ -33,14 +33,7 @@ class AdminPergiBarengController extends Controller
     /** Resolusi gambar pergi bareng (samakan dengan halaman front). */
     private function resolvePergiImage(?string $path): string
     {
-        $fallback = '/assets/pergi-bareng/PergiBarengHeader.avif';
-        if (! $path) {
-            return $fallback;
-        }
-        if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://', '/'])) {
-            return $path;
-        }
-        return '/storage/' . $path;
+        return $this->resolveStoredImage($path);
     }
 
     public function index(Request $request)
@@ -158,7 +151,7 @@ class AdminPergiBarengController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|string',
             'transportation' => 'required|in:' . implode(',', self::TRANSPORTATIONS),
@@ -190,7 +183,7 @@ class AdminPergiBarengController extends Controller
             $trip = PergiBareng::create([
                 'initiator_id' => Auth::id(),
                 'name' => $validated['name'],
-                'description' => $validated['description'],
+                'description' => $validated['description'] ?? null,
                 'time_appointment' => $appointment,
                 'transportation' => $validated['transportation'],
                 'people_amount' => $validated['people_amount'],

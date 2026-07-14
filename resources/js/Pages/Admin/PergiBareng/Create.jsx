@@ -106,6 +106,7 @@ export default function Create({ transportations = [], prefill = null }) {
                                 onChange={(v) => setData("destination_loc", v)}
                                 placeholder={t("admin.pergi.form.destination_ph")}
                                 className={inputClass}
+                                countryCodes="id"
                             />
                             {fieldError("destination_loc")}
                         </div>
@@ -117,6 +118,7 @@ export default function Create({ transportations = [], prefill = null }) {
                                 onChange={(v) => setData("departure_loc", v)}
                                 placeholder={t("admin.pergi.form.meeting_point_ph")}
                                 className={inputClass}
+                                countryCodes="id"
                             />
                             {fieldError("departure_loc")}
                         </div>
@@ -164,7 +166,7 @@ export default function Create({ transportations = [], prefill = null }) {
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.trip.form.description")}<Req /></label>
+                            <label className={labelClass}>{t("admin.trip.form.description")}</label>
                             <textarea
                                 rows={4}
                                 value={data.description}

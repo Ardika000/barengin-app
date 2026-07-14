@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { router } from "@inertiajs/react";
 import { FiX, FiSearch } from "react-icons/fi";
+import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
     return a.filter(Boolean).join(" ");
@@ -34,6 +35,7 @@ function UserRow({ user, onClick }) {
 }
 
 export default function NewChatModal({ open, onClose }) {
+    const { t } = useTranslation();
     const [q, setQ] = useState("");
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState([]);
@@ -51,7 +53,7 @@ export default function NewChatModal({ open, onClose }) {
         if (!open) return;
 
         let ignore = false;
-        const t = setTimeout(async () => {
+        const timer = setTimeout(async () => {
             setLoading(true);
             try {
                 const res = await axios.get("/chat/users", {
@@ -65,7 +67,7 @@ export default function NewChatModal({ open, onClose }) {
 
         return () => {
             ignore = true;
-            clearTimeout(t);
+            clearTimeout(timer);
         };
     }, [open, q]);
 
@@ -99,20 +101,20 @@ export default function NewChatModal({ open, onClose }) {
                 type="button"
                 className="absolute inset-0 bg-black/40"
                 onClick={onClose}
-                aria-label="Close modal"
+                aria-label={t("chat.close")}
             />
 
             {/* modal */}
             <div className="relative mx-auto mt-24 w-[92%] max-w-lg rounded-2xl bg-white shadow-xl">
                 <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
                     <div className="text-base font-semibold text-neutral-700">
-                        Mulai Chat Baru
+                        {t("chat.new_modal_title")}
                     </div>
                     <button
                         type="button"
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl hover:bg-neutral-100"
                         onClick={onClose}
-                        aria-label="Close"
+                        aria-label={t("chat.close")}
                     >
                         <FiX className="h-5 w-5" />
                     </button>
@@ -127,7 +129,7 @@ export default function NewChatModal({ open, onClose }) {
                             ref={inputRef}
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
-                            placeholder="Cari nama / username / email..."
+                            placeholder={t("chat.new_modal_search")}
                             className={cn(
                                 "h-12 w-full rounded-xl border border-neutral-300 bg-white pl-10 pr-3 text-sm text-neutral-700",
                                 "focus:border-primary-700 focus:outline-none",
@@ -138,13 +140,13 @@ export default function NewChatModal({ open, onClose }) {
                     <div className="mt-4 max-h-[360px] overflow-y-auto pr-1">
                         {loading ? (
                             <div className="py-10 text-center text-sm text-neutral-500">
-                                Loading...
+                                {t("chat.loading")}
                             </div>
                         ) : null}
 
                         {empty ? (
                             <div className="py-10 text-center text-sm text-neutral-500">
-                                User tidak ditemukan.
+                                {t("chat.user_not_found")}
                             </div>
                         ) : null}
 
@@ -159,7 +161,7 @@ export default function NewChatModal({ open, onClose }) {
 
                     {creating ? (
                         <div className="mt-3 text-xs text-neutral-500">
-                            Membuat chat...
+                            {t("chat.creating")}
                         </div>
                     ) : null}
                 </div>

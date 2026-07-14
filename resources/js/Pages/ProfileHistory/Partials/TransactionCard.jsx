@@ -19,6 +19,10 @@ const STATUS_CONFIG = {
         labelKey: "ph.status_progress",
         badge: "bg-warning-100 text-warning-700",
     },
+    refunded: {
+        labelKey: "ph.status_refunded",
+        badge: "bg-danger-100 text-danger-700",
+    },
 };
 
 export default function TransactionCard({ transaction, onPay, onReview }) {
@@ -185,6 +189,22 @@ function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload
                 disabled={!snapToken}
             >
                 {t("trip.checkout.pay_now")}
+            </Button>
+        );
+    }
+
+    // Dana dikembalikan (jastip dihapus) — hanya bisa melihat detail
+    if (status === "refunded") {
+        return (
+            <Button
+                type="neutral"
+                variant="outline"
+                size="sm"
+                rounded={false}
+                className="rounded-lg"
+                onClick={onViewDetail}
+            >
+                {t("ph.view_detail")}
             </Button>
         );
     }

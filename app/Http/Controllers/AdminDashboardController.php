@@ -159,14 +159,7 @@ class AdminDashboardController extends Controller
     // Samakan resolusi gambar pergi bareng dengan halaman front (PergiBarengController)
     private function resolvePergiImage(?string $path): string
     {
-        $fallback = '/assets/pergi-bareng/PergiBarengHeader.avif';
-        if (! $path) {
-            return $fallback;
-        }
-        if (Str::startsWith($path, ['http://', 'https://', '/'])) {
-            return $path;
-        }
-        return '/storage/' . $path;
+        return $this->resolveStoredImage($path);
     }
 
     // Format produk jastip agar cocok dengan props JastipProductCard.jsx

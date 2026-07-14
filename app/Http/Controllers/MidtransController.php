@@ -45,6 +45,11 @@ class MidtransController extends Controller
                         ->select('transaction_id'))
                     ->orWhereIn('t.id', DB::table('jastip_orders')
                         ->whereIn('order_status', ['pending', 'unpaid'])
+                        ->select('transaction_id'))
+                    // Request titipan yang sudah ditawar & sedang menunggu pembayaran
+                    ->orWhereIn('t.id', DB::table('jastip_requests')
+                        ->where('status', 'quoted')
+                        ->whereNotNull('transaction_id')
                         ->select('transaction_id'));
             })
             ->pluck('t.id');
@@ -102,9 +107,27 @@ class MidtransController extends Controller
             ->where('transaction_id', $orderId)
             ->update(['order_status' => $orderStatus, 'updated_at' => now()]);
 
+        // Pesanan yang sudah di-refund (jastip dihapus jastiper) tidak boleh
+        // "hidup lagi" karena webhook/sync yang datang terlambat.
         DB::table('jastip_orders')
             ->where('transaction_id', $orderId)
+            ->where('order_status', '!=', 'refunded')
             ->update(['order_status' => $orderStatus, 'updated_at' => now()]);
+
+        // Request titipan: hanya request yang masih 'quoted' yang bisa berubah —
+        // paid → tandai dibayar; gagal/kedaluwarsa → lepaskan transaksi agar
+        // pemohon bisa mencoba membayar lagi dengan transaksi baru.
+        if ($orderStatus === 'paid') {
+            DB::table('jastip_requests')
+                ->where('transaction_id', $orderId)
+                ->where('status', 'quoted')
+                ->update(['status' => 'paid', 'updated_at' => now()]);
+        } elseif ($orderStatus === 'unpaid') {
+            DB::table('jastip_requests')
+                ->where('transaction_id', $orderId)
+                ->where('status', 'quoted')
+                ->update(['transaction_id' => null, 'updated_at' => now()]);
+        }
 
         // Saat lunas: buat peserta trip & masukkan pembeli ke grup chat
         if ($orderStatus === 'paid') {

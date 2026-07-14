@@ -24,6 +24,7 @@ class AdminJastipController extends Controller
 
         $search       = trim((string) $request->query('search', ''));
         $sort         = (string) $request->query('sort', 'latest');
+        $status       = (string) $request->query('status', 'all');
         $ordersSearch = trim((string) $request->query('orders_search', ''));
 
         $itemsQuery = JastipItem::query()
@@ -31,6 +32,11 @@ class AdminJastipController extends Controller
             ->with(['jastip_item_images', 'category'])
             ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
             ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'));
+
+        // Filter status jastiper (draft/published/buy_time/finished) di SQL
+        if ($status !== 'all') {
+            $itemsQuery->jastiperStatus($status);
+        }
 
         if ($search !== '') {
             // Nama produk dicari fuzzy (toleran typo); kategori tetap substring.
@@ -107,6 +113,7 @@ class AdminJastipController extends Controller
             'filters' => [
                 'search'        => $search,
                 'sort'          => $sort,
+                'status'        => $status,
                 'orders_search' => $ordersSearch,
             ],
         ]);
@@ -124,14 +131,14 @@ class AdminJastipController extends Controller
         $data = $this->validateItem($request, true);
         $item = $this->persistItem(new JastipItem(['user_id' => Auth::id()]), $request, $data);
 
-        ActivityLog::record('Membuat produk jastip: ' . $item->name);
+        ActivityLog::record('Membuat jastip: ' . $item->name);
 
         // Buat grup chat jastip langsung saat dibuat (jastiper jadi anggota pertama).
         (new \App\Services\Chat\GroupConversationService())->ensureJastipGroup($item->id, $item->user_id);
 
         return redirect()->route('admin.jastip.index')->with('flash', [
             'type' => 'success',
-            'message' => $item->isDraft() ? 'Produk jastip disimpan sebagai draft.' : 'Produk jastip berhasil dipublish.',
+            'message' => $item->isDraft() ? 'Jastip disimpan sebagai draft.' : 'Jastip berhasil dipublish.',
         ]);
     }
 
@@ -145,7 +152,7 @@ class AdminJastipController extends Controller
         if (! $item->isDraft()) {
             return redirect()->route('admin.jastip.index')->with('flash', [
                 'type' => 'info',
-                'message' => 'Produk yang sudah dipublish tidak dapat diedit lagi.',
+                'message' => 'Jastip yang sudah dipublish tidak dapat diedit lagi.',
             ]);
         }
 
@@ -202,37 +209,63 @@ class AdminJastipController extends Controller
         if (! $item->isDraft()) {
             return redirect()->route('admin.jastip.index')->with('flash', [
                 'type' => 'info',
-                'message' => 'Produk yang sudah dipublish tidak dapat diedit lagi.',
+                'message' => 'Jastip yang sudah dipublish tidak dapat diedit lagi.',
             ]);
         }
 
         $data = $this->validateItem($request);
         $this->persistItem($item, $request, $data);
 
-        ActivityLog::record('Memperbarui produk jastip: ' . $item->name);
+        ActivityLog::record('Memperbarui jastip: ' . $item->name);
 
         return redirect()->route('admin.jastip.index')->with('flash', [
             'type' => 'success',
-            'message' => 'Produk jastip berhasil diperbarui.',
+            'message' => 'Jastip berhasil diperbarui.',
         ]);
     }
 
     public function destroy($id)
     {
-        $item = JastipItem::where('user_id', Auth::id())->with('jastip_item_variants')->findOrFail($id);
+        $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
         $name = $item->name;
 
-        foreach ($item->jastip_item_images as $img) {
-            $this->deleteStoredImage($img->image_name);
+        // Jastip yang sudah dipublish boleh dihapus, KECUALI mulai H-1 sebelum
+        // batas pemesanan (end_date) — sejak saat itu jastiper dianggap sudah
+        // berkomitmen membelikan barang. Ini otomatis memblokir fase
+        // buy_time/finished karena end_date-nya sudah lewat.
+        if (! $item->canBeDeleted()) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Jastip tidak dapat dihapus mulai H-1 sebelum batas pemesanan berakhir.',
+            ]);
         }
-        foreach ($item->jastip_item_variants as $v) {
-            $this->deleteStoredImage($v->image_name);
-        }
-        $item->delete();
 
-        ActivityLog::record('Menghapus produk jastip: ' . $name);
+        $refunded = DB::transaction(function () use ($item) {
+            // Simulasi pengembalian dana: tandai pesanan yang sudah/masih
+            // berjalan sebagai 'refunded' agar riwayat pembeli tetap utuh.
+            $orderIds = DB::table('jastip_order_items')
+                ->where('jastip_item_id', $item->id)
+                ->pluck('jastip_order_id');
 
-        return back()->with('flash', ['type' => 'success', 'message' => 'Produk jastip berhasil dihapus.']);
+            $refunded = DB::table('jastip_orders')
+                ->whereIn('id', $orderIds)
+                ->whereIn('order_status', ['paid', 'pending'])
+                ->update(['order_status' => 'refunded', 'updated_at' => now()]);
+
+            // Soft delete: baris tetap ada sehingga riwayat transaksi pembeli,
+            // aktivitas penjualan, dan analitik tidak kehilangan referensi.
+            // File gambar sengaja tidak dihapus agar riwayat tetap tampil.
+            $item->delete();
+
+            return $refunded;
+        });
+
+        ActivityLog::record(
+            'Menghapus jastip: ' . $name
+            . ($refunded > 0 ? " (dana {$refunded} pesanan ditandai dikembalikan)" : '')
+        );
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Jastip berhasil dihapus.']);
     }
 
     public function publish($id)
@@ -240,9 +273,9 @@ class AdminJastipController extends Controller
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
         $item->update(['status' => JastipItem::STATUS_PUBLISHED]);
 
-        ActivityLog::record('Mempublikasikan produk jastip: ' . $item->name);
+        ActivityLog::record('Mempublikasikan jastip: ' . $item->name);
 
-        return back()->with('flash', ['type' => 'success', 'message' => 'Produk jastip berhasil dipublish.']);
+        return back()->with('flash', ['type' => 'success', 'message' => 'Jastip berhasil dipublish.']);
     }
 
     // #11: Buka ulang jastip yang sudah selesai → duplikat jadi draft baru
@@ -427,6 +460,8 @@ class AdminJastipController extends Controller
             'status'      => $isSoldOut ? 'sold_out' : $item->status,
             'jastiper_status' => $item->jastiperStatus(),
             'is_draft'    => $item->isDraft(),
+            'can_delete'  => $item->canBeDeleted(),
+            'has_paid_orders' => $sold > 0,
             'image'       => $item->relationLoaded('jastip_item_images') && $item->jastip_item_images->isNotEmpty()
                 ? $this->resolveImageUrl($item->jastip_item_images->first()->image_name)
                 : '/assets/default-image.png',
@@ -474,8 +509,8 @@ class AdminJastipController extends Controller
             'images.*'    => ['image', 'max:5120'],
             'removed_images' => ['nullable', 'array'],
         ], [
-            'images.required'          => 'Unggah minimal satu gambar produk.',
-            'images.min'               => 'Unggah minimal satu gambar produk.',
+            'images.required'          => 'Unggah minimal satu gambar barang.',
+            'images.min'               => 'Unggah minimal satu gambar barang.',
             'images.*.max'             => 'Ukuran gambar maksimal 5MB.',
             'variants.*.image.max'     => 'Ukuran gambar varian maksimal 5MB.',
             'pickup_province.required' => 'Provinsi lokasi ambil wajib dipilih.',

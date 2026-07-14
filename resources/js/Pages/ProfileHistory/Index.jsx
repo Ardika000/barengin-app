@@ -11,6 +11,7 @@ import ProfileSidebar from "./Partials/ProfileSidebar";
 import ProfileEditForm from "./Partials/ProfileEditForm";
 import TransactionCard from "./Partials/TransactionCard";
 import JalanBarengCard from "./Partials/JalanBarengCard";
+import JastipRequestCard from "./Partials/JastipRequestCard";
 import ReviewModal from "./Partials/ReviewModal";
 import JastipCard from "@/Pages/Home/Cards/JastipCard";
 import { useTranslation } from "@/lib/useTranslation";
@@ -25,6 +26,7 @@ import {
 
 const TABS = [
     { key: "transactions", labelKey: "ph.tab_transactions", pageParam: "tx_page", icon: FaReceipt },
+    { key: "requests", labelKey: "ph.tab_requests", pageParam: "req_page", icon: FaShoppingBag },
     { key: "history", labelKey: "ph.tab_history", pageParam: "jb_page", icon: FaRoute },
     { key: "jastip_history", labelKey: "ph.tab_jastip_history", pageParam: "jh_page", icon: FaShoppingBag },
     { key: "trips", labelKey: "ph.tab_trips", pageParam: "trip_page", icon: FaMapMarkedAlt },
@@ -40,6 +42,7 @@ export default function ProfileHistory({
     trip_favorites,
     pergi_barengs,
     jastip_favorites,
+    jastip_requests,
     tab = "transactions",
     midtrans_client_key,
 }) {
@@ -78,6 +81,23 @@ export default function ProfileHistory({
             onPending: () => router.reload({ only: ["transactions"] }),
             onError: () => router.reload({ only: ["transactions"] }),
             onClose: () => router.reload({ only: ["transactions"] }),
+        });
+    };
+
+    // Bayar request titipan yang sudah ditawar — muat ulang tab Titipan Saya
+    const handlePayRequest = (snapToken) => {
+        if (!snapToken) return;
+        if (!snapReady || !window.snap) {
+            toast.warning(t("ph.pay_not_ready"));
+            return;
+        }
+
+        const reload = () => router.reload({ only: ["jastip_requests"] });
+        window.snap.pay(snapToken, {
+            onSuccess: reload,
+            onPending: reload,
+            onError: reload,
+            onClose: reload,
         });
     };
 
@@ -154,6 +174,30 @@ export default function ProfileHistory({
                                         transaction={tx}
                                         onPay={handlePay}
                                         onReview={setReviewTarget}
+                                    />
+                                ))}
+                            </div>
+                        </TabSection>
+                    )}
+
+                    {/* Titipan Saya — request titipan & pembayarannya */}
+                    {activeTab === "requests" && (
+                        <TabSection
+                            paginator={jastip_requests}
+                            pageParam="req_page"
+                            onPageChange={goToPage}
+                            empty={{
+                                icon: <FaShoppingBag className="h-12 w-12" />,
+                                title: t("ph.empty_requests_title"),
+                                desc: t("ph.empty_requests_desc"),
+                            }}
+                        >
+                            <div className="space-y-4">
+                                {jastip_requests.data.map((req) => (
+                                    <JastipRequestCard
+                                        key={req.id}
+                                        request={req}
+                                        onPay={handlePayRequest}
                                     />
                                 ))}
                             </div>
