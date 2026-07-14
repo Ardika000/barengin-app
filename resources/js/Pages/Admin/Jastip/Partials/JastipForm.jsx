@@ -393,6 +393,18 @@ export default function JastipForm({
                     />
                     <p className="mt-1 pl-6 text-xs text-neutral-400">{t("jastip.form.has_variants_hint")}</p>
                 </div>
+
+                {/* Terima request titipan di luar katalog untuk item ini */}
+                <div className="mt-4 rounded-xl border border-dashed border-primary-200 bg-primary-50/50 p-4">
+                    <Checkbox
+                        id="allow_requests"
+                        checked={Boolean(data.allow_requests)}
+                        onChange={(checked) => setData("allow_requests", checked)}
+                        label={t("jastip.form.allow_requests")}
+                        labelClassName="font-semibold"
+                    />
+                    <p className="mt-1 pl-6 text-xs text-neutral-400">{t("jastip.form.allow_requests_hint")}</p>
+                </div>
             </div>
 
             {/* Tambah Varian — hanya bila punya varian, DI BAWAH Inventaris (#9) */}

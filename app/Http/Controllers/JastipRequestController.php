@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Jastip;
+use App\Models\JastipItem;
 use App\Models\JastipRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,21 +11,38 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 /**
- * Sisi pembeli fitur Request Titipan: telusuri destinasi jastiper yang
- * menerima request, ajukan permintaan, lalu bayar setelah ditawar.
+ * Sisi pembeli fitur Request Titipan: telusuri jastip yang menerima request
+ * (dikelompokkan per jastiper + destinasi), ajukan permintaan, lalu bayar
+ * setelah ditawar. Request terikat langsung ke sebuah jastip_item.
  */
 class JastipRequestController extends Controller
 {
     /** Biaya layanan tetap — selaras dengan checkout jastip biasa. */
     private const SERVICE_FEE = 5000;
 
-    /** Halaman "Request Titipan": destinasi jastiper yang menerima request. */
+    /**
+     * Halaman "Request Titipan": jastip published yang menerima request,
+     * dikelompokkan per jastiper + destinasi + lokasi ambil + batas pesan.
+     * Satu kartu = satu "trip" jastiper (id = jastip_item perwakilan).
+     */
     public function browse(Request $request)
     {
-        $trips = Jastip::query()
+        $trips = JastipItem::query()
+            ->join('users', 'users.id', '=', 'jastip_items.user_id')
             ->openForRequests()
-            ->with('user')
-            ->orderBy('end_date')
+            ->groupBy(
+                'jastip_items.user_id', 'users.full_name', 'users.username', 'users.profile_image',
+                'jastip_items.purchase_province', 'jastip_items.purchase_city',
+                'jastip_items.pickup_province', 'jastip_items.pickup_city', 'jastip_items.end_date',
+            )
+            ->selectRaw(
+                'MIN(jastip_items.id) as id, jastip_items.user_id,
+                 users.full_name, users.username, users.profile_image,
+                 jastip_items.purchase_province, jastip_items.purchase_city,
+                 jastip_items.pickup_province, jastip_items.pickup_city,
+                 jastip_items.end_date, COUNT(*) as item_count'
+            )
+            ->orderBy('jastip_items.end_date')
             ->paginate(9)
             ->withQueryString();
 
@@ -43,19 +60,16 @@ class JastipRequestController extends Controller
             $rating = $ratings->get($trip->user_id);
 
             return [
-                'id'               => $trip->id,
-                'title'            => $trip->title,
-                'origin_city'      => $trip->origin_city,
-                'destination_city' => $trip->destination_city,
-                'pickup_location'  => $trip->pickup_location,
-                'deadline_label'   => optional($trip->end_date)->translatedFormat('d M Y'),
-                'window_label'     => optional($trip->start_date)->translatedFormat('d M Y')
-                    . ' – ' . optional($trip->end_date)->translatedFormat('d M Y'),
+                'id'               => $trip->id, // jastip_item perwakilan → target request
+                'destination_city' => $trip->purchase_city ?: $trip->purchase_province,
+                'origin_city'      => $trip->pickup_city ?: $trip->pickup_province,
+                'deadline_label'   => optional($trip->end_date ? \Carbon\Carbon::parse($trip->end_date) : null)?->translatedFormat('d M Y'),
+                'item_count'       => (int) $trip->item_count,
                 'jastiper'         => [
-                    'id'       => $trip->user?->id,
-                    'name'     => $trip->user?->full_name,
-                    'username' => $trip->user?->username,
-                    'avatar'   => $this->resolveAvatarUrl($trip->user?->profile_image),
+                    'id'       => $trip->user_id,
+                    'name'     => $trip->full_name,
+                    'username' => $trip->username,
+                    'avatar'   => $this->resolveAvatarUrl($trip->profile_image),
                     'rating'   => $rating ? round((float) $rating->avg_rating, 1) : null,
                     'reviews'  => $rating ? (int) $rating->cnt : 0,
                 ],
@@ -65,11 +79,11 @@ class JastipRequestController extends Controller
         return Inertia::render('Jastip/Requests/Browse', ['trips' => $trips]);
     }
 
-    /** Ajukan request titipan ke satu destinasi jastiper. */
+    /** Ajukan request titipan yang terikat ke sebuah jastip (item). */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'jastip_id' => 'required|integer|exists:jastips,id',
+            'jastip_item_id' => 'required|integer|exists:jastip_items,id',
             'item_name' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'quantity'  => 'required|integer|min:1|max:100',
@@ -78,10 +92,11 @@ class JastipRequestController extends Controller
             'image'     => 'nullable|image|max:5120',
         ]);
 
-        $trip = Jastip::openForRequests()->findOrFail($validated['jastip_id']);
+        // Pastikan item masih menerima request & belum lewat batas pesan
+        $item = JastipItem::openForRequests()->findOrFail($validated['jastip_item_id']);
 
-        if ($trip->user_id === $request->user()->id) {
-            return back()->with('flash', ['type' => 'error', 'message' => 'Anda tidak bisa mengajukan titipan ke destinasi sendiri.']);
+        if ($item->user_id === $request->user()->id) {
+            return back()->with('flash', ['type' => 'error', 'message' => 'Anda tidak bisa mengajukan titipan ke jastip milik sendiri.']);
         }
 
         $imageName = null;
@@ -90,7 +105,7 @@ class JastipRequestController extends Controller
         }
 
         JastipRequest::create([
-            'jastip_id' => $trip->id,
+            'jastip_item_id' => $item->id,
             'user_id'   => $request->user()->id,
             'item_name' => $validated['item_name'],
             'description' => $validated['description'] ?? null,

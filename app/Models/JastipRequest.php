@@ -17,7 +17,7 @@ class JastipRequest extends Model
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
-        'jastip_id', 'user_id', 'item_name', 'description', 'quantity',
+        'jastip_item_id', 'user_id', 'item_name', 'description', 'quantity',
         'budget', 'note', 'image_name', 'status',
         'quoted_item_price', 'quoted_fee', 'quoted_at', 'transaction_id',
     ];
@@ -32,9 +32,10 @@ class JastipRequest extends Model
         ];
     }
 
-    public function jastip()
+    public function jastipItem()
     {
-        return $this->belongsTo(Jastip::class);
+        // withTrashed: item bisa di-soft-delete tetapi request tetap perlu konteksnya.
+        return $this->belongsTo(JastipItem::class)->withTrashed();
     }
 
     public function user()

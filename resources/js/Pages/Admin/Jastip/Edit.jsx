@@ -22,6 +22,7 @@ export default function Edit({ item, categories = [] }) {
         base_price: item.base_price ?? "",
         jastip_fee: item.jastip_fee ?? "",
         has_variants: Boolean(item.has_variants),
+        allow_requests: Boolean(item.allow_requests),
         max_slot: item.max_slot ?? "",
         min_buy: item.min_buy ?? "1",
         variants: item.variants?.length
@@ -55,6 +56,7 @@ export default function Edit({ item, categories = [] }) {
             ...d,
             publish: 0,
             has_variants: d.has_variants ? 1 : 0,
+            allow_requests: d.allow_requests ? 1 : 0,
             variants: d.has_variants ? d.variants : [],
         }));
         form.post(`/admin/jastip/${item.id}`, { forceFormData: true });

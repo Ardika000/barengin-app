@@ -21,6 +21,7 @@ export default function Create({ categories = [] }) {
         base_price: "",
         jastip_fee: "",
         has_variants: false,
+        allow_requests: false,
         max_slot: "",
         min_buy: "1",
         // Kosong saat awal; varian "Original" dibuat otomatis saat checkbox dicentang (#9)
@@ -40,6 +41,7 @@ export default function Create({ categories = [] }) {
             ...d,
             publish: 0,
             has_variants: d.has_variants ? 1 : 0,
+            allow_requests: d.allow_requests ? 1 : 0,
             // Kirim varian hanya bila diaktifkan (hindari validasi baris kosong)
             variants: d.has_variants ? d.variants : [],
         }));

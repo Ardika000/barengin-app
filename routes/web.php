@@ -25,7 +25,7 @@ use App\Http\Controllers\AdminMessageController;
 use App\Http\Controllers\AdminPergiBarengController;
 use App\Http\Controllers\AdminTripController;
 use App\Http\Controllers\AdminJastipController;
-use App\Http\Controllers\AdminJastipTripController;
+use App\Http\Controllers\AdminJastipRequestController;
 use App\Http\Controllers\JastipRequestController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ContactController;
@@ -361,20 +361,17 @@ Route::prefix('admin')->group(function () {
         Route::get('/create', [AdminJastipController::class, 'create'])->name('create');
         Route::get('/analytics', [AdminJastipController::class, 'analytics'])->name('analytics');
 
-        // Destinasi jastip + request titipan masuk (fitur Request Titipan)
-        Route::get('/trips', [AdminJastipTripController::class, 'index'])->name('trips.index');
-        Route::post('/trips', [AdminJastipTripController::class, 'store'])->name('trips.store');
-        Route::post('/trips/{id}', [AdminJastipTripController::class, 'update'])->whereNumber('id')->name('trips.update');
-        Route::delete('/trips/{id}', [AdminJastipTripController::class, 'destroy'])->whereNumber('id')->name('trips.destroy');
-        Route::get('/requests', [AdminJastipTripController::class, 'requests'])->name('requests.index');
-        Route::post('/requests/{id}/quote', [AdminJastipTripController::class, 'quote'])->whereNumber('id')->name('requests.quote');
-        Route::post('/requests/{id}/reject', [AdminJastipTripController::class, 'reject'])->whereNumber('id')->name('requests.reject');
+        // Request titipan masuk (fitur Request Titipan — model per-item)
+        Route::get('/requests', [AdminJastipRequestController::class, 'requests'])->name('requests.index');
+        Route::post('/requests/{id}/quote', [AdminJastipRequestController::class, 'quote'])->whereNumber('id')->name('requests.quote');
+        Route::post('/requests/{id}/reject', [AdminJastipRequestController::class, 'reject'])->whereNumber('id')->name('requests.reject');
 
         Route::post('/', [AdminJastipController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [AdminJastipController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::post('/{id}', [AdminJastipController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminJastipController::class, 'publish'])->whereNumber('id')->name('publish');
         Route::post('/{id}/reopen', [AdminJastipController::class, 'reopen'])->whereNumber('id')->name('reopen');
+        Route::post('/{id}/toggle-requests', [AdminJastipController::class, 'toggleRequests'])->whereNumber('id')->name('toggle-requests');
         Route::delete('/{id}', [AdminJastipController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers, FiEye, FiRefreshCw } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers, FiEye, FiRefreshCw, FiInbox } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
 const STATUS_STYLE = {
@@ -19,7 +19,7 @@ const LIFECYCLE_STYLE = {
 const FALLBACK_IMG = "/assets/default-image.png";
 
 // Kartu produk jastip. `manage` menampilkan aksi (edit/publish/hapus) saat hover.
-export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail, onReopen }) {
+export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail, onReopen, onToggleRequests }) {
     const { t } = useTranslation();
 
     const pct = item.max_slot > 0 ? Math.min(100, (item.sold / item.max_slot) * 100) : 0;
@@ -89,6 +89,19 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-primary-700 shadow-sm hover:bg-white"
                             >
                                 <FiUsers size={15} />
+                            </button>
+                        )}
+                        {/* Buka/tutup penerimaan request titipan (live, hanya item published) */}
+                        {!item.is_draft && onToggleRequests && (
+                            <button
+                                type="button"
+                                onClick={onToggleRequests}
+                                title={item.allow_requests ? t("jastip.action_requests_on") : t("jastip.action_requests_off")}
+                                className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm ${
+                                    item.allow_requests ? "bg-primary-700 text-white hover:bg-primary-600" : " hover:bg-white bg-white/95 text-neutral-500"
+                                }`}
+                            >
+                                <FiInbox size={15} />
                             </button>
                         )}
                         {/* #11: buka ulang jastip yang sudah selesai menjadi draft baru */}

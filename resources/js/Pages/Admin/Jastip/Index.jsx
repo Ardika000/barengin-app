@@ -220,6 +220,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                         onPublish={() => setPublishModal({ open: true, id: item.id, name: item.name })}
                         onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}
                         onReopen={() => setReopenModal({ open: true, id: item.id, name: item.name })}
+                        onToggleRequests={() => router.post(`/admin/jastip/${item.id}/toggle-requests`, {}, { preserveScroll: true })}
                         onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name, hasPaidOrders: item.has_paid_orders })}
                     />
                 ))}

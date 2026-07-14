@@ -13,7 +13,6 @@ import {
     FiMessageSquare,
     FiShoppingCart,
     FiGlobe,
-    FiMap,
     FiInbox,
 } from "react-icons/fi";
 import { FaSuitcase, FaCar } from "react-icons/fa6";
@@ -40,7 +39,6 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen
             requires: null,
             items: [
                 { name: t("admin.nav.jastip_mgmt"), icon: <FiShoppingCart />, href: "/admin/jastip" },
-                { name: t("admin.nav.jastip_trips"), icon: <FiMap />, href: "/admin/jastip/trips" },
                 { name: t("admin.nav.jastip_requests"), icon: <FiInbox />, href: "/admin/jastip/requests" },
                 { name: t("admin.nav.jastip_analytics"), icon: <FiBarChart2 />, href: "/admin/jastip/analytics" },
             ],

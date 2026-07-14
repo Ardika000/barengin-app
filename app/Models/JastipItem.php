@@ -17,7 +17,7 @@ class JastipItem extends Model
         'pickup_province', 'pickup_city', 'pickup_address',
         'purchase_province', 'purchase_city', 'purchase_address',
         'max_slot', 'base_price', 'jastip_fee', 'min_buy', 'has_variants', 'weight_gram',
-        'status', 'start_date', 'end_date', 'pickup_start_date', 'pickup_end_date',
+        'status', 'allow_requests', 'start_date', 'end_date', 'pickup_start_date', 'pickup_end_date',
     ];
 
     protected function casts()
@@ -27,6 +27,7 @@ class JastipItem extends Model
             'jastip_fee'   => 'decimal:2',
             'weight_gram'  => 'decimal:2',
             'has_variants' => 'boolean',
+            'allow_requests' => 'boolean',
             'start_date'   => 'date',
             'end_date'     => 'date',
             'pickup_start_date' => 'date',
@@ -62,6 +63,24 @@ class JastipItem extends Model
     public function jastip_order_items()
     {
         return $this->hasMany(JastipOrderItem::class);
+    }
+
+    public function jastip_requests()
+    {
+        return $this->hasMany(JastipRequest::class);
+    }
+
+    /**
+     * Item yang menerima request titipan & masih terbuka untuk memesan:
+     * published, allow_requests aktif, dan batas pemesanan belum lewat.
+     */
+    public function scopeOpenForRequests($query)
+    {
+        return $query
+            ->where('jastip_items.status', self::STATUS_PUBLISHED)
+            ->where('jastip_items.allow_requests', true)
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '>=', \Carbon\Carbon::today());
     }
 
     // ── Helpers ──────────────────────────────────────────────

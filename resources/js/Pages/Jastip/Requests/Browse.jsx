@@ -24,7 +24,7 @@ export default function Browse({ trips = {} }) {
 
     const [requestModal, setRequestModal] = useState({ open: false, trip: null });
     const form = useForm({
-        jastip_id: null,
+        jastip_item_id: null,
         item_name: "",
         description: "",
         quantity: 1,
@@ -40,7 +40,7 @@ export default function Browse({ trips = {} }) {
         }
         form.reset();
         form.clearErrors();
-        form.setData("jastip_id", trip.id);
+        form.setData("jastip_item_id", trip.id);
         setRequestModal({ open: true, trip });
     };
 
@@ -82,6 +82,7 @@ export default function Browse({ trips = {} }) {
                 }
                 confirmLabel={t("jastip.request.cta")}
                 confirmType="primary"
+                size="md"
             >
                 <div>
                     <label className={labelClass}>{t("jastip.request.form.item_name")}</label>
@@ -208,7 +209,11 @@ export default function Browse({ trips = {} }) {
 
                                 {/* Rute */}
                                 <div className="space-y-2 text-sm text-neutral-600">
-                                    {trip.title && <p className="font-semibold text-neutral-700">{trip.title}</p>}
+                                    {trip.item_count > 0 && (
+                                        <p className="text-xs font-semibold text-primary-700">
+                                            {trip.item_count} {t("jastip.request.listed_items")}
+                                        </p>
+                                    )}
                                     <p className="flex items-center gap-2">
                                         <FaPlaneDeparture className="shrink-0 text-neutral-400" size={13} />
                                         {t("jastip.card.bought_in")} <span className="font-semibold text-neutral-800">{trip.destination_city}</span>

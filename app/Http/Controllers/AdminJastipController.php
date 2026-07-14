@@ -278,6 +278,24 @@ class AdminJastipController extends Controller
         return back()->with('flash', ['type' => 'success', 'message' => 'Jastip berhasil dipublish.']);
     }
 
+    /**
+     * Buka/tutup penerimaan request titipan untuk satu jastip. Sengaja tidak
+     * terikat aturan #14 (item published terkunci edit) — flag ini boleh
+     * diubah kapan pun agar jastiper bisa membuka/menutup titipan saat aktif.
+     */
+    public function toggleRequests($id)
+    {
+        $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
+        $item->update(['allow_requests' => ! $item->allow_requests]);
+
+        return back()->with('flash', [
+            'type' => 'success',
+            'message' => $item->allow_requests
+                ? 'Jastip ini kini menerima request titipan.'
+                : 'Jastip ini berhenti menerima request titipan.',
+        ]);
+    }
+
     // #11: Buka ulang jastip yang sudah selesai → duplikat jadi draft baru
     // (semua data ikut, gambar & varian disalin) dengan tanggal dikosongkan,
     // lalu arahkan ke form edit agar jastiper mengatur jadwal baru.
@@ -462,6 +480,7 @@ class AdminJastipController extends Controller
             'is_draft'    => $item->isDraft(),
             'can_delete'  => $item->canBeDeleted(),
             'has_paid_orders' => $sold > 0,
+            'allow_requests' => (bool) $item->allow_requests,
             'image'       => $item->relationLoaded('jastip_item_images') && $item->jastip_item_images->isNotEmpty()
                 ? $this->resolveImageUrl($item->jastip_item_images->first()->image_name)
                 : '/assets/default-image.png',
@@ -488,6 +507,7 @@ class AdminJastipController extends Controller
             'base_price'         => ['required', 'numeric', 'min:0'],
             'jastip_fee'         => ['nullable', 'numeric', 'min:0'],
             'has_variants'       => ['required', 'boolean'],
+            'allow_requests'     => ['sometimes', 'boolean'],
             // Tanpa varian: stok & min pembelian di tingkat produk
             'max_slot'           => ['required_if:has_variants,0,false', 'nullable', 'integer', 'min:1'],
             'min_buy'            => ['required_if:has_variants,0,false', 'nullable', 'integer', 'min:1'],
@@ -558,6 +578,7 @@ class AdminJastipController extends Controller
                 'base_price'         => $data['base_price'],
                 'jastip_fee'         => $data['jastip_fee'] ?? 0,
                 'has_variants'       => $hasVariants,
+                'allow_requests'     => filter_var($data['allow_requests'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'max_slot'           => $totalStock,
                 'min_buy'            => $minBuy,
                 'start_date'         => $data['start_date'] ?? null,

@@ -118,6 +118,9 @@ class ProfileHistoryController extends Controller
     {
         $transactions = Transaction::query()
             ->where('user_id', $user->id)
+            // Hanya transaksi pembelian; request titipan (type 'jastip_request')
+            // dikelola sepenuhnya di tab "Titipan Saya".
+            ->whereIn('type', ['jastip', 'trip'])
             ->with([
                 'trip_order.trip',
                 'jastip_order.jastip_order_items.jastip_item.jastip_item_images',
@@ -643,13 +646,14 @@ class ProfileHistoryController extends Controller
     {
         $requests = \App\Models\JastipRequest::query()
             ->where('user_id', $user->id)
-            ->with(['jastip.user'])
+            ->with(['jastipItem.user'])
             ->latest()
             ->paginate(5, ['*'], 'req_page')
             ->withQueryString();
 
         $requests->getCollection()->transform(function ($req) {
-            $jastiper = $req->jastip?->user;
+            $item = $req->jastipItem;
+            $jastiper = $item?->user;
 
             return [
                 'id'          => $req->id,
@@ -664,9 +668,9 @@ class ProfileHistoryController extends Controller
                 'quoted_fee'  => $req->quoted_fee !== null ? (float) $req->quoted_fee : null,
                 'quoted_total' => in_array($req->status, ['quoted', 'paid'], true) ? $req->quotedTotal() : null,
                 'created_label' => $req->created_at->translatedFormat('d M Y'),
-                'destination' => $req->jastip?->destination_city,
-                'pickup_city' => $req->jastip?->origin_city,
-                'deadline_label' => optional($req->jastip?->end_date)->translatedFormat('d M Y'),
+                'destination' => $item?->purchase_city ?: $item?->purchase_province,
+                'pickup_city' => $item?->pickup_city ?: $item?->pickup_province,
+                'deadline_label' => optional($item?->end_date)->translatedFormat('d M Y'),
                 'jastiper'    => [
                     'id'       => $jastiper?->id,
                     'name'     => $jastiper?->full_name,

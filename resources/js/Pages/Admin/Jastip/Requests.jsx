@@ -20,7 +20,7 @@ const REQUEST_STATUS_BADGE = {
 
 // "Permintaan Titipan" — request barang di luar katalog yang masuk ke
 // destinasi jastiper. Aksi: beri penawaran (harga + biaya) atau tolak.
-export default function Requests({ requests = {}, trip_options = [], filters = {} }) {
+export default function Requests({ requests = {}, item_options = [], filters = {} }) {
     const { t } = useTranslation();
     const rows = requests.data ?? [];
 
@@ -29,7 +29,7 @@ export default function Requests({ requests = {}, trip_options = [], filters = {
     const quoteForm = useForm({ quoted_item_price: "", quoted_fee: "" });
 
     const applyFilter = (patch) => {
-        const params = { status: filters.status ?? "all", trip_id: filters.trip_id ?? "", ...patch };
+        const params = { status: filters.status ?? "all", item_id: filters.item_id ?? "", ...patch };
         Object.keys(params).forEach((k) => {
             if (params[k] === "" || params[k] == null || params[k] === "all") delete params[k];
         });
@@ -126,12 +126,12 @@ export default function Requests({ requests = {}, trip_options = [], filters = {
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <select
-                            value={filters.trip_id ?? ""}
-                            onChange={(e) => applyFilter({ trip_id: e.target.value })}
+                            value={filters.item_id ?? ""}
+                            onChange={(e) => applyFilter({ item_id: e.target.value })}
                             className={selectClass + " w-48"}
                         >
-                            <option value="">{t("jastip.req.all_trips")}</option>
-                            {trip_options.map((o) => (
+                            <option value="">{t("jastip.req.all_items")}</option>
+                            {item_options.map((o) => (
                                 <option key={o.id} value={o.id}>{o.label}</option>
                             ))}
                         </select>
