@@ -74,6 +74,33 @@ class GroupConversationService{
         return $conversation;
     }
 
+    /**
+     * Re-trip: pakai grup yang SAMA tetapi keluarkan semua peserta lama, sisakan
+     * hanya pemilik (pemandu) — menunggu peserta run baru bergabung. Dipanggil
+     * dari AdminTripController::retrip.
+     */
+    public function resetTripGroupToOwner(int $tripId, int $ownerId): void
+    {
+        $conversation = Conversation::where('trip_id', $tripId)
+            ->where('is_group', true)
+            ->first();
+
+        if (! $conversation) {
+            return;
+        }
+
+        $others = $conversation->participants()
+            ->where('users.id', '!=', $ownerId)
+            ->pluck('users.id');
+
+        if ($others->isNotEmpty()) {
+            $conversation->participants()->detach($others->all());
+        }
+
+        // Pemilik tetap jadi anggota agar grup tak kehilangan pengelolanya.
+        $this->attachIfMissing($conversation, $ownerId);
+    }
+
     private function attachIfMissing(Conversation $conversation, ?int $userId): void
     {
         if (! $userId) {

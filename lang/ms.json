@@ -485,6 +485,7 @@
     "admin.trip.action_delete": "Padam",
     "admin.trip.action_view": "Lihat di Trip Bareng",
     "admin.trip.action_retrip": "Jalankan Semula Trip",
+    "admin.trip.action_group_chat": "Buka Sembang Kumpulan",
     "admin.trip.retrip_title": "Jalankan Semula Trip?",
     "admin.trip.reopen_title": "Buka Semula Trip",
     "admin.trip.reopen_subtitle": "Kemas kini butiran trip dan tetapkan jadual baharu. Nama & lokasi perjalanan tidak boleh diubah.",

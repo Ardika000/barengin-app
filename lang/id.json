@@ -485,6 +485,7 @@
     "admin.trip.action_delete": "Hapus",
     "admin.trip.action_view": "Lihat di Trip Bareng",
     "admin.trip.action_retrip": "Buka Ulang Trip",
+    "admin.trip.action_group_chat": "Buka Grup Chat",
     "admin.trip.retrip_title": "Buka Ulang Trip?",
     "admin.trip.reopen_title": "Buka Ulang Trip",
     "admin.trip.reopen_subtitle": "Perbarui detail trip dan atur jadwal baru. Nama & lokasi perjalanan tidak dapat diubah.",

@@ -485,6 +485,7 @@
     "admin.trip.action_delete": "Delete",
     "admin.trip.action_view": "View in Trip Bareng",
     "admin.trip.action_retrip": "Re-run Trip",
+    "admin.trip.action_group_chat": "Open Group Chat",
     "admin.trip.retrip_title": "Re-run this Trip?",
     "admin.trip.reopen_title": "Reopen Trip",
     "admin.trip.reopen_subtitle": "Update the trip details and set a new schedule. Trip name and location cannot be changed.",

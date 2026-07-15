@@ -4,7 +4,13 @@ import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import Input from "@/Components/Input";
-import { FaStar, FaSuitcase, FaBagShopping, FaTrophy, FaLocationCrosshairs } from "react-icons/fa6";
+import {
+    FaStar,
+    FaSuitcase,
+    FaBagShopping,
+    FaTrophy,
+    FaLocationCrosshairs,
+} from "react-icons/fa6";
 import { FaCrown, FaFire } from "react-icons/fa";
 import { FiSearch } from "react-icons/fi";
 import StreakBadge from "@/Components/StreakBadge";
@@ -12,17 +18,67 @@ import { useTranslation } from "@/lib/useTranslation";
 import { fuzzyIncludes } from "@/lib/fuzzyMatch";
 
 const BOARDS = [
-    { key: "purchase_trip", tab: "lb.tab_purchase_trip", metric: "lb.metric_purchase_trip", unit: "lb.unit_trip", rating: false, Icon: FaSuitcase },
-    { key: "purchase_jastip", tab: "lb.tab_purchase_jastip", metric: "lb.metric_purchase_jastip", unit: "lb.unit_jastip", rating: false, Icon: FaBagShopping },
-    { key: "best_guider", tab: "lb.tab_best_guider", metric: "lb.metric_created_trip", unit: "lb.unit_trip", rating: true, Icon: FaSuitcase },
-    { key: "best_jastiper", tab: "lb.tab_best_jastiper", metric: "lb.metric_created_jastip", unit: "lb.unit_jastip", rating: true, Icon: FaBagShopping },
-    { key: "streak", tab: "lb.tab_streak", metric: "lb.metric_streak", unit: "lb.unit_day", rating: false, Icon: FaFire },
+    {
+        key: "purchase_trip",
+        tab: "lb.tab_purchase_trip",
+        metric: "lb.metric_purchase_trip",
+        unit: "lb.unit_trip",
+        rating: false,
+        Icon: FaSuitcase,
+    },
+    {
+        key: "purchase_jastip",
+        tab: "lb.tab_purchase_jastip",
+        metric: "lb.metric_purchase_jastip",
+        unit: "lb.unit_jastip",
+        rating: false,
+        Icon: FaBagShopping,
+    },
+    {
+        key: "best_guider",
+        tab: "lb.tab_best_guider",
+        metric: "lb.metric_created_trip",
+        unit: "lb.unit_trip",
+        rating: true,
+        Icon: FaSuitcase,
+    },
+    {
+        key: "best_jastiper",
+        tab: "lb.tab_best_jastiper",
+        metric: "lb.metric_created_jastip",
+        unit: "lb.unit_jastip",
+        rating: true,
+        Icon: FaBagShopping,
+    },
+    {
+        key: "streak",
+        tab: "lb.tab_streak",
+        metric: "lb.metric_streak",
+        unit: "lb.unit_day",
+        rating: false,
+        Icon: FaFire,
+    },
 ];
 
 const PODIUM_STYLE = {
-    1: { ring: "ring-yellow-400", badge: "bg-yellow-400 text-white", order: "order-2 md:-translate-y-5", size: "h-24 w-24" },
-    2: { ring: "ring-neutral-300", badge: "bg-neutral-400 text-white", order: "order-1", size: "h-20 w-20" },
-    3: { ring: "ring-amber-500", badge: "bg-amber-600 text-white", order: "order-3", size: "h-20 w-20" },
+    1: {
+        ring: "ring-yellow-400",
+        badge: "bg-yellow-400 text-white",
+        order: "order-2 md:-translate-y-5",
+        size: "h-24 w-24",
+    },
+    2: {
+        ring: "ring-neutral-300",
+        badge: "bg-neutral-400 text-white",
+        order: "order-1",
+        size: "h-20 w-20",
+    },
+    3: {
+        ring: "ring-amber-500",
+        badge: "bg-amber-600 text-white",
+        order: "order-3",
+        size: "h-20 w-20",
+    },
 };
 
 export default function Leaderboard({ boards = {}, streakLeader = null }) {
@@ -35,12 +91,14 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
     const rows = boards[activeKey] || [];
     const unit = t(board.unit);
 
-    const isMe = (u) => authUserId != null && String(u.id) === String(authUserId);
+    const isMe = (u) =>
+        authUserId != null && String(u.id) === String(authUserId);
 
     // Saat mencari, tampilkan daftar rata (tanpa podium) hasil pencocokan fuzzy.
     const searching = query.trim() !== "";
     const filtered = useMemo(
-        () => (searching ? rows.filter((r) => fuzzyIncludes(r.name, query)) : rows),
+        () =>
+            searching ? rows.filter((r) => fuzzyIncludes(r.name, query)) : rows,
         [rows, query, searching],
     );
 
@@ -48,10 +106,17 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
     const rest = rows.slice(3);
 
     // Urutan podium: rank 2 (kiri), rank 1 (tengah), rank 3 (kanan)
-    const podiumOrder = [topThree.find((r) => r.rank === 2), topThree.find((r) => r.rank === 1), topThree.find((r) => r.rank === 3)].filter(Boolean);
+    const podiumOrder = [
+        topThree.find((r) => r.rank === 2),
+        topThree.find((r) => r.rank === 1),
+        topThree.find((r) => r.rank === 3),
+    ].filter(Boolean);
 
     // Peringkat user login di papan yang sedang ditampilkan (untuk label tombol).
-    const myRank = useMemo(() => rows.find((u) => isMe(u))?.rank, [rows, authUserId]);
+    const myRank = useMemo(
+        () => rows.find((u) => isMe(u))?.rank,
+        [rows, authUserId],
+    );
 
     // Tombol melayang "peringkat kamu": muncul saat baris user login berada di luar
     // viewport, hilang saat terlihat (mirip scroll-to-top). Cek posisi secara
@@ -70,7 +135,8 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                 return;
             }
             const r = el.getBoundingClientRect();
-            const vh = window.innerHeight || document.documentElement.clientHeight;
+            const vh =
+                window.innerHeight || document.documentElement.clientHeight;
             // Terlihat bila sebagian barisnya masuk viewport (buffer ~navbar atas).
             const visible = r.top < vh - 24 && r.bottom > 88;
             setShowJump(!visible);
@@ -90,14 +156,25 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
         };
     }, [activeKey, query, searching, myRank]);
 
-    const jumpToMe = () =>
-        meElRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const jumpToMe = () => {
+        document
+            .querySelector("[data-leaderboard-me]")
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
 
     const ProfileWrap = ({ user, className, children, ...rest }) =>
         user.username ? (
-            <Link href={`/forum/users/${user.username}`} className={className} {...rest}>{children}</Link>
+            <Link
+                href={`/forum/users/${user.username}`}
+                className={className}
+                {...rest}
+            >
+                {children}
+            </Link>
         ) : (
-            <div className={className} {...rest}>{children}</div>
+            <div className={className} {...rest}>
+                {children}
+            </div>
         );
 
     const YouBadge = () => (
@@ -116,25 +193,41 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                             <th className="px-6 py-3">{t("lb.col_rank")}</th>
                             <th className="px-6 py-3">{t("lb.col_user")}</th>
                             <th className="px-6 py-3">{t(board.metric)}</th>
-                            {board.rating && <th className="px-6 py-3">{t("lb.col_rating")}</th>}
-                            <th className="px-6 py-3 text-right">{t("lb.col_action")}</th>
+                            {board.rating && (
+                                <th className="px-6 py-3">
+                                    {t("lb.col_rating")}
+                                </th>
+                            )}
+                            <th className="px-6 py-3 text-right">
+                                {t("lb.col_action")}
+                            </th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
                         {list.map((u) => (
                             <tr
                                 key={u.id}
-                                {...(isMe(u) ? { "data-leaderboard-me": "true" } : {})}
+                                {...(isMe(u)
+                                    ? { "data-leaderboard-me": "true" }
+                                    : {})}
                                 className={`transition ${isMe(u) ? "bg-primary-50/70" : "hover:bg-neutral-50/60"}`}
                             >
-                                <td className="px-6 py-3.5 text-sm font-semibold text-neutral-500">#{u.rank}</td>
+                                <td className="px-6 py-3.5 text-sm font-semibold text-neutral-500">
+                                    #{u.rank}
+                                </td>
                                 <td className="px-6 py-3.5">
-                                    <ProfileWrap user={u} className="flex items-center gap-3 group">
+                                    <ProfileWrap
+                                        user={u}
+                                        className="flex items-center gap-3 group"
+                                    >
                                         <img
                                             src={u.avatar}
                                             alt={u.name}
                                             className={`h-9 w-9 rounded-full border object-cover ${isMe(u) ? "border-primary-500 ring-2 ring-primary-200" : "border-neutral-200"}`}
-                                            onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
+                                            onError={(e) => {
+                                                e.target.src =
+                                                    "/assets/default-profile.png";
+                                            }}
                                         />
                                         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800 group-hover:text-primary-700">
                                             {u.name}
@@ -142,17 +235,28 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                                         </span>
                                     </ProfileWrap>
                                 </td>
-                                <td className="px-6 py-3.5 text-sm text-neutral-600">{u.count} {unit}</td>
+                                <td className="px-6 py-3.5 text-sm text-neutral-600">
+                                    {u.count} {unit}
+                                </td>
                                 {board.rating && (
                                     <td className="px-6 py-3.5">
                                         <span className="flex items-center gap-1 text-sm font-medium text-neutral-700">
-                                            <FaStar className="text-amber-400" /> {Number(u.rating).toFixed(1)}
+                                            <FaStar className="text-amber-400" />{" "}
+                                            {Number(u.rating).toFixed(1)}
                                         </span>
                                     </td>
                                 )}
                                 <td className="px-6 py-3.5 text-right">
                                     {u.username && (
-                                        <Button isButtonLink href={`/forum/users/${u.username}`} type="primary" variant="outline" size="xs" rounded={false} className="rounded-lg">
+                                        <Button
+                                            isButtonLink
+                                            href={`/forum/users/${u.username}`}
+                                            type="primary"
+                                            variant="outline"
+                                            size="xs"
+                                            rounded={false}
+                                            className="rounded-lg"
+                                        >
                                             {t("lb.view_profile")}
                                         </Button>
                                     )}
@@ -172,43 +276,13 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
             {/* Header */}
             <div className="mb-8 text-center">
                 <h1 className="mb-2 flex items-center justify-center gap-2 text-2xl font-bold text-neutral-800 md:text-3xl">
-                    <FaTrophy className="text-yellow-400" /> {t("nav.leaderboard")}
+                    <FaTrophy className="text-yellow-400" />{" "}
+                    {t("nav.leaderboard")}
                 </h1>
-                <p className="mx-auto max-w-2xl text-sm text-neutral-500">{t("lb.subtitle")}</p>
+                <p className="mx-auto max-w-2xl text-sm text-neutral-500">
+                    {t("lb.subtitle")}
+                </p>
             </div>
-
-            {/* Pemuncak streak harian saat ini */}
-            {streakLeader && (
-                <div className="mx-auto mb-8 max-w-2xl">
-                    <ProfileWrap
-                        user={streakLeader}
-                        className="group flex items-center gap-4 rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 shadow-sm transition hover:shadow-md"
-                    >
-                        <div className="relative shrink-0">
-                            <img
-                                src={streakLeader.avatar}
-                                alt={streakLeader.name}
-                                className="h-14 w-14 rounded-full border-2 border-orange-300 object-cover"
-                                onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
-                            />
-                            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white shadow ring-2 ring-white">
-                                <FaFire className="text-xs" />
-                            </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold uppercase tracking-wide text-orange-600">
-                                {t("lb.streak_leader")}
-                            </p>
-                            <p className="flex items-center gap-2 truncate text-base font-bold text-neutral-800 group-hover:text-primary-700">
-                                {streakLeader.name}
-                                {isMe(streakLeader) && <YouBadge />}
-                            </p>
-                            <p className="text-xs text-neutral-500">{t("lb.streak_leader_sub")}</p>
-                        </div>
-                        <StreakBadge count={streakLeader.streak_count} className="shrink-0" />
-                    </ProfileWrap>
-                </div>
-            )}
 
             {/* Tabs */}
             <div className="mb-8 flex flex-wrap justify-center gap-2">
@@ -266,7 +340,9 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                                 <ProfileWrap
                                     key={u.id}
                                     user={u}
-                                    {...(me ? { "data-leaderboard-me": "true" } : {})}
+                                    {...(me
+                                        ? { "data-leaderboard-me": "true" }
+                                        : {})}
                                     className={`flex w-32 flex-col items-center rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md md:w-44 ${s.order} ${me ? "border-primary-400 ring-2 ring-primary-300" : "border-neutral-100"}`}
                                 >
                                     <div className="relative mb-3">
@@ -277,21 +353,33 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                                             src={u.avatar}
                                             alt={u.name}
                                             className={`rounded-full object-cover ring-4 ${s.ring} ${s.size}`}
-                                            onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
+                                            onError={(e) => {
+                                                e.target.src =
+                                                    "/assets/default-profile.png";
+                                            }}
                                         />
-                                        <span className={`absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[11px] font-bold ${s.badge}`}>
+                                        <span
+                                            className={`absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[11px] font-bold ${s.badge}`}
+                                        >
                                             #{u.rank}
                                         </span>
                                     </div>
-                                    <h3 className="line-clamp-1 text-center text-sm font-bold text-neutral-800">{u.name}</h3>
-                                    {me && <div className="mt-1"><YouBadge /></div>}
+                                    <h3 className="line-clamp-1 text-center text-sm font-bold text-neutral-800">
+                                        {u.name}
+                                    </h3>
+                                    {me && (
+                                        <div className="mt-1">
+                                            <YouBadge />
+                                        </div>
+                                    )}
                                     <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs font-semibold text-neutral-600">
                                         <span className="flex items-center gap-1 text-primary-700">
                                             <board.Icon /> {u.count} {unit}
                                         </span>
                                         {board.rating && (
                                             <span className="flex items-center gap-1">
-                                                <FaStar className="text-amber-400" /> {Number(u.rating).toFixed(1)}
+                                                <FaStar className="text-amber-400" />{" "}
+                                                {Number(u.rating).toFixed(1)}
                                             </span>
                                         )}
                                     </div>

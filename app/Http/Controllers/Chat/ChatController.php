@@ -47,8 +47,8 @@ class ChatController extends Controller
 
         $conversation->load([
             'participants:id,full_name,profile_image',
-            'trip:id,name,guider_id,image',
-            'pergi_bareng:id,name,img_name,initiator_id',
+            'trip:id,name,guider_id,image,start_date,end_date',
+            'pergi_bareng:id,name,img_name,initiator_id,time_appointment',
             'jastip_item:id,name,user_id',
             'jastip_item.jastip_item_images:id,jastip_item_id,image_name',
         ]);
@@ -99,6 +99,10 @@ class ChatController extends Controller
                 'peer_last_read_at' => $peerLastReadAt,
                 'owner_id' => $ownerId ? (int) $ownerId : null,
                 'is_owner' => $ownerId !== null && (int) $ownerId === (int) $user->id,
+                // Baris pembeda untuk grup (tanggal/jam), agar grup dengan nama
+                // sama — mis. beberapa "Pergi Bareng" ke rute yang sama — bisa
+                // dibedakan.
+                'group_meta' => $conversation->is_group ? $this->groupMeta($conversation) : null,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->full_name,
@@ -441,8 +445,8 @@ class ChatController extends Controller
         return $user->conversations()
             ->with([
                 'participants:id,full_name,profile_image',
-                'trip:id,name,image',
-                'pergi_bareng:id,name,img_name',
+                'trip:id,name,image,start_date,end_date',
+                'pergi_bareng:id,name,img_name,time_appointment',
                 'jastip_item:id,name,user_id',
                 'jastip_item.jastip_item_images:id,jastip_item_id,image_name',
             ])
@@ -491,12 +495,39 @@ class ChatController extends Controller
                     'title' => $title ?? 'Chat',
                     'avatar' => $avatar,
                     'subtitle' => $subtitle ?? '',
+                    'group_meta' => $c->is_group ? $this->groupMeta($c) : null,
                     'last_message_at' => $lastMessage?->created_at?->toISOString(),
                     'unread' => $unread,
                 ];
             })
             ->sortByDesc(fn ($c) => $c['last_message_at'] ?? 0)
             ->values();
+    }
+
+    /**
+     * Baris pembeda ("meta") untuk grup: menampilkan waktu agar dua grup dengan
+     * nama sama tetap bisa dibedakan.
+     *  - Trip        : rentang tanggal ("d M Y – d M Y").
+     *  - Pergi Bareng: tanggal & jam keberangkatan ("d M Y, H:i").
+     *  - Jastip      : tidak ada (nama produk sudah unik).
+     */
+    private function groupMeta(Conversation $conversation): ?string
+    {
+        if ($conversation->trip && $conversation->trip->start_date) {
+            $start = Carbon::parse($conversation->trip->start_date)->translatedFormat('d M Y');
+            $end = $conversation->trip->end_date
+                ? Carbon::parse($conversation->trip->end_date)->translatedFormat('d M Y')
+                : null;
+
+            return ($end && $end !== $start) ? "$start – $end" : $start;
+        }
+
+        if ($conversation->pergi_bareng && $conversation->pergi_bareng->time_appointment) {
+            return Carbon::parse($conversation->pergi_bareng->time_appointment)
+                ->translatedFormat('d M Y, H:i');
+        }
+
+        return null;
     }
 
     /**

@@ -7,8 +7,9 @@ import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
-import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
+import { BsChatDots } from "react-icons/bs";
 
 const STATUS_STYLES = {
     draft: "bg-blue-100 text-blue-700",
@@ -42,6 +43,10 @@ export default function Index({ trips = {}, filters = {} }) {
     };
 
     const rupiah = (n) => "Rp " + Number(n).toLocaleString("id-ID");
+
+    // Buka grup chat trip (pemandu). Backend akan membuat/menyertakan grup lalu
+    // mengalihkan ke halaman chat.
+    const openGroupChat = (id) => router.post(`/chat/trip/${id}/group`);
 
     return (
         <>
@@ -169,14 +174,21 @@ export default function Index({ trips = {}, filters = {} }) {
                                                 </>
                                             ) : t.status !== "done" ? (
                                                 <Link href={`/trip-bareng/${t.id}`} title={translate("admin.trip.action_view")}
-                                                    className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors">
-                                                    <FiExternalLink size={16} />
+                                                    className="p-2 bg-neutral-100 text-neutral-600 hover:bg-neutral-200 rounded-lg transition-colors">
+                                                    <FiEye size={16} />
                                                 </Link>
                                             ) : (
                                                 <Link href={`/admin/trip/${t.id}/reopen`} title={translate("admin.trip.action_retrip")}
                                                     className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
                                                     <FiRefreshCw size={16} />
                                                 </Link>
+                                            )}
+                                            {/* Grup chat trip (pemandu ↔ peserta run aktif) */}
+                                            {!t.is_draft && (
+                                                <button onClick={() => openGroupChat(t.id)} title={translate("admin.trip.action_group_chat")}
+                                                    className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors">
+                                                    <BsChatDots size={16} />
+                                                </button>
                                             )}
                                             {/* Riwayat run sebelumnya (hasil re-trip) */}
                                             {t.histories?.length > 0 && (

@@ -204,9 +204,13 @@ export default function Show({ trip }) {
             
             <div className="bg-white border-b border-neutral-200 py-4">
                 <Container>
-                    <Link href="/pergi-bareng" className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition">
+                    <button
+                        type="button"
+                        onClick={() => (window.history.length > 1 ? window.history.back() : router.visit("/pergi-bareng"))}
+                        className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
+                    >
                         <FaChevronLeft className="text-xl" /> {t("pb.show.back")}
-                    </Link>
+                    </button>
                 </Container>
             </div> 
 

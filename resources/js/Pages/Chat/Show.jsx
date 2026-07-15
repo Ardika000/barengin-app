@@ -659,6 +659,7 @@ export default function ChatShow({
                                     avatar={getConversationAvatar(c)}
                                     title={getConversationTitle(c)}
                                     subtitle={c.subtitle}
+                                    badgeLabel={c.group_meta}
                                     time={formatTime(c.last_message_at)}
                                     unread={c.unread}
                                 />
@@ -694,6 +695,9 @@ export default function ChatShow({
                                                 ":count",
                                                 participants?.length ?? 0,
                                             )}
+                                            {conversation?.group_meta
+                                                ? ` · ${conversation.group_meta}`
+                                                : ""}
                                         </div>
                                     </div>
                                     <FiChevronRight className="h-5 w-5 shrink-0 text-neutral-400 transition group-hover:text-neutral-600" />

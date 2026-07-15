@@ -92,9 +92,16 @@ class ChatConversationController extends Controller
             $conversationId = $conversation->id;
         }
 
+        // Hanya pembeli berbayar pada RUN AKTIF (setelah re-trip terakhir). Ini
+        // menjaga agar peserta run lama tidak ikut ditambahkan kembali setelah
+        // grup di-reset saat re-trip.
         $buyerIds = DB::table('trip_orders')
             ->where('trip_id', $trip->id)
-            // ->where('order_status', 'paid')
+            ->where('order_status', 'paid')
+            ->when(
+                $trip->current_run_started_at,
+                fn ($q) => $q->where('created_at', '>=', $trip->current_run_started_at),
+            )
             ->pluck('user_id')
             ->unique()
             ->values();

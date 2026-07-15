@@ -10,7 +10,7 @@ import { useServerTable } from "@/lib/useServerTable";
 import { DEFAULT_IMAGE } from "@/lib/images";
 import { FiSearch, FiTrash2, FiPlus, FiUsers, FiRefreshCw } from "react-icons/fi";
 import { FaCarSide } from "react-icons/fa";
-import { BsChatDotsFill } from "react-icons/bs";
+import { BsChatDots } from "react-icons/bs";
 
 export default function Index({ trips = {}, filters = {} }) {
     const { t: translate } = useTranslation();
@@ -156,7 +156,7 @@ export default function Index({ trips = {}, filters = {} }) {
                                                     className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
                                                     title={translate("admin.pergi.action_chat")}
                                                 >
-                                                    <BsChatDotsFill size={16} />
+                                                    <BsChatDots size={16} />
                                                 </button>
                                                 {t.status === "finish" && (
                                                     <Link

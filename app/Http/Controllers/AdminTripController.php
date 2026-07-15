@@ -343,6 +343,12 @@ class AdminTripController extends Controller
             // Ganti seluruh aktivitas dengan jadwal baru
             $trip->detail_trips()->delete();
             $this->syncActivities($request, $trip, $validated['activities'] ?? []);
+
+            // Grup chat dipakai ulang, tetapi peserta run lama dikeluarkan —
+            // hanya pemandu yang tersisa, menunggu peserta baru. Membership run
+            // baru ditambahkan lagi lewat openOrCreateTripGroup (paid + run aktif).
+            (new \App\Services\Chat\GroupConversationService())
+                ->resetTripGroupToOwner($trip->id, (int) $trip->guider_id);
         });
 
         \App\Models\ActivityLog::record('Membuka ulang trip: ' . $trip->name);

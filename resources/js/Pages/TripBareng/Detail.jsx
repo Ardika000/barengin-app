@@ -172,13 +172,14 @@ export default function Detail({ trip }) {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-                    <Link
-                        href="/trip-bareng"
+                    <button
+                        type="button"
+                        onClick={() => (window.history.length > 1 ? window.history.back() : router.visit("/trip-bareng"))}
                         className="absolute top-6 left-6 md:top-8 md:left-8 z-10 w-10 h-10 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white transition-all shadow-sm"
                         aria-label="Kembali"
                     >
                         <FaChevronLeft className="text-sm -ml-0.5" />
-                    </Link>
+                    </button>
 
                     {currentTrip.already_joined && (
                         <div className="absolute top-6 right-6 md:top-8 md:right-8 z-10 flex items-center gap-2 rounded-full bg-success-600/95 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm">

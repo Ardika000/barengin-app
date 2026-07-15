@@ -1,5 +1,6 @@
 import React from "react";
-import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers, FiEye, FiRefreshCw, FiInbox } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiRefreshCw, FiInbox } from "react-icons/fi";
+import { BsChatDots } from "react-icons/bs";
 import { useTranslation } from "@/lib/useTranslation";
 
 const STATUS_STYLE = {
@@ -88,7 +89,7 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 title={t("jastip.action_group_chat")}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-primary-700 shadow-sm hover:bg-white"
                             >
-                                <FiUsers size={15} />
+                                <BsChatDots size={15} />
                             </button>
                         )}
                         {/* Buka/tutup penerimaan request titipan — hanya item aktif
