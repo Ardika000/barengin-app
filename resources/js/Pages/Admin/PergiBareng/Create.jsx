@@ -52,6 +52,15 @@ export default function Create({ transportations = [], prefill = null }) {
     const fieldError = (key) =>
         errors[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
 
+    // Tanggal tidak boleh sebelum hari ini (selaras backend after_or_equal:today).
+    // `en-CA` menghasilkan format YYYY-MM-DD dalam zona waktu lokal.
+    const todayStr = new Date().toLocaleDateString("en-CA");
+    // Jam minimum hanya berlaku bila tanggal yang dipilih adalah hari ini.
+    const timeMin =
+        data.date === todayStr
+            ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+            : undefined;
+
     const inputClass =
         "w-full px-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all";
     const labelClass = "block text-sm font-medium text-neutral-700 mb-1.5";
@@ -133,6 +142,7 @@ export default function Create({ transportations = [], prefill = null }) {
                                 <label className={labelClass}>{t("admin.trip.form.date")}<Req /></label>
                                 <input
                                     type="date"
+                                    min={todayStr}
                                     value={data.date}
                                     onChange={(e) => setData("date", e.target.value)}
                                     className={inputClass}
@@ -143,6 +153,7 @@ export default function Create({ transportations = [], prefill = null }) {
                                 <label className={labelClass}>{t("admin.pergi.form.time_label")}<Req /></label>
                                 <input
                                     type="time"
+                                    min={timeMin}
                                     value={data.time}
                                     onChange={(e) => setData("time", e.target.value)}
                                     className={inputClass}

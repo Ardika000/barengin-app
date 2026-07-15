@@ -123,6 +123,7 @@ export default function Login() {
                             <Button
                                 type="neutral"
                                 variant="outline"
+                                htmlType="button"
                                 className="w-full gap-3"
                                 onClick={() =>
                                     (window.location.href =

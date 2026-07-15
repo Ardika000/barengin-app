@@ -165,14 +165,8 @@ export default function Index({
         );
     };
 
-    // #10: deteksi lokasi user & isi otomatis kolom "Diambil di" saat pertama membuka etalase.
-    useEffect(() => {
-        if (filters.to_q) return; // hormati input manual / hasil sebelumnya
-        if (sessionStorage.getItem("jastip_auto_geo")) return; // hanya sekali per sesi
-        sessionStorage.setItem("jastip_auto_geo", "1");
-        geolocateInto("to");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // Catatan: kolom "Diambil di" sengaja TIDAK diisi otomatis dari lokasi user.
+    // Pengguna dapat mengisinya manual atau memakai tombol crosshair di bawah.
 
     // Tombol crosshair kecil di dalam input lokasi
     const LocateButton = ({ field }) => (

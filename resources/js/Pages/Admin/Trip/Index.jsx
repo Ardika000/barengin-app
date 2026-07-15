@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { Head, Link, router, useForm } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
-import FormModal from "@/Components/FormModal";
 import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
@@ -27,24 +26,7 @@ export default function Index({ trips = {}, filters = {} }) {
     });
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
-    const [retripModal, setRetripModal] = useState({ open: false, id: null, name: "" });
     const [expandedId, setExpandedId] = useState(null); // baris riwayat yang terbuka
-
-    // Form re-trip: tanggal baru untuk trip yang sudah selesai
-    const retripForm = useForm({ start_date: "", end_date: "" });
-
-    const openRetrip = (trip) => {
-        retripForm.reset();
-        retripForm.clearErrors();
-        setRetripModal({ open: true, id: trip.id, name: trip.name });
-    };
-
-    const submitRetrip = () => {
-        retripForm.post(`/admin/trip/${retripModal.id}/retrip`, {
-            preserveScroll: true,
-            onSuccess: () => setRetripModal({ open: false, id: null, name: "" }),
-        });
-    };
 
     const confirmDelete = () => {
         router.delete(`/admin/trip/${deleteModal.id}`, {
@@ -92,48 +74,6 @@ export default function Index({ trips = {}, filters = {} }) {
                 confirmLabel={translate("admin.trip.publish_confirm")}
                 confirmType="primary"
             />
-            {/* Re-trip: buka ulang trip selesai dengan tanggal baru (baris yang sama) */}
-            <FormModal
-                open={retripModal.open}
-                onClose={() => setRetripModal({ open: false, id: null, name: "" })}
-                onSubmit={submitRetrip}
-                processing={retripForm.processing}
-                icon={<FiRefreshCw size={24} />}
-                iconClass="bg-green-100 text-green-600"
-                title={translate("admin.trip.retrip_title")}
-                description={<>{translate("admin.trip.retrip_desc_prefix")} <span className="font-semibold text-neutral-700">{retripModal.name}</span>. {translate("admin.trip.retrip_desc")}</>}
-                confirmLabel={translate("admin.trip.retrip_confirm")}
-                confirmType="primary"
-            >
-                <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
-                        {translate("admin.trip.retrip_start")}
-                    </label>
-                    <input
-                        type="date"
-                        value={retripForm.data.start_date}
-                        onChange={(e) => retripForm.setData("start_date", e.target.value)}
-                        className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
-                    />
-                    {retripForm.errors.start_date && (
-                        <p className="mt-1 text-xs text-danger-700">{retripForm.errors.start_date}</p>
-                    )}
-                </div>
-                <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
-                        {translate("admin.trip.retrip_end")}
-                    </label>
-                    <input
-                        type="date"
-                        value={retripForm.data.end_date}
-                        onChange={(e) => retripForm.setData("end_date", e.target.value)}
-                        className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
-                    />
-                    {retripForm.errors.end_date && (
-                        <p className="mt-1 text-xs text-danger-700">{retripForm.errors.end_date}</p>
-                    )}
-                </div>
-            </FormModal>
 
             {/* Toolbar */}
             <div className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -233,10 +173,10 @@ export default function Index({ trips = {}, filters = {} }) {
                                                     <FiExternalLink size={16} />
                                                 </Link>
                                             ) : (
-                                                <button onClick={() => openRetrip(t)} title={translate("admin.trip.action_retrip")}
+                                                <Link href={`/admin/trip/${t.id}/reopen`} title={translate("admin.trip.action_retrip")}
                                                     className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
                                                     <FiRefreshCw size={16} />
-                                                </button>
+                                                </Link>
                                             )}
                                             {/* Riwayat run sebelumnya (hasil re-trip) */}
                                             {t.histories?.length > 0 && (

@@ -4,7 +4,7 @@ import TagPillList from "./TagPillList";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronDown, FiSearch } from "react-icons/fi";
 
-export default function ForumFilterAccordion({ tags = [], onTagClick }) {
+export default function ForumFilterAccordion({ tags = [], onTagClick, activeTag = "" }) {
     const { t } = useTranslation();
     return (
         <div className="lg:hidden mb-6">
@@ -20,7 +20,7 @@ export default function ForumFilterAccordion({ tags = [], onTagClick }) {
                         leftIcon={<FiSearch />}
                     />
 
-                    <TagPillList tags={tags} onTagClick={onTagClick} />
+                    <TagPillList tags={tags} onTagClick={onTagClick} activeTag={activeTag} />
                 </div>
             </details>
         </div>

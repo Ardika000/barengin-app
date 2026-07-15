@@ -14,6 +14,9 @@ export default function TripSearchForm({ naked = true }) {
     const [startDate, setStartDate] = useState(filters.start_date || "");
     const [endDate, setEndDate] = useState(filters.end_date || "");
 
+    // Tanggal hari ini (lokal) sebagai batas bawah agar tanggal lampau tak bisa dipilih.
+    const todayStr = new Date().toLocaleDateString("en-CA");
+
     const handleSearch = (e) => {
         e.preventDefault();
         router.get(
@@ -48,6 +51,7 @@ export default function TripSearchForm({ naked = true }) {
                     <Input
                         label={t("search.start_date")}
                         type="date"
+                        min={todayStr}
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                     />
@@ -57,6 +61,7 @@ export default function TripSearchForm({ naked = true }) {
                     <Input
                         label={t("search.end_date")}
                         type="date"
+                        min={startDate || todayStr}
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                     />

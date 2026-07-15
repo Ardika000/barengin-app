@@ -232,6 +232,7 @@ function ForumIndexPage({ posts, tags, filters }) {
                     <ForumFilterAccordion
                         tags={sidebarTagNames}
                         onTagClick={onTagClick}
+                        activeTag={filters?.tag ?? ""}
                     />
 
                     <ComposerCard
@@ -285,6 +286,7 @@ function ForumIndexPage({ posts, tags, filters }) {
                                 tags={sidebarTagNames}
                                 onTagClick={onTagClick}
                                 fontSize="sm"
+                                activeTag={filters?.tag ?? ""}
                             />
                         </div>
                     </div>

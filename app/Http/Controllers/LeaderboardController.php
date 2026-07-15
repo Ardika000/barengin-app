@@ -18,8 +18,34 @@ class LeaderboardController extends Controller
                 'purchase_jastip' => $this->purchaseJastip(),
                 'best_guider'    => $this->bestGuider(),
                 'best_jastiper'  => $this->bestJastiper(),
+                'streak'         => $this->streakBoard(),
             ],
+            'streakLeader' => $this->streakLeader(),
         ]);
+    }
+
+    /** Pengguna dengan streak harian aktif terpanjang saat ini. */
+    private function streakLeader(): ?array
+    {
+        $r = DB::table('users')
+            ->where('streak_count', '>', 0)
+            ->orderByDesc('streak_count')
+            ->orderByDesc('streak_best')
+            ->select('id', 'full_name', 'username', 'profile_image', 'streak_count', 'streak_best')
+            ->first();
+
+        if (! $r) {
+            return null;
+        }
+
+        return [
+            'id'           => $r->id,
+            'name'         => $r->full_name ?? 'Pengguna',
+            'username'     => $r->username,
+            'avatar'       => $this->avatar($r->profile_image),
+            'streak_count' => (int) $r->streak_count,
+            'streak_best'  => (int) $r->streak_best,
+        ];
     }
 
     /** Pembeli open trip terbanyak (order trip berbayar). */
@@ -97,6 +123,20 @@ class LeaderboardController extends Controller
             ->get();
 
         return $this->format($rows, true);
+    }
+
+    /** Papan streak: pengguna dengan streak harian aktif terpanjang saat ini. */
+    private function streakBoard(): array
+    {
+        $rows = DB::table('users')
+            ->where('streak_count', '>', 0)
+            ->orderByDesc('streak_count')
+            ->orderByDesc('streak_best')
+            ->select('users.id', 'users.full_name', 'users.username', 'users.profile_image', DB::raw('streak_count as cnt'))
+            ->limit(self::LIMIT)
+            ->get();
+
+        return $this->format($rows, false);
     }
 
     /** Bentuk seragam untuk podium & tabel di frontend. */

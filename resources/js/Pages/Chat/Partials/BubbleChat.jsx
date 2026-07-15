@@ -1,6 +1,7 @@
 import React from "react";
 import Avatar from "./Avatar";
 import { FiCornerUpLeft } from "react-icons/fi";
+import ReferenceCard from "./ReferenceCard";
 import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
@@ -38,6 +39,7 @@ export default function Bubble({
     isGroup,
     senderName,
     reply,
+    reference,
     onReply,
     onReplyQuoteClick,
 }) {
@@ -105,6 +107,13 @@ export default function Bubble({
                                 </span>
                             </span>
                         </button>
+                    ) : null}
+
+                    {/* Kartu referensi Trip / Pergi Bareng (konteks pesan) */}
+                    {reference ? (
+                        <div className={cn(text || reply ? "mb-2" : "")}>
+                            <ReferenceCard reference={reference} />
+                        </div>
                     ) : null}
 
                     {text ? (

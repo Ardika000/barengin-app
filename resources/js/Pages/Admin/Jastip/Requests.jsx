@@ -65,44 +65,47 @@ export default function Requests({ requests = {}, item_options = [], filters = {
                 onClose={() => setQuoteModal({ open: false, id: null, name: "" })}
                 onSubmit={submitQuote}
                 processing={quoteForm.processing}
+                size="lg"
                 icon={<FiTag size={22} />}
                 iconClass="bg-blue-100 text-primary-700"
                 title={t("jastip.req.quote_title")}
-                description={<>{t("jastip.req.quote_desc_prefix")} <span className="font-semibold text-neutral-700">{quoteModal.name}</span>. {t("jastip.req.quote_desc")}</>}
+                description={<>{t("jastip.req.quote_desc_prefix")} <span className="font-semibold text-neutral-700">{quoteModal.name}</span></>}
                 confirmLabel={t("jastip.req.quote_btn")}
                 confirmType="primary"
             >
-                <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
-                        {t("jastip.req.item_price_label")}
-                    </label>
-                    <input
-                        type="number"
-                        min="0"
-                        value={quoteForm.data.quoted_item_price}
-                        onChange={(e) => quoteForm.setData("quoted_item_price", e.target.value)}
-                        placeholder="150000"
-                        className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
-                    />
-                    {quoteForm.errors.quoted_item_price && (
-                        <p className="mt-1 text-xs text-danger-700">{quoteForm.errors.quoted_item_price}</p>
-                    )}
-                </div>
-                <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
-                        {t("jastip.req.fee_label")}
-                    </label>
-                    <input
-                        type="number"
-                        min="0"
-                        value={quoteForm.data.quoted_fee}
-                        onChange={(e) => quoteForm.setData("quoted_fee", e.target.value)}
-                        placeholder="25000"
-                        className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
-                    />
-                    {quoteForm.errors.quoted_fee && (
-                        <p className="mt-1 text-xs text-danger-700">{quoteForm.errors.quoted_fee}</p>
-                    )}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
+                            {t("jastip.req.item_price_label")}
+                        </label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={quoteForm.data.quoted_item_price}
+                            onChange={(e) => quoteForm.setData("quoted_item_price", e.target.value)}
+                            placeholder="150000"
+                            className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
+                        />
+                        {quoteForm.errors.quoted_item_price && (
+                            <p className="mt-1 text-xs text-danger-700">{quoteForm.errors.quoted_item_price}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-neutral-500">
+                            {t("jastip.req.fee_label")}
+                        </label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={quoteForm.data.quoted_fee}
+                            onChange={(e) => quoteForm.setData("quoted_fee", e.target.value)}
+                            placeholder="25000"
+                            className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700"
+                        />
+                        {quoteForm.errors.quoted_fee && (
+                            <p className="mt-1 text-xs text-danger-700">{quoteForm.errors.quoted_fee}</p>
+                        )}
+                    </div>
                 </div>
             </FormModal>
 

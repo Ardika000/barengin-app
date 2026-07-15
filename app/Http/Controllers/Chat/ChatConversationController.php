@@ -18,6 +18,9 @@ class ChatConversationController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
+            // Referensi opsional (kartu konteks Trip / Pergi Bareng) untuk pesan pertama.
+            'ref_type' => ['nullable', 'in:trip,pergi_bareng'],
+            'ref_id' => ['nullable', 'integer'],
         ]);
 
         $me = $request->user();
@@ -50,7 +53,15 @@ class ChatConversationController extends Controller
             $conversationId = $conversation->id;
         }
 
-        return redirect()->route('chat.show', ['conversation' => $conversationId]);
+        // Teruskan referensi (bila ada) sebagai query agar halaman chat menampilkan
+        // kartu konteks yang terpasang di komposer.
+        $params = ['conversation' => $conversationId];
+        if (! empty($data['ref_type']) && ! empty($data['ref_id'])) {
+            $params['ref_type'] = $data['ref_type'];
+            $params['ref_id'] = $data['ref_id'];
+        }
+
+        return redirect()->route('chat.show', $params);
     }
 
     public function openOrCreateTripGroup(Request $request, Trip $trip){

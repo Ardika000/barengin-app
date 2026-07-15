@@ -5,10 +5,12 @@ export default function Button({
     href = "",
     type = "primary", // primary | danger | success | warning | neutral
     variant = "solid", // solid | outline | soft | ghost
-    size = "md", // xs | sm | md 
+    size = "md", // xs | sm | md
     rounded = true, // keep your old API
     className = "",
     onClick = () => {},
+    htmlType, // native button type: "button" | "submit" | "reset".
+    //          Default undefined preserves the browser default (submit inside a form).
     children,
     ...props
 }) {
@@ -72,7 +74,7 @@ export default function Button({
     }
 
     return (
-        <button onClick={onClick} className={classes} {...props}>
+        <button type={htmlType} onClick={onClick} className={classes} {...props}>
             {children}
         </button>
     );

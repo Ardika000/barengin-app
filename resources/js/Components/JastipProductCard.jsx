@@ -91,8 +91,9 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 <FiUsers size={15} />
                             </button>
                         )}
-                        {/* Buka/tutup penerimaan request titipan (live, hanya item published) */}
-                        {!item.is_draft && onToggleRequests && (
+                        {/* Buka/tutup penerimaan request titipan — hanya item aktif
+                            (bukan draft, belum selesai). Jastip selesai/draft tak bisa terima request. */}
+                        {!item.is_draft && !isFinished && onToggleRequests && (
                             <button
                                 type="button"
                                 onClick={onToggleRequests}

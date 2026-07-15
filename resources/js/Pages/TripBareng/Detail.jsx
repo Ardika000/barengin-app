@@ -34,7 +34,7 @@ import {
     FaUserTie,
     FaCheckCircle,
 } from "react-icons/fa";
-import { BsChatText } from "react-icons/bs";
+import { BsChatText, BsPeople } from "react-icons/bs";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 
 export default function Detail({ trip }) {
@@ -142,7 +142,16 @@ export default function Detail({ trip }) {
             return;
         }
 
-        router.post("/chat/personal", { user_id: otherUserId });
+        // Sertakan kartu referensi Trip Bareng sebagai konteks percakapan.
+        router.post("/chat/personal", {
+            user_id: otherUserId,
+            ref_type: "trip",
+            ref_id: currentTrip.id,
+        });
+    };
+
+    const handleOpenGroupChat = () => {
+        router.post(`/chat/trip/${currentTrip.id}/group`);
     };
 
     return (
@@ -366,15 +375,29 @@ export default function Detail({ trip }) {
                                     </div>
                                 </div>
                             </div>
-                            {isOwner ? (
-                                <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
-                                    {t("trip.detail.your_trip")}
-                                </span>
-                            ) : (
-                                <button type="button" onClick={handleOpenChat} className="w-10 h-10 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 transition-colors shadow-sm">
-                                    <BsChatText className="text-lg" />
-                                </button>
-                            )}
+                            <div className="flex shrink-0 items-center gap-2">
+                                {isOwner ? (
+                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                                        {t("trip.detail.your_trip")}
+                                    </span>
+                                ) : (
+                                    <button type="button" onClick={handleOpenChat} title={t("trip.detail.chat_host")} className="w-10 h-10 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 transition-colors shadow-sm">
+                                        <BsChatText className="text-lg" />
+                                    </button>
+                                )}
+                                {/* Grup chat trip — hanya untuk peserta / pemandu */}
+                                {(currentTrip.already_joined || isOwner) && (
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenGroupChat}
+                                        title={t("trip.detail.group_chat")}
+                                        aria-label={t("trip.detail.group_chat")}
+                                        className="w-10 h-10 rounded-lg border border-primary-700 flex items-center justify-center text-primary-700 hover:bg-primary-50 transition-colors shadow-sm"
+                                    >
+                                        <BsPeople className="text-lg" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Pricing Card */}

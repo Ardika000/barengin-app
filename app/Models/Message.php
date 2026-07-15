@@ -16,10 +16,12 @@ class Message extends Model
         'attachment_name',
         'attachment_size',
         'attachments',
+        'reference',
     ];
 
     protected $casts = [
         'attachments' => 'array',
+        'reference' => 'array',
     ];
 
     public function conversation(){

@@ -27,7 +27,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
         <form onSubmit={handleSubmit} className="flex flex-col">
             <AvatarEditor profile={profile} />
 
-            <p className="mt-4 text-xs text-neutral-400">
+            <p className="mt-4 text-xs text-neutral-500">
                 {t("ph.avatar_hint")}
             </p>
 
@@ -82,7 +82,7 @@ export default function ProfileEditForm({ profile, onCancel }) {
 
                 <Field label={t("trip.checkout.phone_label")} error={errors.phone}>
                     <div className="flex">
-                        <span className="inline-flex items-center rounded-l-lg border border-r-0 border-neutral-300 bg-neutral-50 px-3 text-sm text-neutral-500">
+                        <span className="inline-flex items-center rounded-l-lg border border-r-0 border-neutral-300 bg-neutral-50 px-3 text-sm text-neutral-700">
                             +62
                         </span>
                         <input

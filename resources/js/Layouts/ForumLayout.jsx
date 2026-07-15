@@ -21,6 +21,8 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
 
     const [openCreatePost, setOpenCreatePost] = useState(false);
     const [openPeople, setOpenPeople] = useState(false);
+    const [createErrors, setCreateErrors] = useState({});
+    const [posting, setPosting] = useState(false);
 
     const safeTags = useMemo(() => tags ?? [], [tags]);
 
@@ -48,17 +50,30 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
         (payload.images ?? []).forEach((file) => fd.append("images[]", file));
         (payload.tag_names ?? []).forEach((t) => fd.append("tag_names[]", t));
 
+        setPosting(true);
+        setCreateErrors({});
+
         router.post("/forum/posts", fd, {
             forceFormData: true,
             // Server mengarahkan ke /forum (beranda) → jangan pertahankan scroll
             // supaya pengguna melihat postingan barunya di paling atas.
             preserveScroll: false,
-            preserveState: false,
+            // Saat validasi gagal (ada errors), pertahankan state agar isi modal
+            // (teks, gambar, tag) tidak hilang. Saat sukses, biarkan reset.
+            preserveState: (page) => Object.keys(page.props?.errors ?? {}).length > 0,
             onSuccess: () => {
+                setCreateErrors({});
                 setOpenCreatePost(false);
                 afterCreate?.();
             },
+            onError: (errs) => setCreateErrors(errs ?? {}),
+            onFinish: () => setPosting(false),
         });
+    };
+
+    const closeCreatePost = () => {
+        setCreateErrors({});
+        setOpenCreatePost(false);
     };
 
     return (
@@ -78,10 +93,12 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
 
                     <CreatePostModal
                         open={openCreatePost}
-                        onClose={() => setOpenCreatePost(false)}
+                        onClose={closeCreatePost}
                         user={user}
                         tags={safeTags}
                         onSubmit={submitCreatePost}
+                        errors={createErrors}
+                        processing={posting}
                     />
 
                     <UserListModal

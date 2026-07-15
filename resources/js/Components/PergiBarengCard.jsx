@@ -78,7 +78,12 @@ export default function PergiBarengCard({ data }) {
             return;
         }
 
-        router.post("/chat/personal", { user_id: otherUserId });
+        // Sertakan kartu referensi Pergi Bareng agar penyelenggara paham konteksnya.
+        router.post("/chat/personal", {
+            user_id: otherUserId,
+            ref_type: "pergi_bareng",
+            ref_id: data.id,
+        });
     };
 
     return (

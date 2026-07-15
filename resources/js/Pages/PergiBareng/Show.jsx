@@ -16,7 +16,7 @@ import {
     FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart,
     FaMinus, FaPlus, FaLock
 } from "react-icons/fa";
-import { BsChatDots } from "react-icons/bs";
+import { BsChatDots, BsPeople } from "react-icons/bs";
 
 const JAKARTA = [-6.1751, 106.8272];
 
@@ -186,7 +186,16 @@ export default function Show({ trip }) {
             return;
         }
 
-        router.post("/chat/personal", { user_id: otherUserId });
+        // Sertakan kartu referensi Pergi Bareng agar penyelenggara paham konteksnya.
+        router.post("/chat/personal", {
+            user_id: otherUserId,
+            ref_type: "pergi_bareng",
+            ref_id: trip.id,
+        });
+    };
+
+    const handleOpenGroupChat = () => {
+        router.post(`/chat/pergi-bareng/${trip.id}/group`);
     };
 
     return (
@@ -229,16 +238,30 @@ export default function Show({ trip }) {
                                             <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} {t("common.reviews")})
                                         </div>
                                     </div>
-                                    {trip.organizer?.is_self ? (
-                                        <span className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
-                                            {t("pb.show.created_by_you")}
-                                        </span>
-                                    ) : (
-                                        <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleChatOrganizer}>
-                                            <BsChatDots className="text-sm" />
-                                            {t("pb.show.chat_organizer")}
-                                        </Button>
-                                    )}
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        {trip.organizer?.is_self ? (
+                                            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                                                {t("pb.show.created_by_you")}
+                                            </span>
+                                        ) : (
+                                            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleChatOrganizer}>
+                                                <BsChatDots className="text-sm" />
+                                                {t("pb.show.chat_organizer")}
+                                            </Button>
+                                        )}
+                                        {/* Grup chat perjalanan — hanya untuk anggota / penyelenggara */}
+                                        {(trip.is_participant || trip.organizer?.is_self) && (
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenGroupChat}
+                                                title={t("pb.show.group_chat")}
+                                                aria-label={t("pb.show.group_chat")}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary-700 text-primary-700 transition hover:bg-primary-50"
+                                            >
+                                                <BsPeople className="text-base" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             

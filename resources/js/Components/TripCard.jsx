@@ -61,7 +61,12 @@ export default function TripCard({ trip }) {
                 return;
             }
 
-            router.post("/chat/personal", { user_id: otherUserId });
+            // Sertakan kartu referensi Trip agar pemandu paham konteks percakapan.
+            router.post("/chat/personal", {
+                user_id: otherUserId,
+                ref_type: "trip",
+                ref_id: trip.id,
+            });
         };
 
     return (

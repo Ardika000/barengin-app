@@ -23,10 +23,13 @@ const emptyActivity = () => ({
     existing_images: [],
 });
 
-export default function TripForm({ data, setData, errors, processing, onSubmit, submitLabel, facilities = [], imageRequired = true }) {
+export default function TripForm({ data, setData, errors, processing, onSubmit, submitLabel, facilities = [], imageRequired = true, lockedFields = [] }) {
     const { t } = useTranslation();
     // Tanggal mulai minimal besok (harus setelah hari ini)
     const minStartDate = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
+    // Kolom yang dikunci (mis. saat "buka ulang" trip: nama & lokasi tak boleh diubah).
+    const isLocked = (field) => lockedFields.includes(field);
 
     const [facilityOptions, setFacilityOptions] = useState(facilities);
     const [showFacilityModal, setShowFacilityModal] = useState(false);
@@ -84,15 +87,30 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                         <div className="mb-4">
                             <label className={labelClass}>{t("admin.trip.form.trip_name")}<Req /></label>
-                            <Input type="text" size="sm" value={data.name} onChange={(e) => setData("name", e.target.value)}
-                                placeholder={t("admin.trip.form.trip_name_ph")} />
+                            {isLocked("name") ? (
+                                <>
+                                    <Input type="text" size="sm" value={data.name} disabled readOnly />
+                                    <p className="text-xs text-neutral-400 mt-1">{t("admin.trip.reopen.locked_hint")}</p>
+                                </>
+                            ) : (
+                                <Input type="text" size="sm" value={data.name} onChange={(e) => setData("name", e.target.value)}
+                                    placeholder={t("admin.trip.form.trip_name_ph")} />
+                            )}
                             {err("name")}
                         </div>
 
                         <div className="mb-4">
                             <label className={labelClass}>{t("admin.trip.form.location")}<Req /></label>
-                            <LocationInput value={data.location} onChange={(v) => setData("location", v)}
-                                placeholder={t("admin.trip.form.location_ph")} className={inputClass} />
+                            {isLocked("location") ? (
+                                <>
+                                    <input type="text" value={data.location} disabled readOnly
+                                        className={inputClass + " bg-neutral-50 text-neutral-500 cursor-not-allowed"} />
+                                    <p className="text-xs text-neutral-400 mt-1">{t("admin.trip.reopen.locked_hint")}</p>
+                                </>
+                            ) : (
+                                <LocationInput value={data.location} onChange={(v) => setData("location", v)}
+                                    placeholder={t("admin.trip.form.location_ph")} className={inputClass} />
+                            )}
                             {err("location")}
                         </div>
 

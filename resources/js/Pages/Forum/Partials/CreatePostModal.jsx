@@ -82,15 +82,22 @@ function normalizeTagName(name) {
         .trim();
 }
 
+// Batas selaras dengan validasi backend PostController@store.
+const MAX_IMAGES = 10;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB / gambar
+
 export default function CreatePostModal({
     open,
     onClose,
     user,
     onSubmit,
     tags = [],
+    errors = {},
+    processing = false,
 }) {
     const { t } = useTranslation();
     useLockBodyScroll(open);
+    const [localError, setLocalError] = useState("");
     const [view, setView] = useState("editor"); // "editor" | "location"
     const [disableComments, setDisableComments] = useState(false);
 
@@ -117,6 +124,26 @@ export default function CreatePostModal({
         const text = getPlainTextFromHtml(contentHtml);
         return text.length > 0 || images.length > 0;
     }, [contentHtml, images]);
+
+    // Pesan error server (validasi backend) → ambil yang paling relevan.
+    const serverError = useMemo(() => {
+        const keys = Object.keys(errors ?? {});
+        if (!keys.length) return "";
+        const imgKey = keys.find((k) => k.startsWith("images"));
+        return errors.content_html || (imgKey ? errors[imgKey] : "") || errors[keys[0]];
+    }, [errors]);
+
+    // Error yang ditampilkan: hasil validasi klien lebih dulu, lalu error server.
+    const displayError = localError || serverError;
+
+    // Validasi klien meniru aturan backend sebelum mengirim.
+    const validateBeforeSubmit = () => {
+        const text = getPlainTextFromHtml(contentHtml);
+        if (text.length === 0 && images.length === 0) return t("forum.create.err_empty");
+        if (images.length > MAX_IMAGES) return t("forum.create.err_too_many");
+        if (images.some((x) => (x.file?.size ?? 0) > MAX_IMAGE_BYTES)) return t("forum.create.err_too_big");
+        return "";
+    };
 
     const tagNames = useMemo(
         () =>
@@ -221,6 +248,7 @@ export default function CreatePostModal({
             preview: URL.createObjectURL(f),
         }));
 
+        if (localError) setLocalError("");
         setImages((prev) => [...(prev ?? []), ...next]);
     };
 
@@ -261,7 +289,8 @@ export default function CreatePostModal({
         );
     };
 
-    const closeAndCleanup = () => {
+    // Reset seluruh isi editor (dipakai saat modal benar-benar ditutup).
+    const resetState = () => {
         images.forEach((x) => {
             try {
                 URL.revokeObjectURL(x.preview);
@@ -281,11 +310,21 @@ export default function CreatePostModal({
         setChipTags([]);
         setTagBoxOpen(false);
         setTagQuery("");
+        setLocalError("");
 
         if (editorRef.current) editorRef.current.innerHTML = "";
-
-        onClose?.();
     };
+
+    // Tutup manual (tombol X / klik backdrop): serahkan ke parent, biarkan
+    // effect di bawah yang mereset isi saat `open` menjadi false. Isi TIDAK
+    // direset saat submit gagal (modal tetap terbuka) sehingga input aman.
+    const requestClose = () => onClose?.();
+
+    // Reset isi hanya ketika modal benar-benar tertutup (sukses / dibatalkan).
+    useEffect(() => {
+        if (!open) resetState();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     if (!open) return null;
 
@@ -295,7 +334,7 @@ export default function CreatePostModal({
                 className="absolute inset-0 flex items-center justify-center p-4 bg-black/40"
                 onClick={(e) => {
                     e.stopPropagation();
-                    if (e.target === e.currentTarget) closeAndCleanup();
+                    if (e.target === e.currentTarget) requestClose();
                 }}
             >
                 <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
@@ -306,7 +345,7 @@ export default function CreatePostModal({
                         </div>
                         <button
                             type="button"
-                            onClick={closeAndCleanup}
+                            onClick={requestClose}
                             className="inline-flex items-center gap-2 text-neutral-700 hover:text-neutral-900"
                         >
                             <FiX />
@@ -355,6 +394,7 @@ export default function CreatePostModal({
                                             onInput={() => {
                                                 syncHtmlFromDom();
                                                 syncFormatState();
+                                                if (localError) setLocalError("");
                                             }}
                                             onKeyUp={syncFormatState}
                                             onMouseUp={syncFormatState}
@@ -627,66 +667,81 @@ export default function CreatePostModal({
 
                     {/* footer */}
                     {view === "editor" ? (
-                        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between shrink-0">
-                            <Toggle
-                                id="disable-comments"
-                                name="disable-comments"
-                                checked={disableComments}
-                                onChange={(next) => setDisableComments(next)}
-                                label={t("forum.create.disable_comments")}
-                            />
+                        <div className="border-t border-neutral-200 shrink-0">
+                            {displayError ? (
+                                <div className="mx-6 mt-3 rounded-lg border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700">
+                                    {displayError}
+                                </div>
+                            ) : null}
 
-                            <Button
-                                onClick={() => {
-                                    if (!canPost) return;
+                            <div className="px-6 py-4 flex items-center justify-between">
+                                <Toggle
+                                    id="disable-comments"
+                                    name="disable-comments"
+                                    checked={disableComments}
+                                    onChange={(next) => setDisableComments(next)}
+                                    label={t("forum.create.disable_comments")}
+                                />
 
-                                    const content_text =
-                                        getPlainTextFromHtml(contentHtml);
+                                <Button
+                                    htmlType="button"
+                                    onClick={() => {
+                                        if (processing) return;
 
-                                    onSubmit?.({
-                                        content_html: contentHtml,
-                                        content_text,
-                                        location: locationLabel,
-                                        location_place: locationPlace
-                                            ? JSON.stringify({
-                                                  provider: "osm",
-                                                  id: locationPlace.id,
-                                                  display_name:
-                                                      locationPlace.display_name ??
-                                                      locationLabel,
-                                                  name:
-                                                      locationPlace.name ??
-                                                      null,
-                                                  lat:
-                                                      locationPlace.lat ?? null,
-                                                  lng:
-                                                      locationPlace.lng ?? null,
-                                                  address:
-                                                      locationPlace.address ??
-                                                      null,
-                                                  raw:
-                                                      locationPlace.raw ?? null,
-                                              })
-                                            : null,
-                                        allows_comment: !disableComments,
-                                        images: images.map((x) => x.file),
-                                        tag_names: chipTags,
-                                    });
+                                        const err = validateBeforeSubmit();
+                                        if (err) {
+                                            setLocalError(err);
+                                            return;
+                                        }
+                                        setLocalError("");
 
-                                    closeAndCleanup();
-                                }}
-                                type="neutral"
-                                variant="outline"
-                                rounded
-                                className={[
-                                    "px-10",
-                                    !canPost
-                                        ? "opacity-50 cursor-not-allowed pointer-events-none"
-                                        : "",
-                                ].join(" ")}
-                            >
-                                {t("forum.post")}
-                            </Button>
+                                        const content_text =
+                                            getPlainTextFromHtml(contentHtml);
+
+                                        // Kirim ke parent. Modal TIDAK ditutup di sini —
+                                        // parent menutup saat sukses; saat gagal modal tetap
+                                        // terbuka dan error server ditampilkan.
+                                        onSubmit?.({
+                                            content_html: contentHtml,
+                                            content_text,
+                                            location: locationLabel,
+                                            location_place: locationPlace
+                                                ? JSON.stringify({
+                                                      provider: "osm",
+                                                      id: locationPlace.id,
+                                                      display_name:
+                                                          locationPlace.display_name ??
+                                                          locationLabel,
+                                                      name:
+                                                          locationPlace.name ??
+                                                          null,
+                                                      lat:
+                                                          locationPlace.lat ?? null,
+                                                      lng:
+                                                          locationPlace.lng ?? null,
+                                                      address:
+                                                          locationPlace.address ??
+                                                          null,
+                                                      raw:
+                                                          locationPlace.raw ?? null,
+                                                  })
+                                                : null,
+                                            allows_comment: !disableComments,
+                                            images: images.map((x) => x.file),
+                                            tag_names: chipTags,
+                                        });
+                                    }}
+                                    type="neutral"
+                                    variant="outline"
+                                    rounded
+                                    className={[
+                                        "px-10",
+                                        processing ? "opacity-60 cursor-wait pointer-events-none" : "",
+                                    ].join(" ")}
+                                >
+                                    {processing ? t("common.processing") : t("forum.post")}
+                                </Button>
+                            </div>
                         </div>
                     ) : null}
                 </div>

@@ -170,6 +170,7 @@ export default function Register() {
                             <Button
                                 type="neutral"
                                 variant="outline"
+                                htmlType="button"
                                 className="w-full gap-3"
                                 onClick={() =>
                                     (window.location.href =

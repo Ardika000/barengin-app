@@ -7,6 +7,7 @@ export default function TagPillList({
     initialCount = 10,
     step = 10,
     fontSize="xs",
+    activeTag = "",
 }) {
     const [visibleCount, setVisibleCount] = useState(initialCount);
 
@@ -23,9 +24,21 @@ export default function TagPillList({
     return (
         <div className="flex flex-wrap gap-3">
 
-            {visibleTags.map((t) => (
-                <TagPill key={t} tag={t} onClick={() => onTagClick?.(t)} fontSize={fontSize} cursor="pointer" />
-            ))}
+            {visibleTags.map((t) => {
+                const isClearAll = t === "semua";
+                const active = isClearAll ? !activeTag : t === activeTag;
+                return (
+                    <TagPill
+                        key={t}
+                        tag={t}
+                        onClick={() => onTagClick?.(t)}
+                        fontSize={fontSize}
+                        cursor="pointer"
+                        active={active}
+                        isClearAll={isClearAll}
+                    />
+                );
+            })}
 
             {tags.length > initialCount ? (
                 <button

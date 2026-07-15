@@ -252,6 +252,47 @@ class AdminTripController extends Controller
      * baris trip yang sama diperbarui. Kursi terisi di-reset lewat
      * current_run_started_at (pesanan lama tidak dihitung lagi).
      */
+    /**
+     * Halaman "buka ulang" — memakai form create/edit penuh (bukan modal) agar
+     * jastiper bisa mengubah data trip. Nama & lokasi dikunci di frontend.
+     */
+    public function reopen($id)
+    {
+        $trip = Trip::with('detail_trips.image_activities', 'facilities')
+            ->where('guider_id', Auth::id())
+            ->findOrFail($id);
+
+        if ($trip->status !== Trip::STATUS_DONE) {
+            return redirect()->route('admin.trip.index')
+                ->with('flash', ['type' => 'error', 'message' => 'Hanya trip yang sudah selesai yang bisa dibuka ulang.']);
+        }
+
+        return Inertia::render('Admin/Trip/Reopen', [
+            'facilities' => $this->facilityOptions(),
+            'trip' => [
+                'id' => $trip->id,
+                'name' => $trip->name,
+                'location' => $trip->location,
+                'description' => $trip->description,
+                'people_amount' => $trip->people_amount,
+                'price' => (float) $trip->price,
+                'image' => $this->resolveImage($trip->image),
+                'facilities' => $trip->facilities->pluck('name')->values(),
+                'activities' => $trip->detail_trips
+                    ->sortBy('activity_order')
+                    ->map(fn ($a) => [
+                        'name' => $a->activity_name,
+                        'start_time' => Carbon::parse($a->activity_start_datetime)->format('H:i'),
+                        'end_time' => Carbon::parse($a->activity_end_datetime)->format('H:i'),
+                        'description' => $a->activity_description,
+                        'existing_images' => $a->image_activities
+                            ->map(fn ($img) => $this->resolveImage($img->activity_img_name))
+                            ->values(),
+                    ])->values(),
+            ],
+        ]);
+    }
+
     public function retrip(Request $request, $id)
     {
         $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
@@ -260,14 +301,10 @@ class AdminTripController extends Controller
             return back()->with('flash', ['type' => 'error', 'message' => 'Hanya trip yang sudah selesai yang bisa dibuka ulang.']);
         }
 
-        $validated = $request->validate([
-            'start_date' => 'required|date|after:today',
-            'end_date'   => 'required|date|after_or_equal:start_date',
-        ], [
-            'start_date.after' => 'Tanggal mulai baru harus setelah hari ini.',
-        ]);
+        // Validasi form penuh (gambar opsional). Nama & lokasi dikunci → nilai lama dipakai.
+        $validated = $this->validateTrip($request, true);
 
-        DB::transaction(function () use ($trip, $validated) {
+        DB::transaction(function () use ($request, $trip, $validated) {
             $runStart = $trip->current_run_started_at ?? '1970-01-01 00:00:00';
 
             // Arsipkan run yang baru saja selesai (peserta & pendapatan run itu)
@@ -287,17 +324,31 @@ class AdminTripController extends Controller
                 'completed_at' => now(),
             ]);
 
+            // Nama & lokasi TIDAK diubah (dikunci saat buka ulang).
             $trip->update([
-                'start_date' => $validated['start_date'],
-                'end_date'   => $validated['end_date'],
-                'status'     => Trip::statusFromDates($validated['start_date'], $validated['end_date']),
+                'description'   => $validated['description'],
+                'people_amount' => $validated['people_amount'],
+                'start_date'    => $validated['start_date'],
+                'end_date'      => $validated['end_date'],
+                'price'         => $validated['price'],
+                'image'         => $request->hasFile('image')
+                    ? $request->file('image')->store('trips', 'public')
+                    : $trip->image,
+                'status'        => Trip::statusFromDates($validated['start_date'], $validated['end_date']),
                 'current_run_started_at' => now(),
             ]);
+
+            $this->syncFacilities($trip, $validated['facilities'] ?? []);
+
+            // Ganti seluruh aktivitas dengan jadwal baru
+            $trip->detail_trips()->delete();
+            $this->syncActivities($request, $trip, $validated['activities'] ?? []);
         });
 
         \App\Models\ActivityLog::record('Membuka ulang trip: ' . $trip->name);
 
-        return back()->with('flash', ['type' => 'success', 'message' => 'Trip berhasil dibuka ulang dengan jadwal baru.']);
+        return redirect()->route('admin.trip.index')
+            ->with('flash', ['type' => 'success', 'message' => 'Trip berhasil dibuka ulang dengan jadwal baru.']);
     }
 
     public function analytics()

@@ -5,8 +5,9 @@ import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import Input from "@/Components/Input";
 import { FaStar, FaSuitcase, FaBagShopping, FaTrophy, FaLocationCrosshairs } from "react-icons/fa6";
-import { FaCrown } from "react-icons/fa";
+import { FaCrown, FaFire } from "react-icons/fa";
 import { FiSearch } from "react-icons/fi";
+import StreakBadge from "@/Components/StreakBadge";
 import { useTranslation } from "@/lib/useTranslation";
 import { fuzzyIncludes } from "@/lib/fuzzyMatch";
 
@@ -15,6 +16,7 @@ const BOARDS = [
     { key: "purchase_jastip", tab: "lb.tab_purchase_jastip", metric: "lb.metric_purchase_jastip", unit: "lb.unit_jastip", rating: false, Icon: FaBagShopping },
     { key: "best_guider", tab: "lb.tab_best_guider", metric: "lb.metric_created_trip", unit: "lb.unit_trip", rating: true, Icon: FaSuitcase },
     { key: "best_jastiper", tab: "lb.tab_best_jastiper", metric: "lb.metric_created_jastip", unit: "lb.unit_jastip", rating: true, Icon: FaBagShopping },
+    { key: "streak", tab: "lb.tab_streak", metric: "lb.metric_streak", unit: "lb.unit_day", rating: false, Icon: FaFire },
 ];
 
 const PODIUM_STYLE = {
@@ -23,7 +25,7 @@ const PODIUM_STYLE = {
     3: { ring: "ring-amber-500", badge: "bg-amber-600 text-white", order: "order-3", size: "h-20 w-20" },
 };
 
-export default function Leaderboard({ boards = {} }) {
+export default function Leaderboard({ boards = {}, streakLeader = null }) {
     const { t } = useTranslation();
     const authUserId = usePage().props.auth?.user?.id;
     const [activeKey, setActiveKey] = useState("purchase_trip");
@@ -174,6 +176,39 @@ export default function Leaderboard({ boards = {} }) {
                 </h1>
                 <p className="mx-auto max-w-2xl text-sm text-neutral-500">{t("lb.subtitle")}</p>
             </div>
+
+            {/* Pemuncak streak harian saat ini */}
+            {streakLeader && (
+                <div className="mx-auto mb-8 max-w-2xl">
+                    <ProfileWrap
+                        user={streakLeader}
+                        className="group flex items-center gap-4 rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 shadow-sm transition hover:shadow-md"
+                    >
+                        <div className="relative shrink-0">
+                            <img
+                                src={streakLeader.avatar}
+                                alt={streakLeader.name}
+                                className="h-14 w-14 rounded-full border-2 border-orange-300 object-cover"
+                                onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
+                            />
+                            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white shadow ring-2 ring-white">
+                                <FaFire className="text-xs" />
+                            </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold uppercase tracking-wide text-orange-600">
+                                {t("lb.streak_leader")}
+                            </p>
+                            <p className="flex items-center gap-2 truncate text-base font-bold text-neutral-800 group-hover:text-primary-700">
+                                {streakLeader.name}
+                                {isMe(streakLeader) && <YouBadge />}
+                            </p>
+                            <p className="text-xs text-neutral-500">{t("lb.streak_leader_sub")}</p>
+                        </div>
+                        <StreakBadge count={streakLeader.streak_count} className="shrink-0" />
+                    </ProfileWrap>
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="mb-8 flex flex-wrap justify-center gap-2">

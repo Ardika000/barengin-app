@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JastipCategory;
 use App\Models\JastipItem;
 use App\Support\FuzzySearch;
+use App\Support\RegionResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -108,16 +109,22 @@ class JastipController extends Controller
         }
         // "Dari" — tempat barang dibeli (negara/kota/alamat pembelian)
         if ($fromQ !== '') {
-            $query->whereRaw(
-                "CONCAT_WS(' ', COALESCE(purchase_province,''), COALESCE(purchase_city,''), COALESCE(purchase_address,'')) LIKE ?",
-                ['%' . $fromQ . '%'],
+            $this->applyLocationFilter(
+                $query,
+                $fromQ,
+                'purchase_province',
+                'purchase_city',
+                "CONCAT_WS(' ', COALESCE(purchase_province,''), COALESCE(purchase_city,''), COALESCE(purchase_address,''))",
             );
         }
         // "Ke" — tempat pembeli mengambil barang (jastiper kembali)
         if ($toQ !== '') {
-            $query->whereRaw(
-                "CONCAT_WS(' ', COALESCE(pickup_province,''), COALESCE(pickup_city,''), COALESCE(pickup_address,'')) LIKE ?",
-                ['%' . $toQ . '%'],
+            $this->applyLocationFilter(
+                $query,
+                $toQ,
+                'pickup_province',
+                'pickup_city',
+                "CONCAT_WS(' ', COALESCE(pickup_province,''), COALESCE(pickup_city,''), COALESCE(pickup_address,''))",
             );
         }
         if (! empty($categories)) {
@@ -134,6 +141,48 @@ class JastipController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * Filter lokasi berbasis kabupaten/kota. Teks bebas ("Jawa Barat", "Bandung",
+     * "Rumah Talenta BCA Sentul") di-resolve ke { province, city } lalu dicocokkan:
+     *   - provinsi saja → semua listing di provinsi itu (semua kabupaten/kota),
+     *   - provinsi+kota → kabupaten/kota tsb (LIKE inti nama, toleran "Kabupaten/Kota"),
+     * dengan fallback LIKE gabungan kolom bila resolusi gagal (mis. lokasi luar negeri).
+     */
+    private function applyLocationFilter($query, string $q, string $provinceCol, string $cityCol, string $concatExpr): void
+    {
+        $region = (new RegionResolver())->resolve($q);
+
+        if (! empty($region['city'])) {
+            // Radius "cukup dekat" = satu kabupaten/kota. Cocokkan inti nama kota
+            // (LIKE) sehingga "Kabupaten Bogor" & "Kota Bogor" sama-sama masuk, tapi
+            // TIDAK melebar ke seluruh provinsi.
+            $core = RegionResolver::core($region['city']);
+
+            $query->where(function ($sub) use ($cityCol, $core, $concatExpr, $q) {
+                if ($core !== '') {
+                    $sub->whereRaw("LOWER($cityCol) LIKE ?", ['%' . $core . '%']);
+                }
+                // Jaring pengaman: cocokkan teks asli pada gabungan kolom.
+                $sub->orWhereRaw("$concatExpr LIKE ?", ['%' . $q . '%']);
+            });
+
+            return;
+        }
+
+        if (! empty($region['province'])) {
+            $province = $region['province'];
+            $query->where(function ($sub) use ($provinceCol, $province, $concatExpr, $q) {
+                $sub->where($provinceCol, $province)
+                    ->orWhereRaw("$concatExpr LIKE ?", ['%' . $q . '%']);
+            });
+
+            return;
+        }
+
+        // Resolusi gagal → perilaku lama (LIKE substring pada gabungan kolom).
+        $query->whereRaw("$concatExpr LIKE ?", ['%' . $q . '%']);
     }
 
     /** Nama produk terdekat dengan kata kunci (untuk saran "mungkin maksud Anda"). */

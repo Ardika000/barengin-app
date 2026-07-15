@@ -57,6 +57,7 @@ class MessageSent implements ShouldBroadcastNow
             'created_at' => $this->message->created_at?->toISOString(),
             'attachments' => \App\Http\Controllers\Chat\ChatController::mapAttachments($this->message),
             'reply_to' => \App\Http\Controllers\Chat\ChatController::mapReply($this->message->replyTo),
+            'reference' => $this->message->reference ?: null,
             'sender' => [
                 'id' => $this->message->sender?->id,
                 'name' => $this->message->sender?->full_name,

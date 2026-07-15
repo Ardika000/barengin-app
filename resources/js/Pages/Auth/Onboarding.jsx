@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { FiChevronDown } from "react-icons/fi";
 import Button from "@/Components/Button.jsx";
@@ -5,6 +6,10 @@ import Input from "@/Components/Input.jsx";
 import Select from "@/Components/Select.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import { useTranslation } from "@/lib/useTranslation";
+
+// Nomor HP Indonesia (bagian lokal setelah +62): mulai 8, total 9–13 digit.
+// Selaras dengan regex backend OnboardingController: ^(?:\+62|62|0)?8\d{8,12}$.
+const ID_PHONE_LOCAL = /^8\d{8,12}$/;
 
 export default function Onboarding({ user }) {
     const { t } = useTranslation();
@@ -14,9 +19,20 @@ export default function Onboarding({ user }) {
         gender: "",
         birth_date: "",
     });
+    const [phoneError, setPhoneError] = useState("");
+
+    // Validasi format nomor HP lokal (abaikan spasi). Kosong = boleh (opsional).
+    const validatePhone = (value) => {
+        const digits = (value || "").replace(/\D/g, "");
+        if (digits === "") return "";
+        return ID_PHONE_LOCAL.test(digits) ? "" : t("auth.onboard.phone_invalid");
+    };
 
     const submit = (e) => {
         e.preventDefault();
+        const err = validatePhone(data.phone);
+        setPhoneError(err);
+        if (err) return;
         post("/onboarding");
     };
 
@@ -68,11 +84,13 @@ export default function Onboarding({ user }) {
                                 label={t("auth.onboard.phone")}
                                 leftAddon="+62"
                                 value={data.phone}
-                                onChange={(e) =>
-                                    setData("phone", e.target.value)
-                                }
+                                onChange={(e) => {
+                                    setData("phone", e.target.value);
+                                    if (phoneError) setPhoneError(validatePhone(e.target.value));
+                                }}
+                                onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
                                 placeholder="810 0000 0000"
-                                error={errors.phone}
+                                error={errors.phone || phoneError}
                             />
 
                             <Select
@@ -114,6 +132,7 @@ export default function Onboarding({ user }) {
                             <Button
                                 type="neutral"
                                 variant="outline"
+                                htmlType="button"
                                 className="w-full"
                                 onClick={skip}
                                 disabled={processing}

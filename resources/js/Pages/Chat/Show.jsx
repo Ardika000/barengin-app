@@ -9,6 +9,7 @@ import { Link, router, usePage } from "@inertiajs/react";
 import Segment from "./Partials/Segment";
 import ChatListItem from "./Partials/ChatListItem";
 import Bubble from "./Partials/BubbleChat";
+import ReferenceCard from "./Partials/ReferenceCard";
 import Avatar from "./Partials/Avatar";
 import ImageLightbox from "@/Components/ImageLightbox";
 import NewChatModal from "./Partials/NewChatModal";
@@ -37,9 +38,22 @@ export default function ChatShow({
     conversations = [],
     conversation,
     messages = [],
+    pendingReference = null,
 }) {
     const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
+
+    // Kartu referensi (Trip / Pergi Bareng) yang tersemat di komposer, dikirim
+    // bersama pesan pertama lalu dibersihkan. Hanya di-set ulang saat BERPINDAH
+    // percakapan — bukan tiap kali prop pendingReference berubah. Sebab setelah
+    // pesan pertama terkirim, storeMessage me-`back()` ke halaman yang sama; kalau
+    // kita ikut pendingReference, kartu akan muncul lagi dan menempel di pesan
+    // berikutnya. Membiarkan dep hanya conversation.id juga menghormati aksi "tutup".
+    const [activeReference, setActiveReference] = useState(pendingReference);
+    useEffect(() => {
+        setActiveReference(pendingReference);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation?.id]);
 
     const getConversationPeer = (c) =>
         c?.participants?.find(
@@ -424,7 +438,7 @@ export default function ChatShow({
     };
     useEffect(() => () => clearTimeout(highlightTimer.current), []);
 
-    const sendMessage = (messageText, files, replyObj) => {
+    const sendMessage = (messageText, files, replyObj, reference) => {
         if (sendingRef.current) return;
         sendingRef.current = true;
 
@@ -435,6 +449,7 @@ export default function ChatShow({
             sender_id: authUser?.id,
             text: messageText || "",
             created_at: new Date().toISOString(),
+            reference: reference ?? null,
             attachments: (files ?? []).map((f) => ({
                 url: URL.createObjectURL(f),
                 type: f.type,
@@ -465,6 +480,10 @@ export default function ChatShow({
         if (messageText) formData.append("message_text", messageText);
         (files ?? []).forEach((f) => formData.append("attachments[]", f));
         if (replyObj?.id) formData.append("reply_to_id", replyObj.id);
+        if (reference?.type && reference?.id) {
+            formData.append("reference_type", reference.type);
+            formData.append("reference_id", reference.id);
+        }
 
         router.post(`/chat/${conversation.id}/messages`, formData, {
             preserveScroll: true,
@@ -511,9 +530,9 @@ export default function ChatShow({
         e.preventDefault();
         const trimmed = text.trim();
         const files = pendingAttachments.map((a) => a.file);
-        if (!trimmed && files.length === 0) return;
+        if (!trimmed && files.length === 0 && !activeReference) return;
 
-        sendMessage(trimmed, files, replyingTo);
+        sendMessage(trimmed, files, replyingTo, activeReference);
 
         // Bersihkan komposer (object URL pratinjau dibebaskan).
         pendingAttachments.forEach((a) => {
@@ -524,6 +543,8 @@ export default function ChatShow({
         setReplyingTo(null);
         setPendingAttachments([]);
         setAttachError("");
+        // Referensi hanya dilampirkan ke pesan pertama, lalu dilepas.
+        setActiveReference(null);
     };
 
     const handleAttach = (e) => {
@@ -733,6 +754,7 @@ export default function ChatShow({
                                             attachments={m.attachments}
                                             onImageClick={openLightbox}
                                             reply={m.reply_to}
+                                            reference={m.reference}
                                             onReplyQuoteClick={
                                                 m.reply_to?.id
                                                     ? () => scrollToMessage(m.reply_to.id)
@@ -747,6 +769,16 @@ export default function ChatShow({
                         </div>
 
                         <div className="shrink-0 border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
+                            {/* Kartu referensi tersemat (konteks Trip / Pergi Bareng) */}
+                            {activeReference ? (
+                                <div className="mb-3">
+                                    <ReferenceCard
+                                        reference={activeReference}
+                                        onDismiss={() => setActiveReference(null)}
+                                    />
+                                </div>
+                            ) : null}
+
                             {/* Bar "membalas" — desain baru (garis tipis + ikon, bukan kotak biru) */}
                             {replyingTo ? (
                                 <div className="mb-3 flex items-center gap-3 border-l-2 border-neutral-300 bg-neutral-50 py-1.5 pl-3 pr-2">

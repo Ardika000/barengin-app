@@ -76,6 +76,19 @@ class ChatController extends Controller
             ? ($this->groupAvatar($conversation) ?? asset('assets/default-profile.png'))
             : ($peer?->public_profile_image ?? asset('assets/default-profile.png'));
 
+        // Kartu referensi tersemat (opsional) dari query — hanya untuk chat personal.
+        $pendingReference = $conversation->is_group
+            ? null
+            : $this->buildReference(request()->query('ref_type'), request()->query('ref_id'));
+
+        // "Sekali saja": bila kartu referensi (trip / pergi bareng) ini sudah pernah
+        // dikirim di percakapan ini, jangan tampilkan lagi di komposer. Tanpa ini,
+        // karena storeMessage me-`back()` ke URL yang masih membawa ref_id/ref_type,
+        // kartu akan menempel ulang pada setiap pesan berikutnya.
+        if ($pendingReference && $this->referenceAlreadySent($conversation, $pendingReference)) {
+            $pendingReference = null;
+        }
+
         return Inertia::render('Chat/Show', [
             'conversations' => $conversations,
             'conversation' => [
@@ -96,6 +109,7 @@ class ChatController extends Controller
                 ])->values(),
             ],
             'messages' => $messages,
+            'pendingReference' => $pendingReference,
         ]);
     }
 
@@ -119,6 +133,9 @@ class ChatController extends Controller
                 'integer',
                 Rule::exists('messages', 'id')->where('conversation_id', $conversation->id),
             ],
+            // Kartu referensi opsional (Trip / Pergi Bareng) untuk pesan pertama.
+            'reference_type' => ['nullable', 'in:trip,pergi_bareng'],
+            'reference_id' => ['nullable', 'integer'],
             // Banyak lampiran (gambar/PDF), masing-masing maksimal 5MB.
             'attachments' => ['nullable', 'array', 'max:10'],
             'attachments.*' => [
@@ -154,7 +171,13 @@ class ChatController extends Controller
         $text = $data['message_text'] ?? '';
         $files = $request->file('attachments', []);
 
-        if (! $text && empty($files)) {
+        // Bangun snapshot referensi (server-authoritative, tidak mempercayai klien).
+        $reference = $this->buildReference(
+            $data['reference_type'] ?? null,
+            $data['reference_id'] ?? null,
+        );
+
+        if (! $text && empty($files) && ! $reference) {
             return back()->withErrors(['message_text' => 'Pesan kosong.']);
         }
 
@@ -174,6 +197,7 @@ class ChatController extends Controller
             'reply_to_id' => $data['reply_to_id'] ?? null,
             'message_text' => $text,
             'attachments' => $attachments ?: null,
+            'reference' => $reference,
         ]);
 
         broadcast(new MessageSent($message))->toOthers();
@@ -270,12 +294,93 @@ class ChatController extends Controller
             'created_at' => $m->created_at?->toISOString(),
             'attachments' => self::mapAttachments($m),
             'reply_to' => $this->mapReply($m->replyTo),
+            'reference' => $m->reference ?: null,
             'sender' => [
                 'id' => $m->sender?->id,
                 'name' => $m->sender?->full_name,
                 'avatar' => $m->sender?->public_profile_image ?? asset('assets/default-profile.png'),
             ],
         ];
+    }
+
+    /**
+     * Bangun snapshot kartu referensi Trip / Pergi Bareng dari (type, id).
+     * Dipakai untuk kartu tersemat di komposer (show) dan untuk disimpan pada
+     * pesan (storeMessage) sehingga tampil sebagai kartu di gelembung chat.
+     */
+    private function buildReference(?string $type, $id): ?array
+    {
+        if (! $type || ! $id) {
+            return null;
+        }
+
+        if ($type === 'trip') {
+            $trip = \App\Models\Trip::find($id);
+            if (! $trip) {
+                return null;
+            }
+
+            return [
+                'type' => 'trip',
+                'id' => (int) $trip->id,
+                'title' => $trip->name,
+                'image_url' => $this->resolveTripImage($trip->image),
+                'subtitle' => $trip->location ?? null,
+                'url' => '/trip-bareng/' . $trip->id,
+            ];
+        }
+
+        if ($type === 'pergi_bareng') {
+            $pb = \App\Models\PergiBareng::find($id);
+            if (! $pb) {
+                return null;
+            }
+
+            $img = $pb->img_name;
+            if (! $img) {
+                $imageUrl = asset('assets/default-image.png');
+            } elseif (str_starts_with($img, 'http://') || str_starts_with($img, 'https://') || str_starts_with($img, '/')) {
+                $imageUrl = $img;
+            } else {
+                $imageUrl = asset('storage/' . $img);
+            }
+
+            return [
+                'type' => 'pergi_bareng',
+                'id' => (int) $pb->id,
+                'title' => $pb->name,
+                'image_url' => $imageUrl,
+                'subtitle' => $pb->destination_loc ?? null,
+                'url' => '/pergi-bareng/' . $pb->id,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Apakah kartu referensi (trip / pergi bareng) yang sama sudah pernah dikirim
+     * pada percakapan ini? Dibandingkan berdasarkan type + id snapshot. DB-agnostic
+     * (tidak bergantung pada query path JSON) dan hanya memuat pesan yang berreferensi.
+     */
+    private function referenceAlreadySent(Conversation $conversation, array $reference): bool
+    {
+        $type = $reference['type'] ?? null;
+        $id = (int) ($reference['id'] ?? 0);
+
+        if (! $type || ! $id) {
+            return false;
+        }
+
+        return $conversation->messages()
+            ->whereNotNull('reference')
+            ->get(['reference'])
+            ->contains(function (Message $m) use ($type, $id) {
+                $ref = $m->reference;
+                return is_array($ref)
+                    && ($ref['type'] ?? null) === $type
+                    && (int) ($ref['id'] ?? 0) === $id;
+            });
     }
 
     /** Daftar lampiran pesan; jatuh balik ke kolom lama untuk pesan lama. */

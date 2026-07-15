@@ -335,6 +335,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/analytics', [AdminTripController::class, 'analytics'])->name('analytics');
         Route::post('/', [AdminTripController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [AdminTripController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::get('/{id}/reopen', [AdminTripController::class, 'reopen'])->whereNumber('id')->name('reopen');
         Route::post('/{id}', [AdminTripController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminTripController::class, 'publish'])->whereNumber('id')->name('publish');
         Route::post('/{id}/retrip', [AdminTripController::class, 'retrip'])->whereNumber('id')->name('retrip');

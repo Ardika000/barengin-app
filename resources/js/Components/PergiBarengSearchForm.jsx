@@ -24,6 +24,15 @@ export default function PergiSearchForm({ naked = true }) {
     const [jumlah, setJumlah] = useState(filters.jumlah || "");
     const [locating, setLocating] = useState(false);
 
+    // Batasi ke hari ini ke depan. Untuk waktu, hanya batasi bila tanggal yang
+    // dipilih adalah hari ini (agar jam lampau tak bisa dipilih); tanggal mendatang
+    // bebas memilih jam berapa pun.
+    const todayStr = new Date().toLocaleDateString("en-CA");
+    const timeMin =
+        tanggal === todayStr
+            ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+            : undefined;
+
     // "Dari mana" TIDAK lagi diisi otomatis dengan lokasi user. Pengguna bisa
     // menekan tombol crosshair untuk mengisi lokasinya sendiri saat dibutuhkan.
     const useMyLocation = async () => {
@@ -93,6 +102,7 @@ export default function PergiSearchForm({ naked = true }) {
                     <Input
                         label={t("search.depart_date")}
                         type="date"
+                        min={todayStr}
                         value={tanggal}
                         onChange={(e) => setTanggal(e.target.value)}
                     />
@@ -102,6 +112,7 @@ export default function PergiSearchForm({ naked = true }) {
                     <Input
                         label={t("search.meet_time")}
                         type="time"
+                        min={timeMin}
                         value={waktu}
                         onChange={(e) => setWaktu(e.target.value)}
                     />
