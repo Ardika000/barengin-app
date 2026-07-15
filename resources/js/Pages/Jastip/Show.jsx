@@ -202,7 +202,7 @@ export default function Show({ product, related = [] }) {
                             <div className="mb-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-semibold text-neutral-700">{t("jastip.show.quantity")}</p>
-                                    <p className="text-xs text-neutral-400">({t("jastip.show.stock")}: {remaining})</p>
+                                    <p className="text-xs text-neutral-600">({t("jastip.show.stock")}: {remaining})</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <button type="button" onClick={() => changeQty("minus")} disabled={quantity <= minBuy}
