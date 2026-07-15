@@ -258,7 +258,7 @@ export default function Show({ product, related = [] }) {
                                                 className="h-10 w-10 rounded-full object-cover"
                                                 onError={(e) => { e.target.src = "/assets/default-profile.png"; }} />
                                             <div className="min-w-0">
-                                                <p className="text-xs text-neutral-400">{t("jastip.show.owner")}</p>
+                                                <p className="text-xs text-neutral-500">{t("jastip.show.owner")}</p>
                                                 <p className="truncate text-sm font-semibold text-neutral-700 group-hover:text-primary-700 group-hover:underline">{product.owner.name}</p>
                                                 <p className="flex items-center gap-1 text-xs text-amber-500">
                                                     <FaStar /> {Number(product.owner.rating || 0).toFixed(1)} {t("jastip.show.rating")}
@@ -271,7 +271,7 @@ export default function Show({ product, related = [] }) {
                                                 className="h-10 w-10 rounded-full object-cover"
                                                 onError={(e) => { e.target.src = "/assets/default-profile.png"; }} />
                                             <div className="min-w-0">
-                                                <p className="text-xs text-neutral-400">{t("jastip.show.owner")}</p>
+                                                <p className="text-xs text-neutral-500">{t("jastip.show.owner")}</p>
                                                 <p className="truncate text-sm font-semibold text-neutral-700">{product.owner.name}</p>
                                                 <p className="flex items-center gap-1 text-xs text-amber-500">
                                                     <FaStar /> {Number(product.owner.rating || 0).toFixed(1)} {t("jastip.show.rating")}
@@ -295,18 +295,18 @@ export default function Show({ product, related = [] }) {
                                 {(product.origin || product.destination) && (
                                     <div className="mt-4 flex items-center justify-between border-t border-neutral-200 pt-3 text-center text-xs">
                                         <div>
-                                            <p className="text-neutral-400">{t("jastip.show.bought_in")}</p>
+                                            <p className="text-neutral-500">{t("jastip.show.bought_in")}</p>
                                             <p className="font-bold text-neutral-700">{product.origin || "-"}</p>
                                         </div>
                                         <FaPlaneUp className="text-primary-600" />
                                         <div>
-                                            <p className="text-neutral-400">{t("jastip.show.arrive_in")}</p>
+                                            <p className="text-neutral-500">{t("jastip.show.arrive_in")}</p>
                                             <p className="font-bold text-neutral-700">{product.destination || "-"}</p>
                                         </div>
                                     </div>
                                 )}
                                 {product.pickup_address && (
-                                    <div className="mt-3 flex items-start gap-2 border-t border-neutral-200 pt-3 text-xs text-neutral-500">
+                                    <div className="mt-3 flex items-start gap-2 border-t border-neutral-200 pt-3 text-sm text-neutral-500">
                                         <FaLocationDot className="mt-0.5 shrink-0 text-primary-600" />
                                         <span>
                                             <span className="font-semibold text-neutral-600">{t("jastip.show.pickup_point")}: </span>
