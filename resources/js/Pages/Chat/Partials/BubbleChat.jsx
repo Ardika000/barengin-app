@@ -2,6 +2,7 @@ import React from "react";
 import Avatar from "./Avatar";
 import { FiCornerUpLeft } from "react-icons/fi";
 import ReferenceCard from "./ReferenceCard";
+import SplitBillCard from "./SplitBillCard";
 import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
@@ -40,6 +41,8 @@ export default function Bubble({
     senderName,
     reply,
     reference,
+    splitBillState,
+    midtransClientKey,
     onReply,
     onReplyQuoteClick,
 }) {
@@ -109,10 +112,19 @@ export default function Bubble({
                         </button>
                     ) : null}
 
-                    {/* Kartu referensi Trip / Pergi Bareng (konteks pesan) */}
+                    {/* Kartu referensi Trip / Pergi Bareng (konteks pesan), atau
+                        kartu tagihan patungan yang statusnya hidup. */}
                     {reference ? (
                         <div className={cn(text || reply ? "mb-2" : "")}>
-                            <ReferenceCard reference={reference} />
+                            {reference.type === "split_bill" ? (
+                                <SplitBillCard
+                                    reference={reference}
+                                    state={splitBillState}
+                                    clientKey={midtransClientKey}
+                                />
+                            ) : (
+                                <ReferenceCard reference={reference} />
+                            )}
                         </div>
                     ) : null}
 

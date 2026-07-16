@@ -160,6 +160,7 @@ export default function ChatIndex({ conversations = [] }) {
                                     title={c.title}
                                     subtitle={c.subtitle}
                                     badgeLabel={c.group_meta}
+                                    groupType={c.group_type}
                                     time={formatTime(c.last_message_at)}
                                     unread={c.unread}
                                 />

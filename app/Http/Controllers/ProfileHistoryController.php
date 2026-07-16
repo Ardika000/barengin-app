@@ -33,6 +33,7 @@ class ProfileHistoryController extends Controller
 
         return inertia('ProfileHistory/Index', [
             'profile'           => $this->profilePayload($user),
+            'wallet'            => $this->walletPayload($user),
             'transactions'      => $this->transactions($user),
             'jalan_bareng'      => $this->jalanBarengHistory($user),
             'jastip_history'    => $this->jastipHistory($user),
@@ -55,6 +56,31 @@ class ProfileHistoryController extends Controller
     }
 
     /* ===================== DATA BUILDERS ===================== */
+
+    /**
+     * Dompet pengguna: saldo + mutasi terakhir. Saldo bertambah ketika anggota
+     * melunasi bagian split bill dari pergi bareng yang ia selenggarakan.
+     */
+    private function walletPayload(User $user): array
+    {
+        $wallet = \App\Models\Wallet::forUser($user->id);
+
+        return [
+            'balance' => (float) $wallet->balance,
+            'entries' => $wallet->wallet_transactions()
+                ->latest()
+                ->take(5)
+                ->get()
+                ->map(fn ($w) => [
+                    'id' => $w->id,
+                    'type' => $w->type,
+                    'amount' => (float) $w->amount,
+                    'description' => $w->description,
+                    'date_label' => Carbon::parse($w->created_at)->translatedFormat('d M Y, H:i'),
+                ])
+                ->values(),
+        ];
+    }
 
     private function profilePayload(User $user): array
     {
@@ -120,10 +146,12 @@ class ProfileHistoryController extends Controller
             ->where('user_id', $user->id)
             // Hanya transaksi pembelian; request titipan (type 'jastip_request')
             // dikelola sepenuhnya di tab "Titipan Saya".
-            ->whereIn('type', ['jastip', 'trip'])
+            ->whereIn('type', ['jastip', 'trip', 'split_bill'])
             ->with([
                 'trip_order.trip',
                 'jastip_order.jastip_order_items.jastip_item.jastip_item_images',
+                'split_bill_share.split_bill.pergi_bareng',
+                'split_bill_share.split_bill.creator',
             ])
             ->latest()
             ->paginate(4, ['*'], 'tx_page')
@@ -134,10 +162,69 @@ class ProfileHistoryController extends Controller
                 return $this->mapTripTransaction($t);
             }
 
+            if ($t->type === 'split_bill') {
+                return $this->mapSplitBillTransaction($t);
+            }
+
             return $this->mapJastipTransaction($t);
         });
 
         return $transactions;
+    }
+
+    /**
+     * Pembayaran bagian patungan (split bill) pergi bareng. Bentuknya mengikuti
+     * kartu transaksi lain agar tab Riwayat Transaksi bisa merendernya apa adanya.
+     */
+    private function mapSplitBillTransaction(Transaction $t): array
+    {
+        $share = $t->split_bill_share;
+        $bill  = $share?->split_bill;
+        $trip  = $bill?->pergi_bareng;
+
+        // Status share ('paid' | 'pending' | 'unpaid') dipetakan ke kosakata UI
+        // yang sama dengan transaksi lain.
+        $status = $share?->status === 'paid' ? 'completed' : 'waiting_payment';
+
+        $image = $this->resolveImage($trip?->img_name, asset('assets/default-image.png'));
+
+        $creator = $bill?->creator;
+        $creatorAvatar = $this->resolveImage($creator?->profile_image, asset('assets/default-profile.png'));
+
+        return [
+            'id'         => $t->id,
+            'kind'       => 'split_bill',
+            'type_label' => 'Patungan Pergi Bareng',
+            'date_label' => Carbon::parse($t->created_at)->translatedFormat('d M Y'),
+            'item_name'  => $bill?->title ?? 'Patungan',
+            'image'      => $image,
+            'slot'       => 1,
+            'total'      => (float) $t->total_amount,
+            'status'     => $status,
+            'snap_token' => $status === 'completed' ? null : $t->snap_token,
+            'detail_url' => $trip ? '/pergi-bareng/' . $trip->id : null,
+            'detail'     => [
+                'order_no'       => 'TRX-' . strtoupper(substr((string) $t->id, 0, 8)),
+                'date_label'     => Carbon::parse($t->created_at)->translatedFormat('d F Y'),
+                'status_heading' => $this->statusHeading($status),
+                'payment_method' => $t->payment_method,
+                'seller'         => [
+                    'name'   => $creator?->full_name ?? 'Penyelenggara',
+                    'avatar' => $creatorAvatar,
+                ],
+                'items'          => [[
+                    'name'  => $bill?->title ?? 'Patungan',
+                    'image' => $image,
+                    'slot'  => 1,
+                ]],
+                'shipping'       => null,
+                'fees'           => [
+                    ['label' => 'Bagian Patungan', 'amount' => (float) $t->total_amount],
+                ],
+                'total'          => (float) $t->total_amount,
+            ],
+            'review_target' => null,
+        ];
     }
 
     private function mapTripTransaction(Transaction $t): array

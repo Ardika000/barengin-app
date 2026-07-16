@@ -270,6 +270,12 @@ Route::middleware('auth')->group(function () {
     })->name('chat.exp');
 });
 
+// Pembayaran bagian split bill oleh anggota (dipanggil dari kartu tagihan di grup chat)
+Route::middleware('auth')->group(function () {
+    Route::post('/split-bill/shares/{share}/pay', [\App\Http\Controllers\SplitBillController::class, 'pay'])
+        ->whereNumber('share')->name('split-bill.share.pay');
+});
+
 // Leaderboard
 Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index'])->name('leaderboard');
 
@@ -338,6 +344,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/{id}/reopen', [AdminTripController::class, 'reopen'])->whereNumber('id')->name('reopen');
         Route::post('/{id}', [AdminTripController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminTripController::class, 'publish'])->whereNumber('id')->name('publish');
+        Route::post('/{id}/finish', [AdminTripController::class, 'finish'])->whereNumber('id')->name('finish');
         Route::post('/{id}/retrip', [AdminTripController::class, 'retrip'])->whereNumber('id')->name('retrip');
         Route::delete('/{id}', [AdminTripController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
@@ -349,6 +356,12 @@ Route::prefix('admin')->group(function () {
         Route::get('/analytics', [AdminPergiBarengController::class, 'analytics'])->name('analytics');
         Route::post('/', [AdminPergiBarengController::class, 'store'])->name('store');
         Route::delete('/{id}', [AdminPergiBarengController::class, 'destroy'])->whereNumber('id')->name('destroy');
+
+        Route::post('/{id}/finish', [AdminPergiBarengController::class, 'finish'])->whereNumber('id')->name('finish');
+
+        // Bagi tagihan (split bill) untuk pergi bareng yang sudah selesai
+        Route::get('/{id}/split-bill', [\App\Http\Controllers\SplitBillController::class, 'create'])->whereNumber('id')->name('split-bill.create');
+        Route::post('/{id}/split-bill', [\App\Http\Controllers\SplitBillController::class, 'store'])->whereNumber('id')->name('split-bill.store');
 
         Route::get('/{id}/reopen', [AdminPergiBarengController::class, 'reopen'])->whereNumber('id')->name('reopen');
         Route::get('/{id}/requests', [AdminPergiBarengController::class, 'requests'])->whereNumber('id')->name('requests');

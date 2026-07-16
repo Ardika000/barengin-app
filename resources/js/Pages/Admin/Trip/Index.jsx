@@ -10,6 +10,7 @@ import { useServerTable } from "@/lib/useServerTable";
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
 import { BsChatDots } from "react-icons/bs";
+import OngoingSection from "@/Pages/Admin/Partials/OngoingSection";
 
 const STATUS_STYLES = {
     draft: "bg-blue-100 text-blue-700",
@@ -18,7 +19,7 @@ const STATUS_STYLES = {
     done: "bg-green-100 text-green-700",
 };
 
-export default function Index({ trips = {}, filters = {} }) {
+export default function Index({ trips = {}, ongoing = [], filters = {} }) {
     const { t: translate } = useTranslation();
     const rows = trips.data ?? [];
     const { values, set, goPage } = useServerTable("/admin/trip", {
@@ -54,6 +55,25 @@ export default function Index({ trips = {}, filters = {} }) {
                 <h1 className="text-2xl font-bold text-neutral-700">{translate("admin.trip.index_title")}</h1>
                 <p className="text-neutral-500 text-sm">{translate("admin.trip.index_subtitle")}</p>
             </div>
+
+            {/* Sedang berlangsung — pemandu bisa menyelesaikan lebih cepat */}
+            <OngoingSection
+                items={ongoing.map((o) => ({
+                    id: o.id,
+                    title: o.name,
+                    subtitle: o.location,
+                    image: o.image,
+                    meta: o.period_label,
+                }))}
+                finishUrl={(id) => `/admin/trip/${id}/finish`}
+                title={translate("admin.trip.ongoing_title")}
+                emptyText={translate("admin.trip.ongoing_empty")}
+                finishLabel={translate("admin.ongoing.finish")}
+                confirmTitle={translate("admin.trip.finish_title")}
+                confirmDescription={translate("admin.trip.finish_desc")}
+                confirmLabel={translate("admin.ongoing.finish_confirm")}
+            />
+
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title="Manajemen Trip" />
 

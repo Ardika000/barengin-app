@@ -26,7 +26,7 @@ class Trip extends Model
     protected $fillable = [
         'guider_id', 'name', 'description', 'people_amount',
         'start_date', 'end_date', 'rating', 'price',
-        'image', 'location', 'status', 'current_run_started_at',
+        'image', 'location', 'status', 'current_run_started_at', 'finished_at',
     ];
 
     protected function casts()
@@ -37,6 +37,7 @@ class Trip extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'current_run_started_at' => 'datetime',
+            'finished_at' => 'datetime',
         ];
     }
 
@@ -101,11 +102,17 @@ class Trip extends Model
     /**
      * Perbarui status semua trip yang sudah dipublish (bukan draft)
      * mengikuti tanggalnya. Dipakai oleh cron & saat membuka dashboard.
+     *
+     * Trip yang diselesaikan manual oleh pemandu (`finished_at`) dilewati:
+     * tanpa ini, trip yang selesai lebih cepat akan dikembalikan ke 'ongoing'
+     * karena end_date-nya belum lewat.
      */
     public static function refreshStatuses(): int
     {
         $changed = 0;
-        self::where('status', '!=', self::STATUS_DRAFT)->get()->each(function ($trip) use (&$changed) {
+        self::where('status', '!=', self::STATUS_DRAFT)
+            ->whereNull('finished_at')
+            ->get()->each(function ($trip) use (&$changed) {
             $expected = self::statusFromDates($trip->start_date, $trip->end_date);
             if ($trip->status !== $expected) {
                 $trip->status = $expected;

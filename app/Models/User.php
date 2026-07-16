@@ -94,6 +94,14 @@ class User extends Authenticatable
         return $this->belongsToMany(Conversation::class, 'conversation_participants');
     }
 
+    public function wallet(){
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function split_bill_shares(){
+        return $this->hasMany(SplitBillShare::class);
+    }
+
     public function followers()
     {
         return $this->hasMany(Follow::class, 'following_id');

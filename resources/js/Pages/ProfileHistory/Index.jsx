@@ -9,6 +9,7 @@ import PergiBarengCard from "@/Components/PergiBarengCard";
 
 import ProfileSidebar from "./Partials/ProfileSidebar";
 import ProfileEditForm from "./Partials/ProfileEditForm";
+import WalletCard from "./Partials/WalletCard";
 import TransactionCard from "./Partials/TransactionCard";
 import JalanBarengCard from "./Partials/JalanBarengCard";
 import JastipRequestCard from "./Partials/JastipRequestCard";
@@ -36,6 +37,7 @@ const TABS = [
 
 export default function ProfileHistory({
     profile,
+    wallet,
     transactions,
     jalan_bareng,
     jastip_history,
@@ -128,6 +130,10 @@ export default function ProfileHistory({
                             onEdit={() => setEditing(true)}
                         />
                     )}
+
+                    {/* Dompet: informasi tingkat akun, jadi menemani profil di
+                        sidebar dan bukan salah satu tab riwayat. */}
+                    {!editing && <WalletCard wallet={wallet} />}
                 </aside>
 
                 {/* ===== Right: Tabbed content ===== */}

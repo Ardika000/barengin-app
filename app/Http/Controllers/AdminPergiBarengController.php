@@ -36,6 +36,16 @@ class AdminPergiBarengController extends Controller
         return $this->resolveStoredImage($path);
     }
 
+    /**
+     * Status untuk tabel manajemen. PergiBareng::status() memakai kosakata
+     * 'will_start', sedangkan halaman ini (dan Riwayat Jalan Bareng) memakai
+     * 'waiting' untuk keadaan yang sama.
+     */
+    private function statusOf(PergiBareng $trip): string
+    {
+        return $trip->status() === 'will_start' ? 'waiting' : $trip->status();
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
@@ -73,11 +83,9 @@ class AdminPergiBarengController extends Controller
                 $date = $trip->time_appointment;
 
                 // Status selaras dengan Riwayat "Jalan Bareng" (ProfileHistory):
-                // waiting (belum mulai) | ongoing (hari-H) | finish (sudah lewat)
-                $now = Carbon::now();
-                $status = $now->lt($date->copy()->startOfDay())
-                    ? 'waiting'
-                    : ($now->lte($date->copy()->endOfDay()) ? 'ongoing' : 'finish');
+                // waiting (belum mulai) | ongoing (hari-H) | finish (sudah lewat
+                // atau diselesaikan manual oleh penyelenggara).
+                $status = $this->statusOf($trip);
 
                 return [
                     'id' => $trip->id,
@@ -97,7 +105,69 @@ class AdminPergiBarengController extends Controller
 
         return Inertia::render('Admin/PergiBareng/Index', [
             'trips' => $trips,
+            'ongoing' => $this->ongoingTrips(),
             'filters' => ['search' => $search, 'sort' => $sort],
+        ]);
+    }
+
+    /**
+     * Pergi bareng yang sedang berlangsung milik penyelenggara — ditampilkan
+     * sebagai seksi tersendiri di atas tabel agar tombol "Selesaikan" mudah
+     * dijangkau. Berlangsung = hari janji adalah hari ini & belum diselesaikan.
+     */
+    private function ongoingTrips()
+    {
+        return PergiBareng::query()
+            ->where('initiator_id', Auth::id())
+            ->whereNull('finished_at')
+            ->whereDate('time_appointment', Carbon::today())
+            ->withSum('pergi_bareng_participants as joined_count', 'quantity')
+            ->orderBy('time_appointment')
+            ->get()
+            ->map(fn ($trip) => [
+                'id' => $trip->id,
+                'code' => $this->shortCode($trip->id),
+                'name' => $trip->name,
+                'destination' => $trip->destination_loc,
+                'departure' => $trip->departure_loc,
+                'image' => $this->resolvePergiImage($trip->img_name),
+                'date_label' => $trip->time_appointment->translatedFormat('d M Y'),
+                'time_label' => $trip->time_appointment->format('H:i'),
+                'joined' => (int) ($trip->joined_count ?? 0),
+                'capacity' => $trip->people_amount,
+            ])
+            ->values();
+    }
+
+    /**
+     * Selesaikan pergi bareng lebih cepat dari waktu janji. Hanya penyelenggara,
+     * dan hanya saat sedang berlangsung — yang belum mulai tidak bisa diselesaikan.
+     */
+    public function finish($id)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        if ($trip->finished_at) {
+            return back()->with('flash', [
+                'type' => 'info',
+                'message' => 'Pergi bareng ini sudah selesai.',
+            ]);
+        }
+
+        if ($trip->status() !== 'ongoing') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Hanya pergi bareng yang sedang berlangsung yang bisa diselesaikan.',
+            ]);
+        }
+
+        $trip->forceFill(['finished_at' => now()])->save();
+
+        \App\Models\ActivityLog::record('Menyelesaikan pergi bareng: ' . $trip->name);
+
+        return back()->with('flash', [
+            'type' => 'success',
+            'message' => 'Pergi bareng "' . $trip->name . '" ditandai selesai. Kamu sekarang bisa membagi tagihan ke anggota.',
         ]);
     }
 

@@ -50,6 +50,13 @@ class MidtransController extends Controller
                     ->orWhereIn('t.id', DB::table('jastip_requests')
                         ->where('status', 'quoted')
                         ->whereNotNull('transaction_id')
+                        ->select('transaction_id'))
+                    // Bagian split bill yang menunggu pembayaran. Penting di
+                    // localhost yang tidak punya webhook publik: status baru
+                    // tersinkron saat halaman Profile History dibuka.
+                    ->orWhereIn('t.id', DB::table('split_bill_shares')
+                        ->where('status', 'pending')
+                        ->whereNotNull('transaction_id')
                         ->select('transaction_id'));
             })
             ->pluck('t.id');
@@ -129,10 +136,61 @@ class MidtransController extends Controller
                 ->update(['transaction_id' => null, 'updated_at' => now()]);
         }
 
+        // Bagian split bill: lunas → catat & isi dompet penyelenggara; gagal →
+        // lepaskan transaksinya agar anggota bisa membayar ulang.
+        if ($orderStatus === 'paid') {
+            self::settleSplitBillShare($orderId);
+        } elseif ($orderStatus === 'unpaid') {
+            DB::table('split_bill_shares')
+                ->where('transaction_id', $orderId)
+                ->where('status', 'pending')
+                ->update(['transaction_id' => null, 'status' => 'unpaid', 'updated_at' => now()]);
+        }
+
         // Saat lunas: buat peserta trip & masukkan pembeli ke grup chat
         if ($orderStatus === 'paid') {
             self::fulfillPaidTripOrders($orderId);
         }
+    }
+
+    /**
+     * Tandai bagian split bill lunas lalu tambahkan nominalnya ke dompet
+     * penyelenggara. Uangnya sendiri masuk ke akun Midtrans platform; dompet
+     * mencatat berapa yang menjadi hak penyelenggara.
+     *
+     * Idempotent: notifikasi Midtrans bisa datang berkali-kali untuk transaksi
+     * yang sama, jadi share yang sudah lunas dilewati dan Wallet::credit()
+     * menolak kredit ganda dari sumber yang sama.
+     */
+    private static function settleSplitBillShare(string $transactionId): void
+    {
+        $share = \App\Models\SplitBillShare::with('split_bill')
+            ->where('transaction_id', $transactionId)
+            ->first();
+
+        if (! $share || $share->status === \App\Models\SplitBillShare::STATUS_PAID) {
+            return;
+        }
+
+        $bill = $share->split_bill;
+
+        if (! $bill) {
+            return;
+        }
+
+        $share->forceFill([
+            'status' => \App\Models\SplitBillShare::STATUS_PAID,
+            'paid_at' => now(),
+        ])->save();
+
+        \App\Models\Wallet::forUser((int) $bill->creator_id)->credit(
+            (float) $share->amount,
+            'Patungan: ' . $bill->title,
+            'split_bill_share',
+            (int) $share->id,
+        );
+
+        $bill->refreshStatus();
     }
 
     /**

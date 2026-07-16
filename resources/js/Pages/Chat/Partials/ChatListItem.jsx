@@ -1,6 +1,8 @@
 import React from "react";
 import { Link } from "@inertiajs/react";
 import Avatar from "./Avatar";
+import { GROUP_TYPE_STYLES } from "./groupType";
+import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
     return a.filter(Boolean).join(" ");
@@ -14,9 +16,12 @@ export default function ChatListItem({
     time,
     unread,
     badgeLabel,
+    groupType,
     href,
     onClick,
 }) {
+    const { t } = useTranslation();
+    const typeStyle = GROUP_TYPE_STYLES[groupType];
     const content = (
         <div className="flex items-center gap-3">
             <Avatar src={avatar} alt={title} />
@@ -43,14 +48,24 @@ export default function ChatListItem({
                     </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {typeStyle ? (
+                        <span
+                            className={cn(
+                                "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold",
+                                typeStyle.chip,
+                            )}
+                        >
+                            <typeStyle.icon className="h-3 w-3" />
+                            {t(typeStyle.key, typeStyle.fallback)}
+                        </span>
+                    ) : null}
+
                     {badgeLabel ? (
                         <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-1 text-[11px] font-medium text-neutral-700">
                             {badgeLabel}
                         </span>
-                    ) : (
-                        <span />
-                    )}
+                    ) : null}
                 </div>
             </div>
         </div>

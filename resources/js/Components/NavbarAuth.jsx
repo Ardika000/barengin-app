@@ -19,6 +19,10 @@ export default function NavbarAuth() {
     const user = props?.auth?.user;
     const { t } = useTranslation();
 
+    // Jumlah percakapan dengan pesan belum dibaca (shared prop dari Inertia).
+    const unreadChats = Number(props?.chat_unread_count ?? 0);
+    const unreadLabel = unreadChats > 99 ? "99+" : String(unreadChats);
+
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -107,17 +111,28 @@ export default function NavbarAuth() {
                         <StreakBadge count={user?.streak_count ?? 0} />
                     </Link>
 
-                    <Button
-                        isButtonLink
-                        href="/chat"
-                        type="primary"
-                        variant="solid"
-                        size="sm"
-                        className="gap-2"
-                    >
-                        <FaPaperPlane className="w-4 h-4" />
-                        {t("nav.chat")}
-                    </Button>
+                    <div className="relative">
+                        <Button
+                            isButtonLink
+                            href="/chat"
+                            type="primary"
+                            variant="solid"
+                            size="sm"
+                            className="gap-2"
+                        >
+                            <FaPaperPlane className="w-4 h-4" />
+                            {t("nav.chat")}
+                        </Button>
+
+                        {unreadChats > 0 && (
+                            <span
+                                aria-label={`${unreadChats} ${t("chat.unread_badge")}`}
+                                className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white ring-1 ring-white"
+                            >
+                                {unreadLabel}
+                            </span>
+                        )}
+                    </div>
 
                     <NavDropdown
                         items={[
@@ -311,6 +326,11 @@ export default function NavbarAuth() {
                         >
                             <FaPaperPlane className="w-4 h-4" />
                             {t("nav.chat")}
+                            {unreadChats > 0 && (
+                                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
+                                    {unreadLabel}
+                                </span>
+                            )}
                         </Button>
                     </div>
                 </div>

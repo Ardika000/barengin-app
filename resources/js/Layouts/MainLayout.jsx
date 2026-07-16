@@ -43,8 +43,6 @@ export default function MainLayout({ children }) {
                     name="viewport"
                     content="width=device-width, initial-scale=1"
                 />
-
-                <link rel="icon" href="/assets/barengin_logows.png" />
             </Head>
 
             <div className="w-full sticky top-0 z-[1000]">
