@@ -63,6 +63,8 @@ class HandleInertiaRequests extends Middleware
                 $cart = $request->session()->get('jastip_cart', []);
                 return collect($cart)->sum(fn ($line) => (int) ($line['quantity'] ?? 0));
             },
+            // Total pesan belum dibaca di semua percakapan — untuk badge di navbar.
+            'chat_unread_count' => fn () => \App\Http\Controllers\Chat\ChatController::unreadCountFor($request->user()),
             // Normalisasi flash dari berbagai pola controller -> {type, message}
             'flash' => function () use ($request) {
                 $s = $request->session();

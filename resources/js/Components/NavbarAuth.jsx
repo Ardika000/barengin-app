@@ -19,6 +19,45 @@ export default function NavbarAuth() {
     const user = props?.auth?.user;
     const { t } = useTranslation();
 
+    const [unreadCount, setUnreadCount] = useState(
+        Number(props?.chat_unread_count ?? 0),
+    );
+    const unreadLabel = unreadCount > 99 ? "99+" : String(unreadCount);
+
+    useEffect(() => {
+        setUnreadCount(Number(props?.chat_unread_count ?? 0));
+    }, [props?.chat_unread_count]);
+
+    useEffect(() => {
+        if (!user?.id) return;
+        let cancelled = false;
+
+        const fetchCount = async () => {
+            if (document.hidden) return;
+            try {
+                const { data } = await window.axios.get("/chat/unread-count");
+                if (!cancelled) setUnreadCount(Number(data?.count ?? 0));
+            } catch {
+                /* diamkan; coba lagi tick berikutnya */
+            }
+        };
+
+        const interval = setInterval(fetchCount, 15000);
+        const onFocus = () => fetchCount();
+        const onUnreadChanged = () => fetchCount();
+        window.addEventListener("focus", onFocus);
+        document.addEventListener("visibilitychange", onFocus);
+        window.addEventListener("chat:unread-changed", onUnreadChanged);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+            window.removeEventListener("focus", onFocus);
+            document.removeEventListener("visibilitychange", onFocus);
+            window.removeEventListener("chat:unread-changed", onUnreadChanged);
+        };
+    }, [user?.id]);
+
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -107,17 +146,33 @@ export default function NavbarAuth() {
                         <StreakBadge count={user?.streak_count ?? 0} />
                     </Link>
 
-                    <Button
-                        isButtonLink
-                        href="/chat"
-                        type="primary"
-                        variant="solid"
-                        size="sm"
-                        className="gap-2"
-                    >
-                        <FaPaperPlane className="w-4 h-4" />
-                        {t("nav.chat")}
-                    </Button>
+                    <div className="relative group">
+                        <Button
+                            isButtonLink
+                            href="/chat"
+                            type="primary"
+                            variant="solid"
+                            size="sm"
+                            className="gap-2"
+                        >
+                            <FaPaperPlane className="w-4 h-4" />
+                            {t("nav.chat")}
+                        </Button>
+
+                        {unreadCount > 0 && (
+                            <>
+                                <span className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-danger-700 px-1.5 text-[11px] font-semibold leading-none text-white shadow">
+                                    {unreadLabel}
+                                </span>
+                                <span
+                                    role="tooltip"
+                                    className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg group-hover:block"
+                                >
+                                    {t("nav.chat_unread").replace(":count", unreadCount)}
+                                </span>
+                            </>
+                        )}
+                    </div>
 
                     <NavDropdown
                         items={[
@@ -311,6 +366,11 @@ export default function NavbarAuth() {
                         >
                             <FaPaperPlane className="w-4 h-4" />
                             {t("nav.chat")}
+                            {unreadCount > 0 && (
+                                <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-semibold leading-none text-primary-700">
+                                    {unreadLabel}
+                                </span>
+                            )}
                         </Button>
                     </div>
                 </div>

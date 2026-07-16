@@ -6,6 +6,7 @@
     "nav.forum": "Forum",
     "nav.leaderboard": "Peringkat",
     "nav.chat": "Chat",
+    "nav.chat_unread": "Belum dibaca (:count)",
     "nav.login": "Masuk",
     "nav.register": "Daftar",
     "nav.dashboard": "Dasbor",

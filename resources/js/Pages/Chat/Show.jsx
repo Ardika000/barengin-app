@@ -173,6 +173,7 @@ export default function ChatShow({
                         : c,
                 ),
             );
+            window.dispatchEvent(new CustomEvent("chat:unread-changed"));
         } catch (err) {
             console.error("markAsRead failed", err);
         }

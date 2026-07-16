@@ -6,6 +6,7 @@
     "nav.forum": "Forum",
     "nav.leaderboard": "Leaderboard",
     "nav.chat": "Chat",
+    "nav.chat_unread": "Unread (:count)",
     "nav.login": "Sign In",
     "nav.register": "Sign Up",
     "nav.dashboard": "Dashboard",
