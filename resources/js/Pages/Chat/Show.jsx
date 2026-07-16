@@ -197,7 +197,14 @@ export default function ChatShow({
         const channel = window.Echo.private(channelName);
 
         channel.listen(".message.sent", (payload) => {
-            setLocalMessages((prev) => [...(prev ?? []), payload]);
+            // Dedup: pesan yang sama bisa datang lewat Pusher DAN polling fallback.
+            setLocalMessages((prev) => {
+                const list = prev ?? [];
+                if (list.some((m) => Number(m.id) === Number(payload.id))) {
+                    return list;
+                }
+                return [...list, payload];
+            });
 
             if (payload?.sender_id !== authUser?.id) {
                 markAsRead();
@@ -325,7 +332,15 @@ export default function ChatShow({
         };
     }, []);
 
-    // ── Fallback POLLING (bekerja tanpa WebSocket, penting untuk shared hosting) ──
+    // Pusher/Echo sedang terhubung? Jika ya, polling di-SKIP: Pusher sudah
+    // mengantar pesan/online/read secara realtime. Polling yang tetap jalan hanya
+    // MEMBEBANI server — di dev server single-thread, request poll bahkan
+    // MENGANTRE dan membuat pengiriman pesan tampak lambat 5–15 detik. Jadi
+    // polling murni fallback saat WebSocket tidak tersedia/terputus.
+    const echoConnected = () =>
+        window.Echo?.connector?.pusher?.connection?.state === "connected";
+
+    // ── Fallback POLLING (hanya saat WebSocket/Pusher TIDAK terhubung) ──
     // Pesan baru dari lawan bicara + status baca + online lawan.
     useEffect(() => {
         if (!conversation?.id) return;
@@ -333,6 +348,7 @@ export default function ChatShow({
 
         const tick = async () => {
             if (document.hidden) return;
+            if (echoConnected()) return;
             try {
                 const after = maxRealId(messagesRef.current);
                 const { data } = await axios.get(`/chat/${conversation.id}/poll`, {
@@ -358,7 +374,9 @@ export default function ChatShow({
         };
 
         tick();
-        const interval = setInterval(tick, 5000);
+        // Fallback saja: kalau Pusher jalan, pesan sudah masuk realtime lebih dulu
+        // (poll ter-dedup by id). 3 detik agar tetap responsif bila WebSocket gagal.
+        const interval = setInterval(tick, 3000);
         return () => {
             cancelled = true;
             clearInterval(interval);
@@ -371,6 +389,7 @@ export default function ChatShow({
         let cancelled = false;
         const tick = async () => {
             if (document.hidden) return;
+            if (echoConnected()) return;
             try {
                 const { data } = await axios.get("/chat/poll");
                 if (cancelled) return;
@@ -485,45 +504,61 @@ export default function ChatShow({
             formData.append("reference_id", reference.id);
         }
 
-        router.post(`/chat/${conversation.id}/messages`, formData, {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: (page) => {
-                // Rekonsiliasi dengan daftar pesan otoritatif dari server agar
-                // pesan optimistik memperoleh id numerik aslinya. Tanpa ini,
-                // pesan yang baru kita kirim tetap ber-id "tmp-…" sepanjang sesi
-                // sehingga tombol "Balas" (yang butuh id numerik) tak muncul —
-                // itulah sebabnya kita seolah tak bisa membalas pesan sendiri.
-                const serverMessages = page?.props?.messages;
-                if (Array.isArray(serverMessages)) {
-                    setLocalMessages((prev) => {
-                        const knownIds = new Set(serverMessages.map((m) => m.id));
-                        // Pertahankan pesan optimistik lain yang belum tercakup
-                        // server, tetapi buang milik kita yang kini sudah nyata.
-                        const stillPending = (prev ?? []).filter(
-                            (m) =>
-                                m.optimistic &&
-                                m.id !== tmpId &&
-                                !knownIds.has(m.id),
-                        );
-                        return [...serverMessages, ...stillPending];
-                    });
-                } else {
-                    // Fallback: minimal tandai "Terkirim".
+        // Kirim lewat axios (bukan Inertia router.post) agar respons RINGAN: server
+        // hanya mengembalikan pesan yang baru dibuat, bukan memuat ulang seluruh
+        // props halaman chat (rebuild sidebar + semua pesan) — itu penyebab utama
+        // pengiriman terasa lambat.
+        window.axios
+            .post(`/chat/${conversation.id}/messages`, formData)
+            .then(({ data }) => {
+                const real = data?.message;
+                if (!real) {
                     setLocalMessages((prev) =>
                         (prev ?? []).map((m) =>
                             m.id === tmpId ? { ...m, sent: true } : m,
                         ),
                     );
+                    return;
                 }
-            },
-            onFinish: () => {
+
+                // Ganti pesan optimistik dengan pesan asli (memperoleh id numerik
+                // → tombol "Balas" muncul). Dedup by id kalau Pusher/poll sudah
+                // menyisipkannya lebih dulu.
+                setLocalMessages((prev) => {
+                    const list = prev ?? [];
+                    if (list.some((m) => Number(m.id) === Number(real.id))) {
+                        return list.filter((m) => m.id !== tmpId);
+                    }
+                    return list.map((m) => (m.id === tmpId ? real : m));
+                });
+
+                // Perbarui sidebar pengirim secara lokal (tanpa reload server):
+                // naikkan percakapan ke atas + perbarui cuplikan & waktu.
+                setSidebarConversations((prev) => {
+                    const next = (prev ?? []).map((c) =>
+                        Number(c.id) === Number(conversation.id)
+                            ? {
+                                  ...c,
+                                  subtitle: getSubtitleFromPayload(real),
+                                  last_message_at:
+                                      real.created_at ?? c.last_message_at,
+                                  unread: 0,
+                              }
+                            : c,
+                    );
+                    return [...next].sort(
+                        (a, b) =>
+                            new Date(b.last_message_at ?? 0) -
+                            new Date(a.last_message_at ?? 0),
+                    );
+                });
+            })
+            .catch((error) => {
+                console.error("send message failed", error);
+            })
+            .finally(() => {
                 sendingRef.current = false;
-            },
-            onError: () => {
-                sendingRef.current = false;
-            },
-        });
+            });
     };
 
     const submit = (e) => {

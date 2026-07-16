@@ -9,6 +9,7 @@ use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Illuminate\Support\Carbon;
 
@@ -182,7 +183,7 @@ class ChatController extends Controller
         );
 
         if (! $text && empty($files) && ! $reference) {
-            return back()->withErrors(['message_text' => 'Pesan kosong.']);
+            throw ValidationException::withMessages(['message_text' => 'Pesan kosong.']);
         }
 
         $attachments = [];
@@ -204,9 +205,21 @@ class ChatController extends Controller
             'reference' => $reference,
         ]);
 
-        broadcast(new MessageSent($message))->toOthers();
+        // Muat relasi untuk respons ringan (dan dipakai kembali oleh event).
+        $message->load(['sender:id,full_name,profile_image', 'replyTo.sender:id,full_name']);
 
-        return back();
+        // Broadcast ke Pusher SETELAH respons dikirim ke pengirim (terminating),
+        // agar pengirim tidak menunggu round-trip HTTP ke Pusher. Recipient tetap
+        // menerima ~instan; bila meleset, polling fallback (3s) menambalnya.
+        app()->terminating(function () use ($message) {
+            broadcast(new MessageSent($message))->toOthers();
+        });
+
+        // Respons ringan berisi HANYA pesan baru. Ini menghindari `back()` yang
+        // memaksa Inertia memuat ULANG seluruh props halaman chat (rebuild sidebar
+        // untuk semua percakapan + semua pesan) pada SETIAP kirim — penyebab
+        // utama pengiriman terasa lambat.
+        return response()->json(['message' => $this->mapMessage($message)]);
     }
 
     /**

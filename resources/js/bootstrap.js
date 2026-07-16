@@ -14,6 +14,22 @@ if (pusherKey) {
         key: pusherKey,
         cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
         forceTLS: true,
+        // Otorisasi channel privat/presence lewat axios. pusher-js secara default
+        // memakai XHR sendiri TANPA header X-XSRF-TOKEN, sehingga POST /broadcasting/auth
+        // ditolak CSRF (419) -> channel privat gagal subscribe -> realtime mati dan
+        // chat "jatuh" ke polling (terasa lambat ~5 detik). axios otomatis mengirim
+        // token XSRF dari cookie, jadi otorisasi berhasil dan pesan masuk realtime.
+        authorizer: (channel) => ({
+            authorize: (socketId, callback) => {
+                window.axios
+                    .post("/broadcasting/auth", {
+                        socket_id: socketId,
+                        channel_name: channel.name,
+                    })
+                    .then((response) => callback(false, response.data))
+                    .catch((error) => callback(true, error));
+            },
+        }),
     });
 } else {
     console.warn(
