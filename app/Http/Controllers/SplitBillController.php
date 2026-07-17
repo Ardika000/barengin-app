@@ -61,6 +61,15 @@ class SplitBillController extends Controller
             ]);
         }
 
+        // Satu pergi bareng hanya boleh ditagih sekali agar anggota tidak
+        // ditagih dua kali untuk grup yang sama.
+        if ($trip->split_bills()->exists()) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Tagihan untuk pergi bareng ini sudah pernah dibuat.',
+            ]);
+        }
+
         $members = $this->billableMembers($trip);
 
         if ($members->isEmpty()) {

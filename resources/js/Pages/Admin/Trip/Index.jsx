@@ -8,7 +8,7 @@ import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
-import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock, FiUsers } from "react-icons/fi";
 import { BsChatDots } from "react-icons/bs";
 import OngoingSection from "@/Pages/Admin/Partials/OngoingSection";
 
@@ -201,6 +201,13 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 <Link href={`/admin/trip/${t.id}/reopen`} title={translate("admin.trip.action_retrip")}
                                                     className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
                                                     <FiRefreshCw size={16} />
+                                                </Link>
+                                            )}
+                                            {/* Daftar peserta (pembeli berbayar run aktif) — bisa dikeluarkan */}
+                                            {!t.is_draft && (
+                                                <Link href={`/admin/trip/${t.id}/participants`} title={translate("admin.trip.action_participants")}
+                                                    className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors">
+                                                    <FiUsers size={16} />
                                                 </Link>
                                             )}
                                             {/* Grup chat trip (pemandu ↔ peserta run aktif) */}

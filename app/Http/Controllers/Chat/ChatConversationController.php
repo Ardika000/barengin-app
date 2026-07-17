@@ -239,7 +239,13 @@ class ChatConversationController extends Controller
 
         abort_unless((bool) $conversation->is_group, 403, 'Hanya berlaku untuk grup.');
 
-        $conversation->loadMissing(['trip:id,guider_id', 'pergi_bareng:id,initiator_id', 'jastip_item:id,user_id']);
+        // Kolom nama & current_run_started_at dibutuhkan ParticipantRemoval untuk
+        // notifikasi & menghitung run trip yang aktif.
+        $conversation->loadMissing([
+            'trip:id,guider_id,name,current_run_started_at',
+            'pergi_bareng:id,initiator_id,name',
+            'jastip_item:id,user_id',
+        ]);
 
         $ownerId = $conversation->trip?->guider_id
             ?? $conversation->pergi_bareng?->initiator_id
@@ -257,7 +263,19 @@ class ChatConversationController extends Controller
             'Pemilik grup tidak dapat dikeluarkan.'
         );
 
-        $conversation->participants()->detach($user->id);
+        // Keluarkan dari grup TERIKAT juga mengeluarkan dari entitasnya:
+        //  - pergi bareng → hapus peserta (bebaskan kursi)
+        //  - trip         → kembalikan dana ke dompet & bebaskan kursi
+        //  - jastip / grup biasa → cukup keluar dari chat (perilaku lama)
+        $removal = new \App\Services\ParticipantRemoval();
+
+        if ($conversation->pergi_bareng) {
+            $removal->fromPergiBareng($conversation->pergi_bareng, (int) $user->id);
+        } elseif ($conversation->trip) {
+            $removal->fromTrip($conversation->trip, (int) $user->id);
+        } else {
+            $conversation->participants()->detach($user->id);
+        }
 
         return response()->json(['ok' => true]);
     }

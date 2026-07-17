@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { router } from "@inertiajs/react";
-import { FiCheckCircle, FiClock } from "react-icons/fi";
-import { MdReceiptLong } from "react-icons/md";
+import { Link, router } from "@inertiajs/react";
+import { FiCheckCircle, FiClock, FiCreditCard, FiAlertCircle } from "react-icons/fi";
+import { MdReceiptLong, MdAccountBalanceWallet } from "react-icons/md";
 import { useTranslation } from "@/lib/useTranslation";
 import { useMidtransSnap } from "@/lib/useMidtransSnap";
 
@@ -42,6 +42,9 @@ export default function SplitBillCard({ reference, state, clientKey }) {
 
     const canPayWithWallet =
         mine && Number(state.wallet_balance ?? 0) >= Number(mine.amount);
+    const shortfall = mine
+        ? Math.max(0, Number(mine.amount) - Number(state.wallet_balance ?? 0))
+        : 0;
 
     // Bayar dari saldo: tidak lewat Snap — server memotong saldo lalu melunasi
     // bagian ini, jadi cukup muat ulang untuk melihat status terbaru.
@@ -189,36 +192,47 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                         </p>
                     ) : (
                         <div className="mt-2 space-y-1.5">
-                            {/* Bayar dari saldo hanya ditawarkan bila saldo cukup;
-                                server tetap memvalidasi ulang saat ditekan. */}
-                            {canPayWithWallet ? (
-                                <button
-                                    type="button"
-                                    onClick={payWithWallet}
-                                    disabled={busy}
-                                    className="w-full rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800 disabled:opacity-60"
-                                >
-                                    {busy
-                                        ? t("split_bill.processing", "Memproses...")
-                                        : `${t("split_bill.pay_wallet", "Bayar dengan Saldo")} ${rupiah(mine.amount)}`}
-                                </button>
+                            {/* Bayar dari saldo — SELALU ditampilkan agar pembayar
+                                tahu opsinya. Nonaktif bila saldo kurang, disertai
+                                arahan mengisi saldo. Server tetap memvalidasi ulang. */}
+                            <button
+                                type="button"
+                                onClick={payWithWallet}
+                                disabled={busy || !canPayWithWallet}
+                                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <MdAccountBalanceWallet className="h-3.5 w-3.5" />
+                                {busy
+                                    ? t("split_bill.processing", "Memproses...")
+                                    : `${t("split_bill.pay_wallet", "Bayar dengan Saldo")} ${rupiah(mine.amount)}`}
+                            </button>
+
+                            {!canPayWithWallet ? (
+                                <p className="flex items-start gap-1 px-0.5 text-[11px] text-amber-600">
+                                    <FiAlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                                    <span>
+                                        {t("payment.wallet_insufficient", "Saldo kurang")}{" "}
+                                        {rupiah(shortfall)}.{" "}
+                                        <Link
+                                            href="/profile-history"
+                                            className="font-semibold underline"
+                                        >
+                                            {t("wallet.topup", "Isi Saldo")}
+                                        </Link>
+                                    </span>
+                                </p>
                             ) : null}
 
                             <button
                                 type="button"
                                 onClick={pay}
                                 disabled={busy}
-                                className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition disabled:opacity-60 ${
-                                    canPayWithWallet
-                                        ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-                                        : "bg-primary-700 text-white hover:bg-primary-800"
-                                }`}
+                                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
                             >
+                                <FiCreditCard className="h-3.5 w-3.5" />
                                 {busy
                                     ? t("split_bill.processing", "Memproses...")
-                                    : canPayWithWallet
-                                      ? t("split_bill.pay_midtrans", "Bayar via Midtrans")
-                                      : `${t("split_bill.pay", "Bayar")} ${rupiah(mine.amount)}`}
+                                    : t("split_bill.pay_midtrans", "Bayar via Midtrans")}
                             </button>
                         </div>
                     )}

@@ -72,6 +72,12 @@ class ChatController extends Controller
             ->get()
             ->map(fn ($m) => $this->mapMessage($m));
 
+        // Tanpa webhook publik (localhost), status pembayaran Midtrans tidak
+        // pernah masuk sendiri. Sinkronkan bagian split bill yang masih menunggu
+        // di percakapan ini setiap kali chat dibuka/dimuat ulang, sehingga status
+        // "lunas" dan kredit dompet penyelenggara langsung terlihat.
+        $this->syncPendingSplitBills($messages);
+
         $headerAvatar = $conversation->is_group
             ? ($this->groupAvatar($conversation) ?? asset('assets/default-profile.png'))
             : ($peer?->public_profile_image ?? asset('assets/default-profile.png'));
@@ -257,6 +263,14 @@ class ChatController extends Controller
             ? Carbon::parse($peer->pivot->last_read_at)->toISOString()
             : null;
 
+        // Status tagihan patungan ikut disegarkan tiap poll (bukan hanya saat
+        // halaman dimuat ulang), sehingga tombol "Bayar" hilang dan rekap
+        // penyelenggara berubah dalam hitungan detik setelah pembayaran — tanpa
+        // perlu refresh manual. Pesan berkartu referensi jumlahnya sedikit, jadi
+        // memuatnya tiap poll murah.
+        $referenceMessages = $this->referenceMessages($conversation);
+        $this->syncPendingSplitBills($referenceMessages);
+
         return response()->json([
             'messages' => $messages->values(),
             'peer_last_read_at' => $peerLastRead,
@@ -264,7 +278,25 @@ class ChatController extends Controller
             'peer_last_seen_at' => $peer?->last_seen_at
                 ? Carbon::parse($peer->last_seen_at)->toISOString()
                 : null,
+            // Selalu dikirim (map per id tagihan). Kartu di gelembung mengambil
+            // status terkini dari sini, jadi meski kartunya pesan lama, ia tetap
+            // ikut berubah saat lunas.
+            'splitBills' => $this->splitBillStates($referenceMessages, $user),
         ]);
+    }
+
+    /**
+     * Pesan pada percakapan yang membawa kartu referensi (split bill / trip /
+     * pergi bareng), dalam bentuk yang sama dengan mapMessage. Dipakai polling
+     * untuk menghitung status tagihan tanpa memuat seluruh riwayat pesan.
+     */
+    private function referenceMessages(Conversation $conversation)
+    {
+        return $conversation->messages()
+            ->whereNotNull('reference')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn ($m) => $this->mapMessage($m));
     }
 
     /**
@@ -557,6 +589,41 @@ class ChatController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Sinkronkan ke Midtrans setiap bagian split bill yang masih 'pending' pada
+     * tagihan-tagihan yang kartunya muncul di percakapan ini.
+     *
+     * Dibutuhkan di localhost yang tidak punya webhook publik: begitu ada yang
+     * membuka/memuat ulang chat, status pembayaran ikut disegarkan — bukan hanya
+     * milik penonton, melainkan seluruh bagian yang menggantung — sehingga tombol
+     * "Bayar" hilang dan dompet penyelenggara dikredit tanpa harus menunggu si
+     * pembayar membuka halaman Riwayat.
+     */
+    private function syncPendingSplitBills($messages): void
+    {
+        $ids = collect($messages)
+            ->map(fn ($m) => ($m['reference']['type'] ?? null) === 'split_bill'
+                ? (int) ($m['reference']['id'] ?? 0)
+                : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $transactionIds = \App\Models\SplitBillShare::whereIn('split_bill_id', $ids)
+            ->where('status', \App\Models\SplitBillShare::STATUS_PENDING)
+            ->whereNotNull('transaction_id')
+            ->pluck('transaction_id')
+            ->unique();
+
+        foreach ($transactionIds as $transactionId) {
+            \App\Http\Controllers\MidtransController::syncTransaction($transactionId);
+        }
     }
 
     /**

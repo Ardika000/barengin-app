@@ -42,6 +42,17 @@ class PergiBarengController extends Controller
             ? $trip->pergi_bareng_requests->contains('user_id', $authId)
             : false;
 
+        // Siapa saja (di antara peserta) yang sudah diikuti user ini — satu query
+        // agar tombol Ikuti/Mengikuti tiap baris tidak memicu N+1.
+        $participantIds = $trip->pergi_bareng_participants->pluck('user_id')->filter()->unique();
+        $followedIds = $authId && $participantIds->isNotEmpty()
+            ? DB::table('follows')
+                ->where('follower_id', $authId)
+                ->whereIn('following_id', $participantIds)
+                ->pluck('following_id')
+                ->flip()
+            : collect();
+
         return [
             'id' => $trip->id,
             'trip_id' => 'PERBAR-' . str_pad($trip->id, 6, '0', STR_PAD_LEFT),
@@ -74,14 +85,16 @@ class PergiBarengController extends Controller
                 'is_self' => $authId === $trip->initiator?->id,
             ],
             // Tiap partisipan diperluas sebanyak kuantitas kursi yang dipesan
-            'participants' => $trip->pergi_bareng_participants->flatMap(function ($p) {
+            'participants' => $trip->pergi_bareng_participants->flatMap(function ($p) use ($authId, $followedIds) {
                 $entry = [
                     'user_id' => $p->user_id,
                     'name' => $p->user?->full_name ?? 'Partisipan',
                     'username' => $p->user?->username,
-                    'rating' => 5.0,
                     'avatar' => $p->user?->public_profile_image ?? '/assets/default-profile.png',
                     'verified' => (bool) $p->user_id,
+                    // Untuk tombol Ikuti/Mengikuti per baris.
+                    'is_self' => $authId !== null && (int) $p->user_id === (int) $authId,
+                    'is_following' => $followedIds->has($p->user_id),
                 ];
 
                 $qty = max(1, (int) $p->quantity);

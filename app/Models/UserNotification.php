@@ -32,7 +32,7 @@ class UserNotification extends Model
             'pergi_bareng.rejected',
             'pergi_bareng.requested',
         ],
-        self::CATEGORY_GROUP        => ['group.joined'],
+        self::CATEGORY_GROUP        => ['group.joined', 'group.removed'],
         self::CATEGORY_ORDER        => ['order.created'],
         self::CATEGORY_PAYMENT      => ['payment.paid'],
         self::CATEGORY_SPLIT_BILL   => ['split_bill.created', 'split_bill.settled'],

@@ -57,6 +57,7 @@ export default function GroupMembersModal({
     members = [],
     ownerId,
     isOwner = false,
+    groupType,
     authUserId,
     onRemoved,
 }) {
@@ -68,9 +69,17 @@ export default function GroupMembersModal({
 
     const handleRemove = async (member) => {
         if (removingId) return;
+        // Grup trip/pergi bareng: mengeluarkan dari chat juga mengeluarkan dari
+        // entitasnya (trip = refund, pergi bareng = lepas peserta). Peringatkan.
+        const warn =
+            groupType === "trip"
+                ? " " + t("chat.remove_warn_trip")
+                : groupType === "pergi_bareng"
+                  ? " " + t("chat.remove_warn_pergi_bareng")
+                  : "";
         if (
             !window.confirm(
-                t("chat.remove_confirm").replace(":name", member.name),
+                t("chat.remove_confirm").replace(":name", member.name) + warn,
             )
         ) {
             return;

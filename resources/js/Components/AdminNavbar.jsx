@@ -5,7 +5,7 @@ import { FaPaperPlane } from "react-icons/fa";
 import { MdHome } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
 import Button from "@/Components/Button.jsx";
-import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
+import NotificationBell from "@/Components/NotificationBell.jsx";
 import StreakBadge from "@/Components/StreakBadge.jsx";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -54,9 +54,12 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                 </div>
             </div>
 
-            {/* Bagian Kanan Navbar (Bahasa, Streak, User Profile) */}
+            {/* Bagian Kanan Navbar (Notifikasi, Streak, Chat, User Profile) */}
             <div className="flex items-center gap-2 sm:gap-3">
-                <LanguageSwitcher className="hidden sm:block" />
+                {/* Pemilih bahasa tidak di sini — hidup di tab Pengaturan (Riwayat
+                    Profil), jadi lonceng notifikasi menggantikannya seperti di
+                    navbar halaman depan. */}
+                <NotificationBell />
 
                 <Link href="/profile-history" aria-label="Streak Nyala">
                     <StreakBadge count={user?.streak_count ?? 0} />
@@ -75,8 +78,8 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                 </Button>
 
                 {/* Wrapper khusus profil: ref hanya membungkus tombol + menu profil,
-                    supaya klik di luar (mis. pemilih bahasa) menutup dropdown ini
-                    dan tidak saling menumpuk. */}
+                    supaya klik di luar (mis. lonceng notifikasi) menutup dropdown
+                    ini dan tidak saling menumpuk. */}
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setIsProfileOpen((v) => !v)}

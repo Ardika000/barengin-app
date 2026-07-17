@@ -192,8 +192,13 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 {t.status === "finish" && (
                                                     <button
                                                         onClick={() => setBillModal({ open: true, trip: t })}
-                                                        className="p-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
-                                                        title={translate("admin.pergi.action_split_bill")}
+                                                        disabled={t.has_split_bill}
+                                                        className="p-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50"
+                                                        title={
+                                                            t.has_split_bill
+                                                                ? translate("admin.pergi.action_split_bill_done")
+                                                                : translate("admin.pergi.action_split_bill")
+                                                        }
                                                     >
                                                         <MdReceiptLong size={16} />
                                                     </button>

@@ -138,6 +138,12 @@ export default function ChatShow({
     const [localMessages, setLocalMessages] = useState(messages ?? []);
     useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
 
+    // Status tagihan patungan disimpan sebagai state agar bisa disegarkan tiap
+    // poll (bukan hanya saat halaman dimuat). Tetap ikut prop saat berpindah
+    // percakapan atau setelah router.reload().
+    const [liveSplitBills, setLiveSplitBills] = useState(splitBills ?? {});
+    useEffect(() => setLiveSplitBills(splitBills ?? {}), [splitBills]);
+
     // Referensi pesan terkini untuk menghitung id terakhir saat polling.
     const messagesRef = useRef(localMessages);
     useEffect(() => {
@@ -360,6 +366,10 @@ export default function ChatShow({
 
                 if (data.peer_last_read_at) setPeerLastReadAt(data.peer_last_read_at);
                 setPollPeerOnline(!!data.peer_online);
+
+                // Status tagihan patungan ikut disegarkan tiap tick, jadi tombol
+                // "Bayar" hilang & rekap penyelenggara berubah tanpa refresh.
+                if (data.splitBills) setLiveSplitBills(data.splitBills);
             } catch {
                 /* diamkan; coba lagi tick berikutnya */
             }
@@ -813,7 +823,7 @@ export default function ChatShow({
                                             reference={m.reference}
                                             splitBillState={
                                                 m.reference?.type === "split_bill"
-                                                    ? splitBills?.[m.reference.id]
+                                                    ? liveSplitBills?.[m.reference.id]
                                                     : undefined
                                             }
                                             midtransClientKey={midtrans_client_key}
@@ -968,6 +978,7 @@ export default function ChatShow({
                 members={participants}
                 ownerId={conversation?.owner_id}
                 isOwner={!!conversation?.is_owner}
+                groupType={conversation?.group_type}
                 authUserId={authUser?.id}
                 onRemoved={(userId) =>
                     setParticipants((prev) =>

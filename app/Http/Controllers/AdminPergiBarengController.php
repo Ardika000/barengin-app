@@ -56,11 +56,16 @@ class AdminPergiBarengController extends Controller
             ->groupBy('pergi_bareng_id')
             ->select('pergi_bareng_id', DB::raw('COALESCE(SUM(quantity),0) as joined'));
 
+        // PENTING: withCount() harus dipanggil SETELAH select(). select() mengganti
+        // seluruh daftar kolom, jadi kalau withCount dipanggil lebih dulu, kolom
+        // hitungannya ikut terhapus dan hasilnya selalu NULL → 0. Ini yang membuat
+        // lencana permintaan & penonaktifan ikon bagi tagihan tak pernah muncul.
         $query = PergiBareng::query()
             ->leftJoinSub($joinedSub, 'p', 'p.pergi_bareng_id', '=', 'pergi_barengs.id')
             ->where('pergi_barengs.initiator_id', Auth::id())
+            ->select('pergi_barengs.*', DB::raw('COALESCE(p.joined,0) as joined_count'))
             ->withCount('pergi_bareng_requests')
-            ->select('pergi_barengs.*', DB::raw('COALESCE(p.joined,0) as joined_count'));
+            ->withCount('split_bills');
 
         if ($search !== '') {
             FuzzySearch::apply(
@@ -100,6 +105,9 @@ class AdminPergiBarengController extends Controller
                     'capacity' => $trip->people_amount,
                     'status' => $status,
                     'pending_requests' => (int) $trip->pergi_bareng_requests_count,
+                    // Sudah pernah dibagi tagihan → tombol bagi tagihan dinonaktifkan
+                    // agar anggota tidak ditagih dua kali untuk grup yang sama.
+                    'has_split_bill' => (int) $trip->split_bills_count > 0,
                 ];
             });
 
@@ -328,7 +336,7 @@ class AdminPergiBarengController extends Controller
 
     public function requests($id)
     {
-        $trip = PergiBareng::with(['pergi_bareng_participants', 'pergi_bareng_requests.user'])
+        $trip = PergiBareng::with(['pergi_bareng_participants.user', 'pergi_bareng_requests.user'])
             ->where('initiator_id', Auth::id())
             ->findOrFail($id);
 
@@ -346,6 +354,17 @@ class AdminPergiBarengController extends Controller
             ],
         ])->values();
 
+        // Peserta yang sudah disetujui — bisa dikeluarkan penyelenggara.
+        $participants = $trip->pergi_bareng_participants
+            ->filter(fn ($p) => $p->user)
+            ->map(fn ($p) => [
+                'user_id' => (int) $p->user_id,
+                'quantity' => (int) $p->quantity,
+                'name' => $p->user->full_name ?? 'Peserta',
+                'username' => $p->user->username,
+                'avatar' => $p->user->public_profile_image ?? '/assets/default-profile.png',
+            ])->values();
+
         return Inertia::render('Admin/PergiBareng/Requests', [
             'trip' => [
                 'id' => $trip->id,
@@ -357,7 +376,23 @@ class AdminPergiBarengController extends Controller
                 'remaining' => max(0, $trip->people_amount - $joined),
             ],
             'requests' => $requests,
+            'participants' => $participants,
         ]);
+    }
+
+    /**
+     * Keluarkan seorang peserta dari pergi bareng: hapus dari peserta & grup chat.
+     * Hanya penyelenggara.
+     */
+    public function kickParticipant($id, $userId)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        $removed = (new \App\Services\ParticipantRemoval())->fromPergiBareng($trip, (int) $userId);
+
+        return back()->with('flash', $removed
+            ? ['type' => 'success', 'message' => 'Peserta dikeluarkan dari pergi bareng & grup chat.']
+            : ['type' => 'info', 'message' => 'Peserta tidak ditemukan.']);
     }
 
     public function approve($id, $requestId)

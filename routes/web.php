@@ -356,6 +356,9 @@ Route::prefix('admin')->group(function () {
         Route::post('/', [AdminTripController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [AdminTripController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::get('/{id}/reopen', [AdminTripController::class, 'reopen'])->whereNumber('id')->name('reopen');
+        // Daftar peserta trip + keluarkan peserta (kembalikan dana)
+        Route::get('/{id}/participants', [AdminTripController::class, 'participants'])->whereNumber('id')->name('participants');
+        Route::delete('/{id}/participants/{userId}', [AdminTripController::class, 'kickParticipant'])->whereNumber('id')->whereNumber('userId')->name('participants.kick');
         Route::post('/{id}', [AdminTripController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminTripController::class, 'publish'])->whereNumber('id')->name('publish');
         Route::post('/{id}/finish', [AdminTripController::class, 'finish'])->whereNumber('id')->name('finish');
@@ -381,6 +384,9 @@ Route::prefix('admin')->group(function () {
         Route::get('/{id}/requests', [AdminPergiBarengController::class, 'requests'])->whereNumber('id')->name('requests');
         Route::post('/{id}/requests/{requestId}/approve', [AdminPergiBarengController::class, 'approve'])->whereNumber('id')->whereNumber('requestId')->name('requests.approve');
         Route::delete('/{id}/requests/{requestId}', [AdminPergiBarengController::class, 'reject'])->whereNumber('id')->whereNumber('requestId')->name('requests.reject');
+
+        // Keluarkan peserta yang sudah disetujui (dari pergi bareng & grup chat)
+        Route::delete('/{id}/participants/{userId}', [AdminPergiBarengController::class, 'kickParticipant'])->whereNumber('id')->whereNumber('userId')->name('participants.kick');
     });
 
     // Manajemen Jastip (jastiper) — terbuka untuk semua user yang login

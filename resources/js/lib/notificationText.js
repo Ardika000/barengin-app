@@ -51,11 +51,12 @@ export function formatNotification(t, notification) {
         balance: data.balance != null ? rupiah(data.balance) : "",
     };
 
-    // order.created punya kalimat berbeda per jenis pesanan.
-    const bodyKey =
-        type === "order.created"
-            ? `notif.order.created.body.${data.kind ?? "trip"}`
-            : `notif.${type}.body`;
+    // Beberapa tipe punya kalimat berbeda per jenis (kind): pesanan dibuat &
+    // dikeluarkan dari grup (trip vs pergi bareng).
+    const perKind = type === "order.created" || type === "group.removed";
+    const bodyKey = perKind
+        ? `notif.${type}.body.${data.kind ?? "trip"}`
+        : `notif.${type}.body`;
 
     return { title, body: interpolate(t(bodyKey), params) };
 }
