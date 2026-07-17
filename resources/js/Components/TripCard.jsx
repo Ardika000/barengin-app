@@ -6,6 +6,7 @@ import { FaStar } from "react-icons/fa";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import { BsChatDots } from "react-icons/bs";
+import StarRating from "@/Components/StarRating";
 import { Link, router, usePage } from "@inertiajs/react";
 import { toast } from "@/lib/toast";
 import { useState } from "react";
@@ -199,13 +200,12 @@ export default function TripCard({ trip }) {
                             </div>
 
                             {/* RATING */}
-                            <div className="flex items-center gap-1 mt-0.5 text-[11px] font-medium text-neutral-500 min-w-0">
-                                <FaStar className="text-yellow-400 size-3 shrink-0" />
-                                <span className="text-neutral-700 font-bold shrink-0">
-                                    {guide_rating}
-                                </span>
-                                <span className="truncate">({guide_reviews} {t("common.reviews")})</span>
-                            </div>
+                            <StarRating
+                                rating={guide_rating}
+                                reviews={guide_reviews}
+                                withReviewsLabel
+                                className="mt-0.5 min-w-0 text-[11px] font-medium"
+                            />
                         </div>
                     </div>
 

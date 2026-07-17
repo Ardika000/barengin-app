@@ -1,22 +1,14 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\GuideController;
 
-Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
-    Route::get('me', [AuthController::class, 'me'])->middleware('auth:sanctum');
-    Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-});
-
-Route::middleware('auth:sanctum')->group(function(){
-    // guide
-    Route::get("/guides", [GuideController::class, 'index']);
-    Route::get("/guides/{guide}", [GuideController::class, 'show']);
-    Route::post('/guides', [GuideController::class, 'store']);
-    Route::put('/guides/{guide}', [GuideController::class, 'update']);
-    Route::delete('/guides/{guide}', [GuideController::class, 'destroy']);
-});
+// Belum ada endpoint API.
+//
+// Berkas ini sebelumnya mendaftarkan rute /auth/* dan /guides/* ke
+// App\Http\Controllers\Api\{AuthController,GuideController} — sisa scaffolding
+// dari commit "initialize project". Controller-nya tidak pernah ada di riwayat
+// git (begitu pula model Guide), jadi rute itu 500 bila dipanggil dan membuat
+// `php artisan route:list` gagal total karena perintah tersebut me-refleksi
+// setiap kelas controller. Rute mati itu dihapus.
+//
+// Bila nanti butuh API: bikin controller-nya lebih dulu, baru daftarkan di sini.

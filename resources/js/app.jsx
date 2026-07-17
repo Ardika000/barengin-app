@@ -19,6 +19,17 @@ createInertiaApp({
     },
 })
 
+// `<html lang>` dirender sekali oleh Blade. Mengganti bahasa lewat Inertia tidak
+// memuat ulang Blade, jadi atributnya jadi basi — mis. seluruh UI sudah English
+// tapi lang tetap "id", yang menyesatkan pembaca layar & terjemahan browser.
+// Selaraskan dari shared prop `locale` pada setiap kunjungan.
+router.on('success', (event) => {
+    const locale = event?.detail?.page?.props?.locale;
+    if (locale) {
+        document.documentElement.lang = String(locale).replace('_', '-');
+    }
+});
+
 // Jembatan flash Laravel -> toast (otomatis untuk SEMUA halaman & aksi)
 let lastFlashKey = null;
 router.on('success', (event) => {

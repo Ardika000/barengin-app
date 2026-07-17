@@ -15,6 +15,8 @@ L.Icon.Default.mergeOptions({
 
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import ImageLightbox from "@/Components/ImageLightbox";
+import StarRating from "@/Components/StarRating";
 import MainLayout from "@/Layouts/MainLayout";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -44,6 +46,11 @@ export default function Detail({ trip }) {
     const isOwner = authUser && Number(authUser.id) === Number(currentTrip?.host?.id);
 
     const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
+
+    // Gambar aktivitas dibuka di ImageLightbox (bisa di-zoom & digeser), sama
+    // seperti gambar di forum dan chat. `images` diisi per aktivitas yang diklik
+    // agar navigasi kiri/kanan tetap dalam satu aktivitas.
+    const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
 
     const handleToggleLike = () => {
         setIsLiked((v) => !v);
@@ -286,16 +293,28 @@ export default function Detail({ trip }) {
                                             {item.images && item.images.length > 0 && (
                                                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                                                     {item.images.map((img, imgIdx) => (
-                                                        <img
+                                                        <button
                                                             key={imgIdx}
-                                                            src={img}
-                                                            alt={`Step ${item.step}`}
-                                                            className="w-40 md:w-48 h-28 object-cover rounded-xl border border-neutral-200 shrink-0 hover:border-primary-400 transition-all"
-                                                            onError={(e) => {
-                                                                e.target.src =
-                                                                    "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?q=80&w=2071&auto=format&fit=crop";
-                                                            }}
-                                                        />
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setLightbox({
+                                                                    open: true,
+                                                                    images: item.images,
+                                                                    index: imgIdx,
+                                                                })
+                                                            }
+                                                            className="shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                                                        >
+                                                            <img
+                                                                src={img}
+                                                                alt={`Step ${item.step}`}
+                                                                className="w-40 md:w-48 h-28 object-cover rounded-xl border border-neutral-200 cursor-zoom-in hover:border-primary-400 transition-all"
+                                                                onError={(e) => {
+                                                                    e.target.src =
+                                                                        "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?q=80&w=2071&auto=format&fit=crop";
+                                                                }}
+                                                            />
+                                                        </button>
                                                     ))}
                                                 </div>
                                             )}
@@ -364,16 +383,22 @@ export default function Detail({ trip }) {
                                 />
                                 <div>
                                     <p className="text-[11px] text-neutral-500 font-medium mb-0.5">
-                                        {currentTrip.host.label}
+                                        {t("trip.detail.guider")}
                                     </p>
                                     <h4 className="font-bold text-neutral-700 leading-tight mb-0.5">
                                         {currentTrip.host.name}
                                     </h4>
-                                    <div className="text-xs font-medium">
-                                        <span className="text-orange-500">{currentTrip.host.role}</span>
-                                        <span className="text-neutral-400 mx-1">•</span>
-                                        <span className="text-neutral-500">{currentTrip.host.badge}</span>
-                                    </div>
+                                    {currentTrip.host.rating ? (
+                                        <StarRating
+                                            rating={currentTrip.host.rating}
+                                            reviews={currentTrip.host.reviews}
+                                            className="text-xs font-medium"
+                                        />
+                                    ) : (
+                                        <div className="text-xs font-medium text-neutral-500">
+                                            {t("trip.detail.guider_new")}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
@@ -432,7 +457,7 @@ export default function Detail({ trip }) {
                             <div className="bg-orange-50 border border-orange-200/60 rounded-xl p-4 flex items-start gap-3">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed font-medium">
-                                    {t("trip.detail.refund_note")}
+                                    {t("trip.detail.price_note")}
                                 </p>
                             </div>
                         </div>
@@ -486,6 +511,14 @@ export default function Detail({ trip }) {
                     </div>
                 </Container>
             </div>
+
+            <ImageLightbox
+                images={lightbox.images}
+                index={lightbox.index}
+                open={lightbox.open}
+                onClose={() => setLightbox((s) => ({ ...s, open: false }))}
+                alt={t("trip.detail.activity_image")}
+            />
         </div>
     );
 }

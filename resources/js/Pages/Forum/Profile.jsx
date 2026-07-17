@@ -5,8 +5,9 @@ import Container from "@/Components/Container";
 import ForumLayout from "@/Layouts/ForumLayout";
 import PostCard from "@/Pages/Forum/Partials/PostCard";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import { FiHeart } from "react-icons/fi";
-import { FaHeart, FaStar, FaRoute } from "react-icons/fa";
+import { FaHeart, FaRoute } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import UserListModal from "@/Pages/Forum/Partials/UserListModal";
 import { useTranslation } from "@/lib/useTranslation";
@@ -379,10 +380,18 @@ export default function Profile({
     const shareProfile = async () => {
         const url = window.location.origin + profileUrl;
 
+        // Yang disalin bukan sekadar tautan telanjang, melainkan ajakan singkat
+        // beserta nama pemilik profil — agar langsung enak ditempel ke chat.
+        const message = t("forum.share_text")
+            .replace(":name", profileUser.full_name)
+            .replace(":username", profileUser.username)
+            .replace(":url", url);
+
         try {
             if (navigator.share) {
                 await navigator.share({
                     title: `${profileUser.full_name} (@${profileUser.username})`,
+                    text: message,
                     url,
                 });
                 return;
@@ -392,10 +401,10 @@ export default function Profile({
         }
 
         try {
-            await navigator.clipboard.writeText(url);
+            await navigator.clipboard.writeText(message);
             toast.success(t("forum.copied"));
         } catch {
-            prompt(t("forum.copied"), url);
+            prompt(t("forum.copied"), message);
         }
     };
 
@@ -579,17 +588,14 @@ export default function Profile({
                             ) : null}
 
                             {ratingChips.map((chip) => (
-                                <span
+                                <StarRating
                                     key={chip.key}
                                     title={`${chip.count} ${t("common.reviews")}`}
-                                    className="inline-flex items-center gap-1 text-neutral-600"
+                                    rating={chip.average ?? 0}
+                                    className="text-neutral-600"
                                 >
-                                    <FaStar className="text-warning-500" size={11} />
-                                    <span className="font-bold text-neutral-800">
-                                        {Number(chip.average ?? 0).toFixed(1)}
-                                    </span>
                                     {chip.label}
-                                </span>
+                                </StarRating>
                             ))}
                         </div>
                     ) : null}

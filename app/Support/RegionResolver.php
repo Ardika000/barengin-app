@@ -79,6 +79,82 @@ class RegionResolver
         return $this->geocode($q);
     }
 
+    /**
+     * Kata kunci LIKE untuk sebuah provinsi pada kolom lokasi berteks bebas.
+     *
+     * Kolom bebas sering menulis "Blok M, Jakarta" — bukan "DKI Jakarta" — maka
+     * varian tanpa prefix "DKI"/"DI" ikut disertakan agar tetap tertangkap.
+     *
+     * @return array<int, string>
+     */
+    public static function provinceNeedles(string $province): array
+    {
+        $core     = self::core($province);
+        $needles  = [$core];
+        $stripped = preg_replace('/^(dki|di)\s+/u', '', $core);
+
+        if ($stripped !== $core) {
+            $needles[] = $stripped;
+        }
+
+        return array_values(array_unique(array_filter($needles, fn ($n) => $n !== '')));
+    }
+
+    /**
+     * Kata kunci LIKE untuk sebuah kabupaten/kota pada kolom berteks bebas.
+     *
+     * Selain inti namanya, varian tanpa arah administratif ikut disertakan
+     * ("Jakarta Pusat" → "jakarta") supaya pencarian sebuah titik spesifik
+     * (mis. "Monas") tetap menemukan listing yang lokasinya ditulis lebih
+     * longgar sebagai "Blok M, Jakarta".
+     *
+     * @return array<int, string>
+     */
+    public static function cityNeedles(string $city): array
+    {
+        $core = self::core($city);
+        if ($core === '') {
+            return [];
+        }
+
+        $needles = [$core];
+        $base = preg_replace('/\s+(utara|selatan|timur|barat|pusat|tengah)$/u', '', $core);
+        if ($base !== $core && $base !== '') {
+            $needles[] = $base;
+        }
+
+        return array_values(array_unique($needles));
+    }
+
+    /**
+     * Kode negara ISO alpha-2 dari sebuah teks lokasi, atau null bila tak
+     * terpetakan. Berbeda dari resolve(), geocode di sini TIDAK dibatasi
+     * Indonesia — justru dipakai untuk mengenali lokasi luar negeri.
+     */
+    public function countryCode(string $q): ?string
+    {
+        $q = trim($q);
+        if ($q === '' || $this->matchProvince($q)) {
+            return $q === '' ? null : 'id';
+        }
+
+        $address = $this->geocodeAddress($q, null, 'region:country:');
+
+        return $address['country_code'] ?? null;
+    }
+
+    /**
+     * True hanya bila lokasi TERBUKTI berada di luar Indonesia. Teks yang gagal
+     * di-geocode (typo, Nominatim mati) sengaja dianggap "belum tentu asing"
+     * agar pencarian tidak ikut mati saat layanan geocode bermasalah.
+     */
+    public function isForeign(string $q): bool
+    {
+        $code = $this->countryCode($q);
+
+        return $code !== null && $code !== 'id';
+    }
+
     /** Inti nama untuk pencocokan LIKE (buang prefix administratif). */
     public static function core(string $s): string
     {
@@ -105,30 +181,37 @@ class RegionResolver
         return self::PROVINCE_ALIASES[$n] ?? null;
     }
 
-    /** @return array{province: ?string, city: ?string} */
-    private function geocode(string $q): array
+    /**
+     * Ambil bagian `address` hasil geocode Nominatim (di-cache 24 jam).
+     *
+     * @param  ?string  $countryCodes  batasi ke negara tertentu, null = seluruh dunia
+     * @return ?array<string, mixed>
+     */
+    private function geocodeAddress(string $q, ?string $countryCodes, string $cachePrefix): ?array
     {
-        $empty = ['province' => null, 'city' => null];
-
         $base = config('services.nominatim.base_url');
         $email = config('services.nominatim.email');
         $ua = config('services.nominatim.user_agent') ?: 'barengin/1.0';
 
-        $cacheKey = 'region:resolve:' . md5(mb_strtolower($q));
+        $cacheKey = $cachePrefix . md5(mb_strtolower($q));
 
-        $address = Cache::remember($cacheKey, now()->addHours(24), function () use ($base, $email, $ua, $q) {
+        return Cache::remember($cacheKey, now()->addHours(24), function () use ($base, $email, $ua, $q, $countryCodes) {
             try {
-                $resp = Http::withHeaders([
-                    'User-Agent' => $ua,
-                    'Accept-Language' => 'id',
-                ])->timeout(6)->get($base . '/search', [
+                $params = [
                     'q' => $q,
                     'format' => 'jsonv2',
                     'addressdetails' => 1,
-                    'countrycodes' => 'id',
                     'limit' => 1,
                     'email' => $email,
-                ]);
+                ];
+                if ($countryCodes !== null) {
+                    $params['countrycodes'] = $countryCodes;
+                }
+
+                $resp = Http::withHeaders([
+                    'User-Agent' => $ua,
+                    'Accept-Language' => 'id',
+                ])->timeout(6)->get($base . '/search', $params);
 
                 if (! $resp->ok()) {
                     return null;
@@ -141,6 +224,14 @@ class RegionResolver
                 return null;
             }
         });
+    }
+
+    /** @return array{province: ?string, city: ?string} */
+    private function geocode(string $q): array
+    {
+        $empty = ['province' => null, 'city' => null];
+
+        $address = $this->geocodeAddress($q, 'id', 'region:resolve:');
 
         if (! $address) {
             return $empty;

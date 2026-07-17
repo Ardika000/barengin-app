@@ -12,6 +12,7 @@ export default function PlaceAutocomplete({
     value = "",
     onChange,
     placeholder,
+    size = "md", // diteruskan ke <Input> (sm | md)
     leftIcon,
     rightAddon = null, // tombol opsional di kanan input (mis. "gunakan lokasi saya")
     prioritizeIndonesia = false,
@@ -125,6 +126,7 @@ export default function PlaceAutocomplete({
             <Input
                 label={label}
                 placeholder={placeholder}
+                size={size}
                 leftIcon={leftIcon}
                 rightAddon={rightAddon}
                 value={query}

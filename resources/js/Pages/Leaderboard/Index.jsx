@@ -3,9 +3,9 @@ import { Head, Link, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import Input from "@/Components/Input";
 import {
-    FaStar,
     FaSuitcase,
     FaBagShopping,
     FaTrophy,
@@ -240,10 +240,7 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                                 </td>
                                 {board.rating && (
                                     <td className="px-6 py-3.5">
-                                        <span className="flex items-center gap-1 text-sm font-medium text-neutral-700">
-                                            <FaStar className="text-amber-400" />{" "}
-                                            {Number(u.rating).toFixed(1)}
-                                        </span>
+                                        <StarRating rating={u.rating} className="text-sm font-medium" />
                                     </td>
                                 )}
                                 <td className="px-6 py-3.5 text-right">
@@ -377,10 +374,7 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
                                             <board.Icon /> {u.count} {unit}
                                         </span>
                                         {board.rating && (
-                                            <span className="flex items-center gap-1">
-                                                <FaStar className="text-amber-400" />{" "}
-                                                {Number(u.rating).toFixed(1)}
-                                            </span>
+                                            <StarRating rating={u.rating} />
                                         )}
                                     </div>
                                 </ProfileWrap>

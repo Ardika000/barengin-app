@@ -72,6 +72,7 @@ export default function PergiSearchForm({ naked = true }) {
                         leftIcon={<FaMapMarkerAlt />}
                         value={dari}
                         onChange={setDari}
+                        countryCodes="id"
                         rightAddon={
                             <button
                                 type="button"
@@ -95,6 +96,7 @@ export default function PergiSearchForm({ naked = true }) {
                         leftIcon={<FaPlane />}
                         value={ke}
                         onChange={setKe}
+                        countryCodes="id"
                     />
                 </div>
 

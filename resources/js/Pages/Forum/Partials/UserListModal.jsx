@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, router, usePage } from "@inertiajs/react";
 import { FiArrowLeft, FiSearch } from "react-icons/fi";
 import Button from "@/Components/Button";
 import useLockBodyScroll from "@/Hooks/useLockBodyScroll";
+import { useTranslation } from "@/lib/useTranslation";
 
 /**
 mode:
@@ -17,7 +19,8 @@ export default function UserListModal({
     username, // required for mode followers atau following
 }) {
     useLockBodyScroll(open);
-    
+
+    const { t } = useTranslation();
     const auth = usePage().props.auth;
 
     const [q, setQ] = useState("");
@@ -26,10 +29,10 @@ export default function UserListModal({
     const [followOverride, setFollowOverride] = useState({}); // { [userId]: boolean }
 
     const title = useMemo(() => {
-        if (mode === "followers") return "Pengikut";
-        if (mode === "following") return "Mengikuti";
-        return "Cari Orang";
-    }, [mode]);
+        if (mode === "followers") return t("forum.user_list.followers_title");
+        if (mode === "following") return t("forum.user_list.following_title");
+        return t("forum.nav.find_people");
+    }, [mode, t]);
 
     const endpoint = useMemo(() => {
         if (mode === "followers") return `/forum/users/${username}/followers`;
@@ -109,14 +112,21 @@ export default function UserListModal({
 
     if (!open) return null;
 
-    return (
+    // Dirender lewat portal ke <body>, BUKAN di tempatnya berada di pohon React.
+    // Alasannya: pemakai bisa menaruh modal ini di dalam elemen yang membentuk
+    // stacking context — mis. ProfileSidebar berada di dalam <aside class="lg:sticky">,
+    // dan `position: sticky` SELALU membentuk stacking context. Akibatnya z-[9999]
+    // di bawah ini hanya berlaku di dalam konteks si aside (yang sendirinya
+    // z-index:auto), sehingga modal kalah dari <header class="relative z-50">
+    // dan navbar menimpa overlay. Portal ke body membuat z-index-nya dinilai di
+    // level root, jadi modal aman dipakai di dalam wadah apa pun.
+    return createPortal(
         <div className="fixed inset-0 z-[9999]">
             <div className="absolute inset-0 bg-black/40" />
 
             <div
                 className="absolute inset-0 flex items-center justify-center p-4"
                 onClick={(e) => {
-                    console.log(e.target, e.currentTarget);
                     if (e.target === e.currentTarget) onClose?.();
                 }}
             >
@@ -145,7 +155,7 @@ export default function UserListModal({
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
                                 className="w-full outline-none text-sm"
-                                placeholder="Cari orang.."
+                                placeholder={t("forum.user_list.search_ph")}
                             />
                         </div>
                     </div>
@@ -153,11 +163,11 @@ export default function UserListModal({
                     <div className="flex-1 overflow-y-auto">
                         {loading ? (
                             <div className="p-6 text-sm text-neutral-500">
-                                Loading...
+                                {t("common.loading")}
                             </div>
                         ) : filtered.length === 0 ? (
                             <div className="p-6 text-sm text-neutral-500">
-                                No users found.
+                                {t("forum.user_list.empty")}
                             </div>
                         ) : (
                             <div className="divide-y divide-neutral-200">
@@ -226,8 +236,8 @@ export default function UserListModal({
                                                             }}
                                                         >
                                                             {isFollowing
-                                                                ? "Berhenti Ikuti"
-                                                                : "Ikuti"}
+                                                                ? t("common.unfollow")
+                                                                : t("lb.follow")}
                                                         </Button>
                                                     </div>
                                                 ) : null}
@@ -240,6 +250,7 @@ export default function UserListModal({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }

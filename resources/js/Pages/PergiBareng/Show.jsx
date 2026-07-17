@@ -5,6 +5,7 @@ import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import { useTranslation } from "@/lib/useTranslation";
 import { DEFAULT_IMAGE } from "@/lib/images";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -13,7 +14,7 @@ import L from 'leaflet';
 
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
-    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart,
+    FaMapMarkerAlt, FaCar, FaInfoCircle, FaHeart, FaRegHeart,
     FaMinus, FaPlus, FaLock
 } from "react-icons/fa";
 import { BsChatDots, BsPeople } from "react-icons/bs";
@@ -238,9 +239,12 @@ export default function Show({ trip }) {
                                         <div className="flex items-center gap-1 font-semibold text-neutral-700">
                                             {trip.organizer.name} {trip.organizer.verified && <FaCheckCircle className="text-primary-500 text-sm"/>}
                                         </div>
-                                        <div className="text-xs text-neutral-500 flex items-center gap-1">
-                                            <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} {t("common.reviews")})
-                                        </div>
+                                        <StarRating
+                                            rating={trip.organizer.rating}
+                                            reviews={trip.organizer.reviews}
+                                            withReviewsLabel
+                                            className="text-xs"
+                                        />
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
                                         {trip.organizer?.is_self ? (
@@ -353,9 +357,10 @@ export default function Show({ trip }) {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-2">
-                                        <div className="text-xs text-neutral-600 flex items-center gap-0.5 whitespace-nowrap">
-                                            <FaStar className="text-warning-500"/> {trip.organizer.rating}
-                                        </div>
+                                        <StarRating
+                                            rating={trip.organizer.rating}
+                                            className="whitespace-nowrap text-xs"
+                                        />
                                     </div>
                                     {!trip.organizer?.is_self && (
                                         <Button
@@ -380,9 +385,10 @@ export default function Show({ trip }) {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 ml-2">
-                                            <div className="text-xs text-neutral-600 flex items-center gap-0.5 whitespace-nowrap">
-                                                <FaStar className="text-warning-500"/> {Number(p.rating).toFixed(1)}
-                                            </div>
+                                            <StarRating
+                                                rating={p.rating}
+                                                className="whitespace-nowrap text-xs"
+                                            />
                                         </div>
                                         {p.username && (
                                             <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">{t("common.view_profile")}</Button>

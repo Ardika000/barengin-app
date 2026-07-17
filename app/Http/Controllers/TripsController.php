@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Trip;
-use App\Support\FuzzySearch;
+use App\Support\LocationFilter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -28,8 +28,10 @@ class TripsController extends Controller
             ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
             ->where('trips.status', '!=', 'draft'); // hanya trip yang sudah dipublish
 
+        // Pencarian longgar: "Bromo" ikut menemukan trip yang lokasinya ditulis
+        // sebagai provinsinya ("Jawa Timur"), termasuk trip lain di kota yang sama.
         if ($tujuan !== '') {
-            FuzzySearch::apply($query, $tujuan, ['trips.location', 'trips.name'], 'trips.id');
+            LocationFilter::freeText($query, $tujuan, ['trips.location', 'trips.name'], 'trips.id');
         }
         if ($startDate) {
             $query->whereDate('trips.start_date', '>=', $startDate);
@@ -169,7 +171,10 @@ class TripsController extends Controller
             ->where('type', 'trip_bareng')
             ->avg('rating_amount');
 
-        $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';
+        $guiderReviews = DB::table('user_ratings')
+            ->where('rated_user_id', $trip->host_id)
+            ->where('type', 'trip_bareng')
+            ->count();
 
         // 3. Ambil activities (itinerary)
         $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order', 'asc')->get();
@@ -218,11 +223,13 @@ class TripsController extends Controller
             'participants' => $participants,
             'price'       => (float) $trip->price,
             'description' => $trip->description,
+            // Guider apa adanya: nama, rating & jumlah ulasan asli dari
+            // user_ratings. rating null = belum pernah diulas (bukan 0).
             'host' => [
                 'id' => $trip->guider_id,
                 'name' => $trip->guide_name,
-                'role' => 'Pemilik',
-                'badge' => 'Expert Guide - ★ ' . $ratingText,
+                'rating' => $guiderRating ? round((float) $guiderRating, 1) : null,
+                'reviews' => $guiderReviews,
                 'avatar' => $this->resolveAvatar($trip->profile_image),
             ],
             'itinerary'   => $itinerary,
@@ -333,6 +340,14 @@ class TripsController extends Controller
                 'error'  => 'Gagal menyimpan transaksi: ' . $e->getMessage(),
             ], 500);
         }
+
+        \App\Models\UserNotification::send(
+            (int) $user->id,
+            'order.created',
+            ['name' => $trip->name, 'kind' => 'trip', 'amount' => (float) $totalAmount],
+            '/profile-history?tab=transactions',
+            'order.created:trx:' . $transactionId,
+        );
 
         // Konfigurasi Midtrans — pakai config(), bukan env() langsung
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');

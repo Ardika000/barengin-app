@@ -31,4 +31,8 @@ class Transaction extends Model
     public function jastip_order(){
         return $this->hasOne(JastipOrder::class);
     }
+
+    public function split_bill_share(){
+        return $this->hasOne(SplitBillShare::class);
+    }
 }

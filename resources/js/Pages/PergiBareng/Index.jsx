@@ -9,7 +9,7 @@ import Pagination from "@/Components/Pagination";
 import HeroSection from "./HeroSection";
 import { useTranslation } from "@/lib/useTranslation";
 
-export default function Index({ trips = {}, filters = {} }) {
+export default function Index({ trips = {}, filters = {}, foreignLocation = false }) {
     const { t } = useTranslation();
     const [sortBy, setSortBy] = useState(filters?.sort ?? "schedule");
 
@@ -75,6 +75,12 @@ export default function Index({ trips = {}, filters = {} }) {
 
                     </div>
                 </div>
+
+                {foreignLocation && (
+                    <div className="mb-6 rounded-xl border border-orange-200/60 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-800">
+                        {t("pb.index.id_only")}
+                    </div>
+                )}
 
                 {data.length > 0 ? (
                     <>

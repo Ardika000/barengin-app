@@ -50,7 +50,36 @@ class User extends Authenticatable
             'last_seen_at' => 'datetime',
             'is_verified' => 'boolean',
             'streak_last_date' => 'date',
+            'notification_prefs' => 'array',
         ];
+    }
+
+    /** Notifikasi yang diterima pengguna ini (lihat model UserNotification). */
+    public function user_notifications()
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
+    /**
+     * Preferensi notifikasi lengkap: kategori yang belum pernah diatur dianggap
+     * AKTIF, sehingga kolom NULL pada pengguna lama tidak perlu di-backfill dan
+     * kategori baru otomatis menyala tanpa migrasi data.
+     */
+    public function notificationPrefs(): array
+    {
+        $saved = $this->notification_prefs ?? [];
+
+        $prefs = [];
+        foreach (array_keys(UserNotification::CATEGORIES) as $category) {
+            $prefs[$category] = (bool) ($saved[$category] ?? true);
+        }
+
+        return $prefs;
+    }
+
+    public function wantsNotification(string $category): bool
+    {
+        return $this->notificationPrefs()[$category] ?? true;
     }
 
     public function sendPasswordResetNotification($token)
@@ -92,6 +121,14 @@ class User extends Authenticatable
 
     public function conversations(){
         return $this->belongsToMany(Conversation::class, 'conversation_participants');
+    }
+
+    public function wallet(){
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function split_bill_shares(){
+        return $this->hasMany(SplitBillShare::class);
     }
 
     public function followers()

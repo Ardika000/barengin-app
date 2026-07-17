@@ -3,9 +3,10 @@ import { router } from "@inertiajs/react";
 import Select from "@/Components/Select";
 import Button from "@/Components/Button";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
-import { useGeoCity } from "@/lib/useGeoCity";
+import { detectCity } from "@/lib/useGeoCity";
 import { useTranslation } from "@/lib/useTranslation";
 import { FaMapMarkerAlt, FaShoppingBag, FaSearch } from "react-icons/fa";
+import { FaLocationCrosshairs } from "react-icons/fa6";
 
 // Kategori jastip (nama harus cocok dengan tabel jastip_categories → filter etalase).
 const CATEGORY_OPTIONS = [
@@ -20,13 +21,21 @@ const CATEGORY_OPTIONS = [
 export default function JastipSearchForm({ naked = false }) {
     const { t } = useTranslation();
 
-    const [toQ, setToQ] = useState("");     // #8: ambil dari mana (lokasi pengambilan)
+    const [toQ, setToQ] = useState("");     // ambil dari mana (lokasi pengambilan)
     const [fromQ, setFromQ] = useState(""); // mau jastip dari mana (lokasi pembelian)
     const [category, setCategory] = useState("");
     const [schedule, setSchedule] = useState("ongoing");
+    const [locating, setLocating] = useState(false);
 
-    // #8: default "Ambil dari mana" ke lokasi user saat ini
-    useGeoCity(true, setToQ);
+    // "Ambil dari mana" TIDAK diisi otomatis. Pengguna menekan tombol crosshair
+    // sendiri bila memang ingin memakai lokasinya saat ini.
+    const useMyLocation = async () => {
+        if (locating) return;
+        setLocating(true);
+        const city = await detectCity();
+        setLocating(false);
+        if (city) setToQ(city);
+    };
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -55,7 +64,20 @@ export default function JastipSearchForm({ naked = false }) {
                         leftIcon={<FaMapMarkerAlt />}
                         value={toQ}
                         onChange={setToQ}
-                        prioritizeIndonesia
+                        countryCodes="id"
+                        rightAddon={
+                            <button
+                                type="button"
+                                onClick={useMyLocation}
+                                title={t("search.use_my_location")}
+                                aria-label={t("search.use_my_location")}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-primary-700 transition hover:bg-primary-50"
+                            >
+                                <FaLocationCrosshairs
+                                    className={locating ? "animate-pulse" : ""}
+                                />
+                            </button>
+                        }
                     />
                 </div>
 

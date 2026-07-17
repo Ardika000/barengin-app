@@ -202,7 +202,7 @@ class FuzzySearch
     }
 
     /** Tebak kolom id untuk whereIn dari $query. */
-    private static function guessIdColumn($query): string
+    public static function guessIdColumn($query): string
     {
         if (method_exists($query, 'getModel')) {
             return $query->getModel()->getQualifiedKeyName(); // mis. users.id

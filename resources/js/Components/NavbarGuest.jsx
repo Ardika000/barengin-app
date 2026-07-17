@@ -44,7 +44,7 @@ export default function NavbarGuest() {
                     </Link>
                 </div>
 
-                <nav className="hidden md:flex shrink-0 space-x-5 lg:space-x-6 items-center text-neutral-700 whitespace-nowrap">
+                <nav className="hidden lg:flex shrink-0 space-x-4 xl:space-x-6 items-center text-neutral-700 whitespace-nowrap">
                     <NavLink href="/">{t("nav.home")}</NavLink>
                     <NavDropdown
                         label={t("nav.jalan_bareng")}
@@ -62,7 +62,7 @@ export default function NavbarGuest() {
                 </nav>
 
                 <div className="flex-1 flex items-center justify-end">
-                <div className="hidden md:flex items-center gap-3 lg:gap-4">
+                <div className="hidden lg:flex items-center gap-3 xl:gap-4">
                     <LanguageSwitcher />
                     <NavLink href="/login">{t("nav.login")}</NavLink>
                     <Button
@@ -76,7 +76,7 @@ export default function NavbarGuest() {
                     </Button>
                 </div>
 
-                <div className="md:hidden flex items-center">
+                <div className="lg:hidden flex items-center">
                     <button
                         type="button"
                         onClick={() => setIsMobileMenuOpen((v) => !v)}
@@ -119,7 +119,7 @@ export default function NavbarGuest() {
             </Container>
 
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">
+                <div className="lg:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">
                     <div className="px-4 pt-2 pb-4 space-y-1">
                         <NavLinkMobile href="/" onClick={closeAll}>
                             {t("nav.home")}

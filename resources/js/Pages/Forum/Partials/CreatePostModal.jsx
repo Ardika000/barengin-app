@@ -97,7 +97,10 @@ export default function CreatePostModal({
 }) {
     const { t } = useTranslation();
     useLockBodyScroll(open);
-    const [localError, setLocalError] = useState("");
+    // Error dipisah per input agar pesannya muncul tepat di bawah kolom yang
+    // bermasalah — konsisten dengan prop `error` pada <Input> di form lain.
+    const [contentError, setContentError] = useState("");
+    const [imageError, setImageError] = useState("");
     const [view, setView] = useState("editor"); // "editor" | "location"
     const [disableComments, setDisableComments] = useState(false);
 
@@ -120,29 +123,28 @@ export default function CreatePostModal({
     const tagBoxRef = useRef(null);
     const [suggestionStyle, setSuggestionStyle] = useState({});
 
-    const canPost = useMemo(() => {
-        const text = getPlainTextFromHtml(contentHtml);
-        return text.length > 0 || images.length > 0;
-    }, [contentHtml, images]);
-
-    // Pesan error server (validasi backend) → ambil yang paling relevan.
-    const serverError = useMemo(() => {
-        const keys = Object.keys(errors ?? {});
-        if (!keys.length) return "";
-        const imgKey = keys.find((k) => k.startsWith("images"));
-        return errors.content_html || (imgKey ? errors[imgKey] : "") || errors[keys[0]];
+    // Error server (validasi backend) disalurkan ke kolom yang bersangkutan.
+    const serverContentError = errors?.content_html ?? "";
+    const serverImageError = useMemo(() => {
+        const imgKey = Object.keys(errors ?? {}).find((k) => k.startsWith("images"));
+        return imgKey ? errors[imgKey] : "";
     }, [errors]);
 
-    // Error yang ditampilkan: hasil validasi klien lebih dulu, lalu error server.
-    const displayError = localError || serverError;
+    // Validasi klien lebih dulu, lalu error server untuk kolom yang sama.
+    const displayContentError = contentError || serverContentError;
+    const displayImageError = imageError || serverImageError;
 
-    // Validasi klien meniru aturan backend sebelum mengirim.
+    // Validasi saat kirim. Ukuran & jumlah gambar sudah dijaga di handleFiles,
+    // jadi di sini cukup memastikan konten teks terisi — teks WAJIB, gambar
+    // hanya pelengkap (selaras dengan `content_html => required` di PostController).
     const validateBeforeSubmit = () => {
         const text = getPlainTextFromHtml(contentHtml);
-        if (text.length === 0 && images.length === 0) return t("forum.create.err_empty");
-        if (images.length > MAX_IMAGES) return t("forum.create.err_too_many");
-        if (images.some((x) => (x.file?.size ?? 0) > MAX_IMAGE_BYTES)) return t("forum.create.err_too_big");
-        return "";
+        if (text.length === 0) {
+            setContentError(t("forum.create.err_empty"));
+            return false;
+        }
+        setContentError("");
+        return true;
     };
 
     const tagNames = useMemo(
@@ -241,15 +243,44 @@ export default function CreatePostModal({
 
     const handlePickImages = () => fileInputRef.current?.click();
 
+    /**
+     * Gambar yang melanggar batas TIDAK ikut masuk ke form — ditolak di sini,
+     * bukan dibiarkan lalu gagal saat submit. Yang lolos tetap dilampirkan.
+     */
     const handleFiles = (files) => {
-        const next = Array.from(files ?? []).map((f) => ({
-            id: `${f.name}_${f.size}_${f.lastModified}_${Math.random()}`,
-            file: f,
-            preview: URL.createObjectURL(f),
-        }));
+        const picked = Array.from(files ?? []);
+        if (!picked.length) return;
 
-        if (localError) setLocalError("");
-        setImages((prev) => [...(prev ?? []), ...next]);
+        const tooBig = picked.filter((f) => f.size > MAX_IMAGE_BYTES);
+        const accepted = picked.filter((f) => f.size <= MAX_IMAGE_BYTES);
+
+        const room = Math.max(0, MAX_IMAGES - images.length);
+        const fitting = accepted.slice(0, room);
+
+        const messages = [];
+        if (tooBig.length) {
+            messages.push(
+                t("forum.create.err_too_big_files").replace(
+                    ":files",
+                    tooBig.map((f) => f.name).join(", "),
+                ),
+            );
+        }
+        if (accepted.length > room) {
+            messages.push(t("forum.create.err_too_many"));
+        }
+        setImageError(messages.join(" "));
+
+        if (fitting.length) {
+            setImages((prev) => [
+                ...(prev ?? []),
+                ...fitting.map((f) => ({
+                    id: `${f.name}_${f.size}_${f.lastModified}_${Math.random()}`,
+                    file: f,
+                    preview: URL.createObjectURL(f),
+                })),
+            ]);
+        }
     };
 
     const removeImage = (id) => {
@@ -310,7 +341,8 @@ export default function CreatePostModal({
         setChipTags([]);
         setTagBoxOpen(false);
         setTagQuery("");
-        setLocalError("");
+        setContentError("");
+        setImageError("");
 
         if (editorRef.current) editorRef.current.innerHTML = "";
     };
@@ -394,7 +426,7 @@ export default function CreatePostModal({
                                             onInput={() => {
                                                 syncHtmlFromDom();
                                                 syncFormatState();
-                                                if (localError) setLocalError("");
+                                                if (contentError) setContentError("");
                                             }}
                                             onKeyUp={syncFormatState}
                                             onMouseUp={syncFormatState}
@@ -421,10 +453,22 @@ export default function CreatePostModal({
                                           }
                                         `}</style>
 
+                                        {displayContentError ? (
+                                            <p className="mt-1 mb-2 text-sm text-red-500">
+                                                {displayContentError}
+                                            </p>
+                                        ) : null}
+
                                         <PreviewMedia
                                             images={images}
                                             onRemove={removeImage}
                                         />
+
+                                        {displayImageError ? (
+                                            <p className="mt-1 mb-2 text-sm text-red-500">
+                                                {displayImageError}
+                                            </p>
+                                        ) : null}
 
                                         {chipTags.length ? (
                                             <div className="flex flex-wrap gap-2 mb-2">
@@ -668,12 +712,6 @@ export default function CreatePostModal({
                     {/* footer */}
                     {view === "editor" ? (
                         <div className="border-t border-neutral-200 shrink-0">
-                            {displayError ? (
-                                <div className="mx-6 mt-3 rounded-lg border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700">
-                                    {displayError}
-                                </div>
-                            ) : null}
-
                             <div className="px-6 py-4 flex items-center justify-between">
                                 <Toggle
                                     id="disable-comments"
@@ -688,12 +726,7 @@ export default function CreatePostModal({
                                     onClick={() => {
                                         if (processing) return;
 
-                                        const err = validateBeforeSubmit();
-                                        if (err) {
-                                            setLocalError(err);
-                                            return;
-                                        }
-                                        setLocalError("");
+                                        if (!validateBeforeSubmit()) return;
 
                                         const content_text =
                                             getPlainTextFromHtml(contentHtml);

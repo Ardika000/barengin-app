@@ -104,7 +104,7 @@ class JastipRequestController extends Controller
             $imageName = $request->file('image')->store('jastip-request-images', 'public');
         }
 
-        JastipRequest::create([
+        $req = JastipRequest::create([
             'jastip_item_id' => $item->id,
             'user_id'   => $request->user()->id,
             'item_name' => $validated['item_name'],
@@ -115,6 +115,20 @@ class JastipRequestController extends Controller
             'image_name' => $imageName,
             'status'    => JastipRequest::STATUS_PENDING,
         ]);
+
+        // Aba-aba bagi jastiper untuk memberi penawaran — pasangan dari
+        // notifikasi 'jastip_request.quoted' yang nanti diterima pemohon.
+        \App\Models\UserNotification::send(
+            (int) $item->user_id,
+            'selling.request_received',
+            [
+                'name' => $req->item_name,
+                'requester' => $request->user()->full_name,
+                'quantity' => (int) $req->quantity,
+            ],
+            '/admin/jastip/requests',
+            'selling.request_received:req:' . $req->id,
+        );
 
         return back()->with('flash', [
             'type' => 'success',

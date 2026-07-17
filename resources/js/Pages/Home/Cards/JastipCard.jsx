@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
-import { FaLocationDot, FaStar, FaHeart, FaPlaneDeparture } from "react-icons/fa6";
+import { FaLocationDot, FaHeart, FaPlaneDeparture } from "react-icons/fa6";
 import { useTranslation } from "@/lib/useTranslation";
+import StarRating from "@/Components/StarRating";
 
 // Kartu produk jastip — dipakai di Home, etalase Jastip, dan produk terkait.
 // Mendukung dua bentuk props:
@@ -139,10 +140,10 @@ export default function JastipCard({ product }) {
                         </span>
                     </div>
 
-                    <div className="text-sm font-semibold flex items-center gap-1 shrink-0">
-                        <FaStar className="text-warning-600" />
-                        {product.rating}
-                    </div>
+                    <StarRating
+                        rating={product.rating}
+                        className="shrink-0 text-sm font-semibold"
+                    />
                 </div>
             </div>
         </>

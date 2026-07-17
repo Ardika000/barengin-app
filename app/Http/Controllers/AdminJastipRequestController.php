@@ -93,6 +93,19 @@ class AdminJastipRequestController extends Controller
             'quoted_at'         => now(),
         ]);
 
+        // Tanpa ini pemohon tidak punya cara tahu penawarannya sudah masuk selain
+        // mengecek halaman profilnya sendiri berulang kali.
+        \App\Models\UserNotification::send(
+            (int) $req->user_id,
+            'jastip_request.quoted',
+            [
+                'name' => $req->item_name,
+                'amount' => (float) ($validated['quoted_item_price'] + $validated['quoted_fee']),
+            ],
+            '/profile-history?tab=requests',
+            'jastip_request.quoted:req:' . $req->id,
+        );
+
         ActivityLog::record('Memberi penawaran request titipan: ' . $req->item_name);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Penawaran terkirim. Pemohon dapat membayar dari halaman profilnya.']);
@@ -109,6 +122,14 @@ class AdminJastipRequestController extends Controller
         }
 
         $req->update(['status' => JastipRequest::STATUS_REJECTED]);
+
+        \App\Models\UserNotification::send(
+            (int) $req->user_id,
+            'jastip_request.rejected',
+            ['name' => $req->item_name],
+            '/profile-history?tab=requests',
+            'jastip_request.rejected:req:' . $req->id,
+        );
 
         ActivityLog::record('Menolak request titipan: ' . $req->item_name);
 

@@ -58,6 +58,42 @@ class HandleInertiaRequests extends Middleware
                     return [];
                 }
             },
+            // Jumlah percakapan yang punya pesan belum dibaca — untuk lencana merah
+            // pada tombol Chat di navbar. Dihitung sebagai satu query agregat
+            // (bukan per-percakapan) karena ikut di setiap response Inertia.
+            'chat_unread_count' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user) {
+                    return 0;
+                }
+
+                return (int) \Illuminate\Support\Facades\DB::table('conversation_participants as cp')
+                    ->join('messages as m', 'm.conversation_id', '=', 'cp.conversation_id')
+                    ->where('cp.user_id', $user->id)
+                    ->where('m.sender_id', '!=', $user->id)
+                    ->where(function ($q) {
+                        $q->whereNull('cp.last_read_at')
+                            ->orWhereColumn('m.created_at', '>', 'cp.last_read_at');
+                    })
+                    ->distinct()
+                    ->count('cp.conversation_id');
+            },
+            // Jumlah notifikasi belum dibaca — untuk lencana pada lonceng navbar.
+            // Sepola dengan chat_unread_count di atas: satu query agregat, ikut
+            // di setiap response Inertia.
+            'notif_unread_count' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user) {
+                    return 0;
+                }
+
+                return (int) \App\Models\UserNotification::query()
+                    ->where('user_id', $user->id)
+                    ->whereNull('read_at')
+                    ->count();
+            },
             // Jumlah baris item di keranjang jastip (session) — untuk indikator keranjang
             'jastip_cart_count' => function () use ($request) {
                 $cart = $request->session()->get('jastip_cart', []);

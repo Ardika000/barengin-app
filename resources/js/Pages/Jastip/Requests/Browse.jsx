@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import Pagination from "@/Components/Pagination";
 import FormModal from "@/Components/FormModal";
 import MainLayout from "@/Layouts/MainLayout";
@@ -9,7 +10,6 @@ import { useTranslation } from "@/lib/useTranslation";
 import {
     FaPlaneDeparture,
     FaLocationDot,
-    FaStar,
     FaRegCalendar,
     FaChevronLeft,
     FaBoxOpen,
@@ -196,11 +196,11 @@ export default function Browse({ trips = {} }) {
                                             <span className="block truncate text-sm font-bold text-neutral-700">{trip.jastiper.name}</span>
                                         )}
                                         {trip.jastiper.rating != null ? (
-                                            <span className="inline-flex items-center gap-1 text-xs text-neutral-500">
-                                                <FaStar className="text-warning-500" size={10} />
-                                                <span className="font-bold text-neutral-700">{Number(trip.jastiper.rating).toFixed(1)}</span>
-                                                ({trip.jastiper.reviews})
-                                            </span>
+                                            <StarRating
+                                                rating={trip.jastiper.rating}
+                                                reviews={trip.jastiper.reviews}
+                                                className="text-xs"
+                                            />
                                         ) : (
                                             <span className="text-xs text-neutral-400">{t("jastip.request.new_jastiper")}</span>
                                         )}

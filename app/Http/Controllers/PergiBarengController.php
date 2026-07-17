@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\PergiBareng;
 use App\Models\PergiBarengRequest;
-use App\Support\FuzzySearch;
+use App\Support\LocationFilter;
+use App\Support\RegionResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -112,11 +113,24 @@ class PergiBarengController extends Controller
         $query = PergiBareng::with(['initiator.received_ratings', 'pergi_bareng_participants'])
             ->where('time_appointment', '>=', now()); // sembunyikan yang sudah lewat
 
-        if ($dari !== '') {
-            FuzzySearch::apply($query, $dari, ['departure_loc']);
-        }
-        if ($ke !== '') {
-            FuzzySearch::apply($query, $ke, ['destination_loc']);
+        // Pergi bareng hanya melayani perjalanan di dalam Indonesia. Lokasi yang
+        // TERBUKTI asing dikosongkan hasilnya (teks yang gagal di-geocode tetap
+        // diproses agar pencarian tak ikut mati saat Nominatim bermasalah).
+        $resolver = new RegionResolver();
+        $foreignLocation = ($dari !== '' && $resolver->isForeign($dari))
+            || ($ke !== '' && $resolver->isForeign($ke));
+
+        if ($foreignLocation) {
+            $query->whereRaw('1 = 0');
+        } else {
+            // Pencarian longgar: bila tak ada yang tepat di titik itu, tampilkan
+            // yang masih satu kabupaten/kota (lihat App\Support\LocationFilter).
+            if ($dari !== '') {
+                LocationFilter::freeText($query, $dari, ['departure_loc']);
+            }
+            if ($ke !== '') {
+                LocationFilter::freeText($query, $ke, ['destination_loc']);
+            }
         }
         if ($tanggal) {
             $query->whereDate('time_appointment', $tanggal);
@@ -213,6 +227,8 @@ class PergiBarengController extends Controller
         // 5. Kirim data ke halaman Index.jsx
         return Inertia::render('PergiBareng/Index', [
             'trips' => $paginatedTrips,
+            // Peringatan di daftar saat user mengetik lokasi di luar Indonesia.
+            'foreignLocation' => $foreignLocation,
             'filters' => [
                 'dari'    => $dari,
                 'ke'      => $ke,
@@ -284,11 +300,33 @@ class PergiBarengController extends Controller
             'quantity.max' => 'Jumlah kursi melebihi kuota yang tersisa.',
         ]);
 
-        PergiBarengRequest::create([
+        $req = PergiBarengRequest::create([
             'pergi_bareng_id' => $trip->id,
             'user_id' => $userId,
             'quantity' => $validated['quantity'],
         ]);
+
+        \App\Models\UserNotification::send(
+            (int) $userId,
+            'order.created',
+            ['name' => $trip->name, 'kind' => 'pergi_bareng', 'quantity' => (int) $validated['quantity']],
+            '/pergi-bareng/' . $trip->id,
+            'order.created:pb_req:' . $req->id,
+        );
+
+        // Sisi penyelenggara: tanpa ini dia tidak tahu ada permintaan yang
+        // menunggu persetujuan kecuali membuka halaman permintaan sendiri.
+        \App\Models\UserNotification::send(
+            (int) $trip->initiator_id,
+            'pergi_bareng.requested',
+            [
+                'name' => $trip->name,
+                'requester' => Auth::user()?->full_name,
+                'quantity' => (int) $validated['quantity'],
+            ],
+            '/admin/pergi-bareng/' . $trip->id . '/requests',
+            'pergi_bareng.requested:pb_req:' . $req->id,
+        );
 
         return redirect()->route('pergi-bareng.request-sent', $trip->id);
     }

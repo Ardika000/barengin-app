@@ -10,10 +10,10 @@ import {
     FaBus,
     FaTrain,
     FaHeart,
-    FaStar,
 } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 import { BsLightningFill, BsChatDots } from "react-icons/bs";
+import StarRating from "@/Components/StarRating";
 import { useTranslation } from "@/lib/useTranslation";
 import { DEFAULT_IMAGE } from "@/lib/images";
 
@@ -169,15 +169,12 @@ export default function PergiBarengCard({ data }) {
                             </div>
 
                             {/* RATING */}
-                            <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-neutral-500 min-w-0">
-                                <FaStar className="size-3 shrink-0 text-yellow-400" />
-                                <span className="shrink-0 font-bold text-neutral-700">
-                                    {user.rating}
-                                </span>
-                                <span className="truncate">
-                                    ({user.reviews} {t("common.reviews")})
-                                </span>
-                            </div>
+                            <StarRating
+                                rating={user.rating}
+                                reviews={user.reviews}
+                                withReviewsLabel
+                                className="mt-0.5 min-w-0 text-[11px] font-medium"
+                            />
                         </div>
                     </div>
 

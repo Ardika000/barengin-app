@@ -36,9 +36,15 @@ class TripSeeder extends Seeder
     {
         $faker = Faker::create('id_ID');
 
-        // Admin juga guider: pegang minimal satu trip selesai agar punya
-        // rating trip_bareng & label "Trip Guider" di halaman profil.
+        // Admin juga guider. Trip yang dipegangnya sengaja menyebar ke tiga fase
+        // agar profil guider-nya lengkap: yang 'past' memberi rating & ulasan
+        // trip_bareng, sementara 'ongoing' dan 'future' membuatnya benar-benar
+        // tampil di etalase trip (listing menyembunyikan trip yang sudah lewat).
         $adminId = DB::table('users')->where('email', 'admin@barengin.com')->value('id');
+
+        // Indeks destinasi yang dipandu admin → bromo (past), bandung (ongoing),
+        // bali (future). Selaras dengan urutan destinations().
+        $adminTripIndexes = [0, 3, 5];
 
         // 1. Buat 5 User Guider
         $guiderIds = [];
@@ -88,9 +94,7 @@ class TripSeeder extends Seeder
             $customerId = $faker->randomElement($customerIds);
             $guiderId   = $faker->randomElement($guiderIds);
 
-            // Trip pertama yang sudah selesai dipandu admin (agar admin
-            // menerima ulasan trip_bareng), sisanya guider acak.
-            if ($i === 0 && $adminId) {
+            if ($adminId && in_array($i, $adminTripIndexes, true)) {
                 $guiderId = $adminId;
             }
 
@@ -167,7 +171,12 @@ class TripSeeder extends Seeder
             // D. Ulasan pemandu (hanya trip yang sudah selesai yang wajar diulas)
             //    2-4 ulasan dari customer berbeda agar rata-rata terasa nyata.
             if ($status === Trip::STATUS_DONE) {
-                $raters = $faker->randomElements($customerIds, $faker->numberBetween(2, 4));
+                // Admin diberi ulasan lebih banyak agar rating guider di kartu
+                // detail trip berdiri di atas sampel yang layak, bukan 1-2 suara.
+                $raterCount = (int) $guiderId === (int) $adminId
+                    ? $faker->numberBetween(5, 8)
+                    : $faker->numberBetween(2, 4);
+                $raters = $faker->randomElements($customerIds, $raterCount);
                 foreach ($raters as $raterId) {
                     DB::table('user_ratings')->insert([
                         'user_id' => $raterId,

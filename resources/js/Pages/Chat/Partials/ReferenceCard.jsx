@@ -3,17 +3,21 @@ import { Link } from "@inertiajs/react";
 import { FiX, FiMapPin } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
-// Kartu konteks Trip / Pergi Bareng. Dua mode:
+// Kartu konteks Trip / Pergi Bareng / Jastip. Dua mode:
 // - onDismiss diberikan → kartu tersemat di komposer (bisa ditutup, tidak nge-link).
 // - tanpa onDismiss → kartu di dalam gelembung pesan (bisa diklik ke detail).
+const TYPE_LABEL_KEYS = {
+    trip: "chat.ref.trip",
+    pergi_bareng: "chat.ref.pergi_bareng",
+    jastip: "chat.ref.jastip",
+};
+
 export default function ReferenceCard({ reference, onDismiss = null, className = "" }) {
     const { t } = useTranslation();
     if (!reference) return null;
 
-    const typeLabel =
-        reference.type === "trip"
-            ? t("chat.ref.trip")
-            : t("chat.ref.pergi_bareng");
+    const labelKey = TYPE_LABEL_KEYS[reference.type];
+    const typeLabel = labelKey ? t(labelKey) : "";
 
     const body = (
         <div
@@ -32,9 +36,11 @@ export default function ReferenceCard({ reference, onDismiss = null, className =
                 />
             ) : null}
             <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-primary-700">
-                    {typeLabel}
-                </p>
+                {typeLabel ? (
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-primary-700">
+                        {typeLabel}
+                    </p>
+                ) : null}
                 <p className="truncate text-sm font-semibold text-neutral-800">
                     {reference.title}
                 </p>

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "@inertiajs/react";
-import { FaStar } from "react-icons/fa";
+import StarRating from "@/Components/StarRating";
 
 export default function TripCard({ trip }) {
     return (
@@ -15,10 +15,12 @@ export default function TripCard({ trip }) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
 
-            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                <FaStar className="text-warning-600 text-sm" />
-                {trip.rating} rating
-            </div>
+            <StarRating
+                rating={trip.rating}
+                className="absolute top-4 right-4 rounded-full bg-white/90 px-2 py-1 text-xs font-medium text-neutral-500 backdrop-blur-sm"
+            >
+                rating
+            </StarRating>
 
             <div className="absolute bottom-4 left-4 text-white">
                 <h3 className="text-lg font-semibold">{trip.title}</h3>

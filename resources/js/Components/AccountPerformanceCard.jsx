@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaStar, FaTrophy } from "react-icons/fa6";
 import { FiChevronDown } from "react-icons/fi";
+import StarRating from "@/Components/StarRating";
 import { useTranslation } from "@/lib/useTranslation";
 
 const INITIAL_REVIEWS = 3;
@@ -82,10 +83,10 @@ function ReviewItem({ review, t }) {
                     <span className="text-sm font-semibold text-neutral-700">
                         {review.name || t("admin.perf.anonymous")}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-600">
-                        <FaStar size={9} />
-                        {Number(review.rating).toFixed(1)}
-                    </span>
+                    <StarRating
+                        rating={review.rating}
+                        className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold"
+                    />
                     <span className="text-xs text-neutral-400">{review.date}</span>
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-neutral-600 break-words">

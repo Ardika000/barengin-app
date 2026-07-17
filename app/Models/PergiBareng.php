@@ -8,16 +8,23 @@ use Illuminate\Database\Eloquent\Model;
 class PergiBareng extends Model
 {
 
-    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name'];
+    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name', 'finished_at'];
 
     /**
      * Status berdasarkan waktu janji (tak ada tanggal selesai terpisah):
      *  - will_start : sebelum hari janji
      *  - ongoing    : pada hari janji
      *  - finish     : setelah hari janji → bisa diulas
+     *
+     * Penyelenggara boleh menyelesaikan lebih cepat; `finished_at` mengalahkan
+     * perhitungan dari tanggal.
      */
     public function status(): string
     {
+        if ($this->finished_at) {
+            return 'finish';
+        }
+
         if (! $this->time_appointment) {
             return 'will_start';
         }
@@ -36,7 +43,8 @@ class PergiBareng extends Model
 
     protected function casts(){
         return [
-            'time_appointment'=> 'datetime'
+            'time_appointment'=> 'datetime',
+            'finished_at' => 'datetime',
         ];
     }
 
@@ -58,6 +66,10 @@ class PergiBareng extends Model
 
     public function conversations(){
         return $this->hasOne(Conversation::class);
+    }
+
+    public function split_bills(){
+        return $this->hasMany(SplitBill::class);
     }
 
 }

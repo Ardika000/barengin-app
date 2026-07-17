@@ -3,20 +3,26 @@ import {
     FaPhoneAlt,
     FaRegCalendarAlt,
     FaFire,
-    FaStar,
     FaRoute,
 } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
+import { useState } from "react";
 import { usePage } from "@inertiajs/react";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
+import UserListModal from "@/Pages/Forum/Partials/UserListModal";
 import AvatarEditor from "./AvatarEditor";
+import WalletCard from "./WalletCard";
 import { useTranslation } from "@/lib/useTranslation";
 
-export default function ProfileSidebar({ profile, onEdit }) {
+export default function ProfileSidebar({ profile, wallet, onEdit }) {
     const { t } = useTranslation();
     const { auth } = usePage().props;
     const streak = auth?.user?.streak_count ?? 0;
     const streakBest = auth?.user?.streak_best ?? 0;
+
+    // Daftar pengikut / mengikuti — modal yang sama dengan profil Forum.
+    const [userListMode, setUserListMode] = useState(null); // null | "followers" | "following"
 
     // Rating per kategori; tampilkan hanya yang punya ulasan.
     const r = profile.ratings ?? {};
@@ -51,18 +57,26 @@ export default function ProfileSidebar({ profile, onEdit }) {
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-5 text-sm lg:justify-start">
-                <span className="text-neutral-700">
+                <button
+                    type="button"
+                    onClick={() => setUserListMode("followers")}
+                    className="text-neutral-700 transition hover:text-neutral-900"
+                >
                     <span className="font-bold text-neutral-900">
                         {profile.followers_count}
                     </span>{" "}
                     {t("forum.followers")}
-                </span>
-                <span className="text-neutral-700">
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setUserListMode("following")}
+                    className="text-neutral-700 transition hover:text-neutral-900"
+                >
                     <span className="font-bold text-neutral-900">
                         {profile.following_count}
                     </span>{" "}
                     {t("forum.following")}
-                </span>
+                </button>
             </div>
 
             {/* Ringkas satu baris: badge pemandu + rating per kategori
@@ -77,17 +91,14 @@ export default function ProfileSidebar({ profile, onEdit }) {
                     ) : null}
 
                     {ratingChips.map((chip) => (
-                        <span
+                        <StarRating
                             key={chip.key}
                             title={`${chip.count} ${t("common.reviews")}`}
-                            className="inline-flex items-center gap-1 text-neutral-600"
+                            rating={chip.average ?? 0}
+                            className="text-neutral-600"
                         >
-                            <FaStar className="text-warning-500" size={11} />
-                            <span className="font-bold text-neutral-800">
-                                {Number(chip.average ?? 0).toFixed(1)}
-                            </span>
                             {chip.label}
-                        </span>
+                        </StarRating>
                     ))}
                 </div>
             ) : null}
@@ -107,6 +118,11 @@ export default function ProfileSidebar({ profile, onEdit }) {
             >
                 {t("ph.edit_profile")}
             </Button>
+
+            {/* Dompet: informasi tingkat akun, jadi menemani profil di sidebar dan
+                bukan salah satu tab riwayat. Ditaruh tepat setelah tombol Edit agar
+                saldo terbaca tanpa perlu menggulir melewati streak & kontak. */}
+            <WalletCard wallet={wallet} />
 
             {/* Streak Nyala */}
             <div className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-left">
@@ -150,6 +166,13 @@ export default function ProfileSidebar({ profile, onEdit }) {
                     </li>
                 )}
             </ul>
+
+            <UserListModal
+                open={userListMode !== null}
+                onClose={() => setUserListMode(null)}
+                mode={userListMode ?? "followers"}
+                username={profile.username}
+            />
         </div>
     );
 }

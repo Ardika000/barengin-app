@@ -2,14 +2,15 @@ import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import ConfirmModal from "@/Components/ConfirmModal";
 import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
-import { FaStar } from "react-icons/fa";
 import { BsChatDots } from "react-icons/bs";
+import OngoingSection from "@/Pages/Admin/Partials/OngoingSection";
 
 const STATUS_STYLES = {
     draft: "bg-blue-100 text-blue-700",
@@ -18,7 +19,7 @@ const STATUS_STYLES = {
     done: "bg-green-100 text-green-700",
 };
 
-export default function Index({ trips = {}, filters = {} }) {
+export default function Index({ trips = {}, ongoing = [], filters = {} }) {
     const { t: translate } = useTranslation();
     const rows = trips.data ?? [];
     const { values, set, goPage } = useServerTable("/admin/trip", {
@@ -54,6 +55,25 @@ export default function Index({ trips = {}, filters = {} }) {
                 <h1 className="text-2xl font-bold text-neutral-700">{translate("admin.trip.index_title")}</h1>
                 <p className="text-neutral-500 text-sm">{translate("admin.trip.index_subtitle")}</p>
             </div>
+
+            {/* Sedang berlangsung — pemandu bisa menyelesaikan lebih cepat */}
+            <OngoingSection
+                items={ongoing.map((o) => ({
+                    id: o.id,
+                    title: o.name,
+                    subtitle: o.location,
+                    image: o.image,
+                    meta: o.period_label,
+                }))}
+                finishUrl={(id) => `/admin/trip/${id}/finish`}
+                title={translate("admin.trip.ongoing_title")}
+                emptyText={translate("admin.trip.ongoing_empty")}
+                finishLabel={translate("admin.ongoing.finish")}
+                confirmTitle={translate("admin.trip.finish_title")}
+                confirmDescription={translate("admin.trip.finish_desc")}
+                confirmLabel={translate("admin.ongoing.finish_confirm")}
+            />
+
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title="Manajemen Trip" />
 
@@ -141,11 +161,11 @@ export default function Index({ trips = {}, filters = {} }) {
                                     <td className="py-3.5 px-5 text-sm font-semibold text-primary-700 whitespace-nowrap">{t.joined}/{t.capacity}</td>
                                     <td className="py-3.5 px-5 text-sm whitespace-nowrap">
                                         {t.rating_avg != null ? (
-                                            <span className="inline-flex items-center gap-1.5 text-neutral-700">
-                                                <FaStar className="text-warning-500" size={13} />
-                                                <span className="font-bold">{Number(t.rating_avg).toFixed(1)}</span>
-                                                <span className="text-xs text-neutral-400">({t.rating_count})</span>
-                                            </span>
+                                            <StarRating
+                                                rating={t.rating_avg}
+                                                reviews={t.rating_count}
+                                                className="text-sm"
+                                            />
                                         ) : (
                                             <span className="text-xs text-neutral-400">—</span>
                                         )}

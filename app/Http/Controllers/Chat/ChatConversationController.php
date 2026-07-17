@@ -18,8 +18,8 @@ class ChatConversationController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            // Referensi opsional (kartu konteks Trip / Pergi Bareng) untuk pesan pertama.
-            'ref_type' => ['nullable', 'in:trip,pergi_bareng'],
+            // Referensi opsional (kartu konteks Trip / Pergi Bareng / Jastip) untuk pesan pertama.
+            'ref_type' => ['nullable', 'in:trip,pergi_bareng,jastip'],
             'ref_id' => ['nullable', 'integer'],
         ]);
 

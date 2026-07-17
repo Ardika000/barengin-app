@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Input from "@/Components/Input";
+import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
 import Button from "@/Components/Button";
 import Checkbox from "@/Components/Checkbox";
 import Pagination from "@/Components/Pagination";
@@ -39,8 +40,7 @@ export default function Index({
     suggestion,
     filters,
     categories = [],
-    fromOptions = [],
-    toOptions = [],
+    foreignPickup = false,
 }) {
     const { t } = useTranslation();
 
@@ -213,25 +213,24 @@ export default function Index({
                         </div>
                         <div>
                             <label className={fieldLabel}>{t("jastip.shop.from_label")}</label>
-                            <Input
+                            <PlaceAutocomplete
                                 size="sm"
                                 leftIcon={<FaPlaneDeparture />}
                                 rightAddon={<LocateButton field="from" />}
-                                list="jastip-from-options"
                                 value={fromQ}
-                                onChange={(e) => setFromQ(e.target.value)}
+                                onChange={setFromQ}
                                 placeholder={t("jastip.shop.from_ph")}
                             />
                         </div>
                         <div>
                             <label className={fieldLabel}>{t("jastip.shop.to_label")}</label>
-                            <Input
+                            <PlaceAutocomplete
                                 size="sm"
                                 leftIcon={<FaLocationDot />}
                                 rightAddon={<LocateButton field="to" />}
-                                list="jastip-to-options"
                                 value={toQ}
-                                onChange={(e) => setToQ(e.target.value)}
+                                onChange={setToQ}
+                                countryCodes="id"
                                 placeholder={t("jastip.shop.to_ph")}
                             />
                         </div>
@@ -239,16 +238,6 @@ export default function Index({
                             {t("jastip.shop.search_btn")}
                         </Button>
                     </div>
-                    <datalist id="jastip-from-options">
-                        {fromOptions.map((o) => (
-                            <option key={o} value={o} />
-                        ))}
-                    </datalist>
-                    <datalist id="jastip-to-options">
-                        {toOptions.map((o) => (
-                            <option key={o} value={o} />
-                        ))}
-                    </datalist>
                 </form>
 
                 {/* Sentinel: diletakkan tepat di bawah kartu pencarian. Bar tersemat
@@ -285,24 +274,23 @@ export default function Index({
                                     />
                                 </div>
                                 <div className="hidden w-[210px] md:block">
-                                    <Input
+                                    <PlaceAutocomplete
                                         size="sm"
                                         leftIcon={<FaPlaneDeparture />}
                                         rightAddon={<LocateButton field="from" />}
-                                        list="jastip-from-options"
                                         value={fromQ}
-                                        onChange={(e) => setFromQ(e.target.value)}
+                                        onChange={setFromQ}
                                         placeholder={t("jastip.shop.from_ph")}
                                     />
                                 </div>
                                 <div className="hidden w-[210px] md:block">
-                                    <Input
+                                    <PlaceAutocomplete
                                         size="sm"
                                         leftIcon={<FaLocationDot />}
                                         rightAddon={<LocateButton field="to" />}
-                                        list="jastip-to-options"
                                         value={toQ}
-                                        onChange={(e) => setToQ(e.target.value)}
+                                        onChange={setToQ}
+                                        countryCodes="id"
                                         placeholder={t("jastip.shop.to_ph")}
                                     />
                                 </div>
@@ -444,6 +432,12 @@ export default function Index({
                         </div>
 
                         {/* Saran typo: "Mungkin maksud Anda ..." */}
+                        {foreignPickup && (
+                            <div className="mb-5 rounded-xl border border-orange-200/60 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-800">
+                                {t("jastip.shop.pickup_id_only")}
+                            </div>
+                        )}
+
                         {products.data.length === 0 && suggestion && (
                             <div className="mb-5 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-neutral-700">
                                 {t("jastip.shop.did_you_mean")}{" "}

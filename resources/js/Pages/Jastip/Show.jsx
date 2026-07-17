@@ -3,13 +3,13 @@ import { Head, Link, router, usePage } from "@inertiajs/react";
 import { toast } from "@/lib/toast";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import JastipCard from "@/Pages/Home/Cards/JastipCard";
 import MainLayout from "@/Layouts/MainLayout";
 import { useTranslation } from "@/lib/useTranslation";
 import {
     FaChevronLeft,
     FaLocationDot,
-    FaStar,
     FaHeart,
     FaRegHeart,
     FaMinus,
@@ -72,7 +72,13 @@ export default function Show({ product, related = [] }) {
 
     const handleOpenChat = () => {
         if (!product.owner?.id) { toast.error(t("jastip.show.owner_unavailable")); return; }
-        router.post("/chat/personal", { user_id: product.owner.id });
+
+        // Sertakan kartu referensi Jastip agar jastiper paham produk mana yang ditanyakan.
+        router.post("/chat/personal", {
+            user_id: product.owner.id,
+            ref_type: "jastip",
+            ref_id: product.id,
+        });
     };
 
     // #15: buka grup chat jastip (jastiper <-> semua pembeli produk ini)
@@ -260,9 +266,12 @@ export default function Show({ product, related = [] }) {
                                             <div className="min-w-0">
                                                 <p className="text-xs text-neutral-500">{t("jastip.show.owner")}</p>
                                                 <p className="truncate text-sm font-semibold text-neutral-700 group-hover:text-primary-700 group-hover:underline">{product.owner.name}</p>
-                                                <p className="flex items-center gap-1 text-xs text-amber-500">
-                                                    <FaStar /> {Number(product.owner.rating || 0).toFixed(1)} {t("jastip.show.rating")}
-                                                </p>
+                                                <StarRating
+                                                    rating={product.owner.rating || 0}
+                                                    className="text-xs text-neutral-500"
+                                                >
+                                                    {t("jastip.show.rating")}
+                                                </StarRating>
                                             </div>
                                         </Link>
                                     ) : (
@@ -273,9 +282,12 @@ export default function Show({ product, related = [] }) {
                                             <div className="min-w-0">
                                                 <p className="text-xs text-neutral-500">{t("jastip.show.owner")}</p>
                                                 <p className="truncate text-sm font-semibold text-neutral-700">{product.owner.name}</p>
-                                                <p className="flex items-center gap-1 text-xs text-amber-500">
-                                                    <FaStar /> {Number(product.owner.rating || 0).toFixed(1)} {t("jastip.show.rating")}
-                                                </p>
+                                                <StarRating
+                                                    rating={product.owner.rating || 0}
+                                                    className="text-xs text-neutral-500"
+                                                >
+                                                    {t("jastip.show.rating")}
+                                                </StarRating>
                                             </div>
                                         </div>
                                     )}
@@ -319,9 +331,9 @@ export default function Show({ product, related = [] }) {
                             {isOwner ? (
                                 /* #5 & #15: pemilik tak melihat tombol pesan — diganti chat grup pembeli */
                                 <div className="space-y-2">
-                                    <Button isButtonLink={false} type="primary" size="md" rounded={false}
+                                    <Button isButtonLink={false} type="primary" variant="outline" size="md" rounded={false}
                                         onClick={handleOpenGroupChat}
-                                        className="flex w-full items-center justify-center gap-2 rounded-xl font-bold text-white">
+                                        className="flex w-full items-center justify-center gap-2 rounded-xl font-bold">
                                         <FaUsers /> {t("jastip.show.group_chat")}
                                     </Button>
                                     <p className="text-center text-xs text-neutral-400">{t("jastip.show.group_chat_hint")}</p>

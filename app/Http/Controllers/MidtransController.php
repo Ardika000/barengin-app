@@ -50,6 +50,13 @@ class MidtransController extends Controller
                     ->orWhereIn('t.id', DB::table('jastip_requests')
                         ->where('status', 'quoted')
                         ->whereNotNull('transaction_id')
+                        ->select('transaction_id'))
+                    // Bagian split bill yang menunggu pembayaran. Penting di
+                    // localhost yang tidak punya webhook publik: status baru
+                    // tersinkron saat halaman Profile History dibuka.
+                    ->orWhereIn('t.id', DB::table('split_bill_shares')
+                        ->where('status', 'pending')
+                        ->whereNotNull('transaction_id')
                         ->select('transaction_id'));
             })
             ->pluck('t.id');
@@ -129,10 +136,139 @@ class MidtransController extends Controller
                 ->update(['transaction_id' => null, 'updated_at' => now()]);
         }
 
+        // Bagian split bill: lunas → catat & isi dompet penyelenggara; gagal →
+        // lepaskan transaksinya agar anggota bisa membayar ulang.
+        if ($orderStatus === 'paid') {
+            self::settleSplitBillShare($orderId);
+        } elseif ($orderStatus === 'unpaid') {
+            DB::table('split_bill_shares')
+                ->where('transaction_id', $orderId)
+                ->where('status', 'pending')
+                ->update(['transaction_id' => null, 'status' => 'unpaid', 'updated_at' => now()]);
+        }
+
         // Saat lunas: buat peserta trip & masukkan pembeli ke grup chat
         if ($orderStatus === 'paid') {
             self::fulfillPaidTripOrders($orderId);
+            self::notifyPaid($orderId);
+            self::notifySellersOfPaidJastip($orderId);
         }
+    }
+
+    /**
+     * Kabari jastiper bahwa produknya terbayar — aba-abanya untuk mulai belanja.
+     *
+     * Satu pesanan bisa memuat produk dari beberapa jastiper, jadi dikelompokkan
+     * per penjual dan kunci dedupe-nya per (transaksi x penjual): setiap jastiper
+     * dapat tepat satu notifikasi walau applyStatus() dipanggil berulang.
+     */
+    private static function notifySellersOfPaidJastip(string $transactionId): void
+    {
+        $rows = DB::table('jastip_orders as jo')
+            ->join('jastip_order_items as joi', 'joi.jastip_order_id', '=', 'jo.id')
+            ->join('jastip_items as ji', 'ji.id', '=', 'joi.jastip_item_id')
+            ->where('jo.transaction_id', $transactionId)
+            ->where('jo.order_status', 'paid')
+            ->get(['ji.user_id as seller_id', 'ji.name as item_name']);
+
+        foreach ($rows->groupBy('seller_id') as $sellerId => $items) {
+            if (! $sellerId) {
+                continue;
+            }
+
+            \App\Models\UserNotification::send(
+                (int) $sellerId,
+                'selling.order_paid',
+                [
+                    'name' => $items->first()->item_name,
+                    'more' => max(0, $items->count() - 1),
+                ],
+                '/admin/jastip',
+                'selling.order_paid:trx:' . $transactionId . ':seller:' . $sellerId,
+            );
+        }
+    }
+
+    /**
+     * Kabari pembeli bahwa transaksinya lunas.
+     *
+     * Transaksi adalah jangkar yang sama untuk semua jenis pesanan (trip, jastip,
+     * split bill), jadi satu notifikasi per transaksi sudah mewakili semuanya.
+     *
+     * Kunci dedupe WAJIB: applyStatus() dipanggil ulang oleh webhook Midtrans
+     * (yang memang mengirim berkali-kali) dan oleh syncPendingForUser() setiap
+     * halaman Profile History dibuka. Tanpa kunci ini pembeli akan dibanjiri
+     * notifikasi "lunas" yang sama.
+     */
+    private static function notifyPaid(string $transactionId): void
+    {
+        $trx = DB::table('transactions')->where('id', $transactionId)->first();
+
+        if (! $trx) {
+            return;
+        }
+
+        \App\Models\UserNotification::send(
+            (int) $trx->user_id,
+            'payment.paid',
+            ['amount' => (float) $trx->total_amount, 'kind' => $trx->type],
+            '/profile-history?tab=transactions',
+            'payment.paid:trx:' . $transactionId,
+        );
+    }
+
+    /**
+     * Tandai bagian split bill lunas lalu tambahkan nominalnya ke dompet
+     * penyelenggara. Uangnya sendiri masuk ke akun Midtrans platform; dompet
+     * mencatat berapa yang menjadi hak penyelenggara.
+     *
+     * Idempotent: notifikasi Midtrans bisa datang berkali-kali untuk transaksi
+     * yang sama, jadi share yang sudah lunas dilewati dan Wallet::credit()
+     * menolak kredit ganda dari sumber yang sama.
+     */
+    private static function settleSplitBillShare(string $transactionId): void
+    {
+        $share = \App\Models\SplitBillShare::with('split_bill')
+            ->where('transaction_id', $transactionId)
+            ->first();
+
+        if (! $share || $share->status === \App\Models\SplitBillShare::STATUS_PAID) {
+            return;
+        }
+
+        $bill = $share->split_bill;
+
+        if (! $bill) {
+            return;
+        }
+
+        $share->forceFill([
+            'status' => \App\Models\SplitBillShare::STATUS_PAID,
+            'paid_at' => now(),
+        ])->save();
+
+        \App\Models\Wallet::forUser((int) $bill->creator_id)->credit(
+            (float) $share->amount,
+            'Patungan: ' . $bill->title,
+            'split_bill_share',
+            (int) $share->id,
+        );
+
+        // Penyelenggara dikabari bahwa bagian ini masuk ke dompetnya. Aman dari
+        // duplikat lewat dedupe_key + penjaga status PAID di atas.
+        \App\Models\UserNotification::send(
+            (int) $bill->creator_id,
+            'split_bill.settled',
+            [
+                'title' => $bill->title,
+                'amount' => (float) $share->amount,
+                'payer' => \App\Models\User::find($share->user_id)?->full_name,
+            ],
+            '/profile-history',
+            'split_bill.settled:share:' . $share->id,
+        );
+
+        $bill->refreshStatus();
     }
 
     /**
@@ -212,6 +348,17 @@ class MidtransController extends Controller
 
         foreach ($members->diff($existing) as $uid) {
             $conversation->participants()->attach($uid, ['last_read_at' => now()]);
+
+            // Pemandu tidak perlu dikabari soal grup trip-nya sendiri.
+            if ((int) $uid !== (int) $trip->guider_id) {
+                \App\Models\UserNotification::send(
+                    (int) $uid,
+                    'group.joined',
+                    ['name' => $trip->name, 'kind' => 'trip'],
+                    '/chat?conversation=' . $conversation->id,
+                    'group.joined:conv:' . $conversation->id . ':user:' . $uid,
+                );
+            }
         }
     }
 
