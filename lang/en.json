@@ -1257,6 +1257,8 @@
     "track.fit_all": "Show all",
     "track.back": "Back",
     "track.dest_missing": "Destination location not found on the map.",
+    "track.live": "LIVE",
+    "track.arrival_prefix": "Arriving",
     "wallet.topup_title": "Top Up Wallet",
     "wallet.topup_desc": "Pick an amount, then complete the payment via Midtrans. Your balance updates once the payment settles.",
     "wallet.topup_amount_label": "Other amount",

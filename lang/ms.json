@@ -1257,6 +1257,8 @@
     "track.fit_all": "Papar semua",
     "track.back": "Kembali",
     "track.dest_missing": "Lokasi destinasi tidak dijumpai di peta.",
+    "track.live": "LANGSUNG",
+    "track.arrival_prefix": "Anggaran tiba",
     "wallet.topup_title": "Tambah Nilai Dompet",
     "wallet.topup_desc": "Pilih jumlah, kemudian selesaikan pembayaran melalui Midtrans. Baki bertambah selepas pembayaran selesai.",
     "wallet.topup_amount_label": "Jumlah lain",
