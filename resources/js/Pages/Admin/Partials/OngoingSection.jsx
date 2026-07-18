@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { router } from "@inertiajs/react";
 import ConfirmModal from "@/Components/ConfirmModal";
 import { DEFAULT_IMAGE } from "@/lib/images";
-import { FiCheckCircle } from "react-icons/fi";
+import { FiCheckCircle, FiNavigation } from "react-icons/fi";
 
 /**
  * Seksi "Sedang Berlangsung" untuk dasbor Trip / Pergi Bareng.
@@ -13,6 +13,9 @@ import { FiCheckCircle } from "react-icons/fi";
  *
  * `items`: [{ id, title, subtitle, image, meta }]
  * `finishUrl(id)`: endpoint POST untuk menyelesaikan.
+ * `onTrack(id)` + `trackLabel` (opsional): bila diisi, tiap baris memunculkan
+ * tombol "Pantau Perjalanan" dan tata letaknya jadi satu kolom (satu baris per
+ * perjalanan) agar muat dua tombol. Trip tidak memakainya, jadi dasbornya utuh.
  */
 export default function OngoingSection({
     items = [],
@@ -23,9 +26,12 @@ export default function OngoingSection({
     confirmTitle,
     confirmDescription,
     confirmLabel,
+    onTrack,
+    trackLabel,
 }) {
     const [confirm, setConfirm] = useState({ open: false, id: null, name: "" });
     const [busyId, setBusyId] = useState(null);
+    const hasTrack = typeof onTrack === "function";
 
     // Tanpa item, seksi ini hanya menambah kebisingan di dasbor.
     if (!items.length) {
@@ -93,7 +99,13 @@ export default function OngoingSection({
                 </span>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div
+                className={
+                    hasTrack
+                        ? "grid gap-3 grid-cols-1"
+                        : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                }
+            >
                 {items.map((item) => (
                     <div
                         key={item.id}
@@ -122,21 +134,34 @@ export default function OngoingSection({
                             ) : null}
                         </div>
 
-                        <button
-                            type="button"
-                            disabled={busyId === item.id}
-                            onClick={() =>
-                                setConfirm({
-                                    open: true,
-                                    id: item.id,
-                                    name: item.title,
-                                })
-                            }
-                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success-700 px-3 py-2 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-60"
-                        >
-                            <FiCheckCircle size={14} />
-                            {finishLabel}
-                        </button>
+                        <div className="flex shrink-0 items-center gap-2">
+                            {hasTrack ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onTrack(item.id)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800"
+                                >
+                                    <FiNavigation size={14} />
+                                    {trackLabel}
+                                </button>
+                            ) : null}
+
+                            <button
+                                type="button"
+                                disabled={busyId === item.id}
+                                onClick={() =>
+                                    setConfirm({
+                                        open: true,
+                                        id: item.id,
+                                        name: item.title,
+                                    })
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-success-700 px-3 py-2 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-60"
+                            >
+                                <FiCheckCircle size={14} />
+                                {finishLabel}
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>

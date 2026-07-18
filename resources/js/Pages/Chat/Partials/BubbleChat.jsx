@@ -3,6 +3,7 @@ import Avatar from "./Avatar";
 import { FiCornerUpLeft } from "react-icons/fi";
 import ReferenceCard from "./ReferenceCard";
 import SplitBillCard from "./SplitBillCard";
+import TrackJourneyCard from "./TrackJourneyCard";
 import { useTranslation } from "@/lib/useTranslation";
 
 function cn(...a) {
@@ -122,6 +123,8 @@ export default function Bubble({
                                     state={splitBillState}
                                     clientKey={midtransClientKey}
                                 />
+                            ) : reference.type === "pergi_track" ? (
+                                <TrackJourneyCard reference={reference} />
                             ) : (
                                 <ReferenceCard reference={reference} />
                             )}

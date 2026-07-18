@@ -250,6 +250,8 @@ Route::prefix('pergi-bareng')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::post('/{id}/join', [PergiBarengController::class, 'store'])->name('pergi-bareng.store');
         Route::get('/{id}/request-sent', [PergiBarengController::class, 'requestSent'])->name('pergi-bareng.request-sent');
+        // Peta pantau perjalanan live — hanya anggota grup
+        Route::get('/{id}/track', [PergiBarengController::class, 'track'])->whereNumber('id')->name('pergi-bareng.track');
     });
 });
 
@@ -375,6 +377,9 @@ Route::prefix('admin')->group(function () {
         Route::delete('/{id}', [AdminPergiBarengController::class, 'destroy'])->whereNumber('id')->name('destroy');
 
         Route::post('/{id}/finish', [AdminPergiBarengController::class, 'finish'])->whereNumber('id')->name('finish');
+
+        // Pantau perjalanan: bagikan kartu ke grup lalu buka peta live
+        Route::post('/{id}/track', [AdminPergiBarengController::class, 'shareTrack'])->whereNumber('id')->name('track');
 
         // Bagi tagihan (split bill) untuk pergi bareng yang sudah selesai
         Route::get('/{id}/split-bill', [\App\Http\Controllers\SplitBillController::class, 'create'])->whereNumber('id')->name('split-bill.create');

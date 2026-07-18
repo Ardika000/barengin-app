@@ -369,6 +369,33 @@ class PergiBarengController extends Controller
     }
 
     /**
+     * Peta "pantau perjalanan" live. Hanya anggota grup (penyelenggara atau
+     * peserta yang sudah disetujui) yang boleh melihat lokasi live satu sama
+     * lain — sama seperti akses grup chat pergi bareng.
+     */
+    public function track($id)
+    {
+        $trip = PergiBareng::with('pergi_bareng_participants')->findOrFail($id);
+
+        $userId = (int) Auth::id();
+        $isMember = (int) $trip->initiator_id === $userId
+            || $trip->pergi_bareng_participants->contains('user_id', $userId);
+
+        abort_unless($isMember, 403, 'Kamu bukan anggota perjalanan ini.');
+
+        return Inertia::render('PergiBareng/Track', [
+            'trip' => [
+                'id' => (int) $trip->id,
+                'name' => $trip->name,
+                'departure_loc' => $trip->departure_loc,
+                'destination_loc' => $trip->destination_loc,
+                'status' => $trip->status(),
+                'is_creator' => (int) $trip->initiator_id === $userId,
+            ],
+        ]);
+    }
+
+    /**
      * Ubah path gambar pergi bareng dari DB menjadi URL untuk <img>.
      * - kosong  -> gambar default generik
      * - http/absolut (/assets/..) -> dipakai apa adanya

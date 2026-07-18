@@ -183,6 +183,76 @@ class AdminPergiBarengController extends Controller
         ]);
     }
 
+    /**
+     * Mulai "pantau perjalanan": bagikan kartu pemantauan ke grup chat (sekali
+     * saja, seperti bagi tagihan) lalu arahkan penyelenggara ke peta live.
+     * Hanya bisa saat perjalanan sedang berlangsung — sebelum itu tak ada yang
+     * perlu dipantau, sesudah selesai perjalanannya sudah usai.
+     */
+    public function shareTrack($id)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        if ($trip->status() !== 'ongoing') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Pantau perjalanan hanya tersedia saat perjalanan sedang berlangsung.',
+            ]);
+        }
+
+        $this->postTrackCardToGroup($trip);
+
+        \App\Models\ActivityLog::record('Membagikan pantau perjalanan: ' . $trip->name);
+
+        // Penyelenggara langsung dibawa ke peta; kartu sudah nangkring di grup
+        // untuk anggota lain.
+        return redirect()->route('pergi-bareng.track', $trip->id);
+    }
+
+    /**
+     * Kirim kartu "pantau perjalanan" ke grup chat pergi bareng — idempoten:
+     * kalau kartunya sudah pernah dibagikan untuk perjalanan ini, tidak dikirim
+     * lagi agar grup tidak dibanjiri kartu duplikat setiap tombol ditekan.
+     */
+    private function postTrackCardToGroup(PergiBareng $trip): void
+    {
+        $conversation = Conversation::where('pergi_bareng_id', $trip->id)
+            ->where('is_group', true)
+            ->first();
+
+        if (! $conversation) {
+            return;
+        }
+
+        $alreadyShared = $conversation->messages()
+            ->whereNotNull('reference')
+            ->get(['reference'])
+            ->contains(function ($m) use ($trip) {
+                $ref = $m->reference;
+                return ($ref['type'] ?? null) === 'pergi_track'
+                    && (int) ($ref['id'] ?? 0) === (int) $trip->id;
+            });
+
+        if ($alreadyShared) {
+            return;
+        }
+
+        $message = \App\Models\Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $trip->initiator_id,
+            'message_text' => '',
+            'reference' => [
+                'type' => 'pergi_track',
+                'id' => (int) $trip->id,
+                'title' => $trip->name,
+                'subtitle' => $trip->destination_loc,
+                'url' => '/pergi-bareng/' . $trip->id . '/track',
+            ],
+        ]);
+
+        broadcast(new \App\Events\MessageSent($message))->toOthers();
+    }
+
     public function analytics()
     {
         $trips = PergiBareng::with('pergi_bareng_participants')
