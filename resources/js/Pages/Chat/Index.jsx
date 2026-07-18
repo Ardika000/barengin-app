@@ -51,6 +51,18 @@ export default function ChatIndex({ conversations = [] }) {
         };
     }, []);
 
+    // Jumlah chat dengan pesan belum dibaca per tab, untuk lencana di Segment.
+    const { personalUnread, groupUnread } = useMemo(() => {
+        let personal = 0;
+        let groups = 0;
+        for (const c of list ?? []) {
+            if (Number(c.unread ?? 0) <= 0) continue;
+            if (c.is_group) groups += 1;
+            else personal += 1;
+        }
+        return { personalUnread: personal, groupUnread: groups };
+    }, [list]);
+
     const filtered = useMemo(() => {
         return (list ?? [])
             .filter((c) => {
@@ -98,7 +110,12 @@ export default function ChatIndex({ conversations = [] }) {
                         </div>
 
                         <div className="mt-6">
-                            <Segment value={tab} onChange={setTab} />
+                            <Segment
+                                value={tab}
+                                onChange={setTab}
+                                personalUnread={personalUnread}
+                                groupUnread={groupUnread}
+                            />
                         </div>
 
                         <div className="mt-6">

@@ -12,12 +12,17 @@ class PergiBareng extends Model
 
     /**
      * Status berdasarkan waktu janji (tak ada tanggal selesai terpisah):
-     *  - will_start : sebelum hari janji
-     *  - ongoing    : pada hari janji
-     *  - finish     : setelah hari janji → bisa diulas
+     *  - will_start : sebelum JAM janji (bukan sekadar sebelum harinya)
+     *  - ongoing    : sejak jam janji, dan TETAP berlangsung sampai penyelenggara
+     *                 menekan "Selesaikan"
+     *  - finish     : hanya setelah penyelenggara menyelesaikannya (`finished_at`)
      *
-     * Penyelenggara boleh menyelesaikan lebih cepat; `finished_at` mengalahkan
-     * perhitungan dari tanggal.
+     * Divalidasi hingga jam, bukan hanya tanggal: perjalanan pukul 23:40 baru
+     * "berlangsung" pada 23:40, bukan sejak 00:00 hari itu.
+     *
+     * TIDAK ADA transisi otomatis ke `finish` di tengah malam — satu-satunya
+     * jalan menuju selesai adalah penyelenggara mengisi `finished_at`. Selama itu
+     * belum terjadi, perjalanan tetap `ongoing` walau harinya sudah lewat.
      */
     public function status(): string
     {
@@ -29,16 +34,11 @@ class PergiBareng extends Model
             return 'will_start';
         }
 
-        $now  = Carbon::now();
-        $appt = Carbon::parse($this->time_appointment);
-
-        if ($now->lt($appt->copy()->startOfDay())) {
-            return 'will_start';
-        }
-        if ($now->lte($appt->copy()->endOfDay())) {
-            return 'ongoing';
-        }
-        return 'finish';
+        // Belum sampai jam keberangkatan → masih menunggu; sejak jam itu →
+        // berlangsung, tanpa batas akhir otomatis.
+        return Carbon::now()->lt(Carbon::parse($this->time_appointment))
+            ? 'will_start'
+            : 'ongoing';
     }
 
     protected function casts(){

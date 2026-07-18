@@ -121,14 +121,18 @@ class AdminPergiBarengController extends Controller
     /**
      * Pergi bareng yang sedang berlangsung milik penyelenggara — ditampilkan
      * sebagai seksi tersendiri di atas tabel agar tombol "Selesaikan" mudah
-     * dijangkau. Berlangsung = hari janji adalah hari ini & belum diselesaikan.
+     * dijangkau. Berlangsung = JAM janji sudah lewat dan belum diselesaikan
+     * (konsisten dengan PergiBareng::status()). Karena tidak ada penyelesaian
+     * otomatis, perjalanan lama yang belum ditutup penyelenggara tetap muncul
+     * di sini — justru mengingatkan agar segera menekan "Selesaikan".
      */
     private function ongoingTrips()
     {
         return PergiBareng::query()
             ->where('initiator_id', Auth::id())
             ->whereNull('finished_at')
-            ->whereDate('time_appointment', Carbon::today())
+            // Jam janji sudah tiba — sebelum ini masih "menunggu", bukan berlangsung.
+            ->where('time_appointment', '<=', Carbon::now())
             ->withSum('pergi_bareng_participants as joined_count', 'quantity')
             ->orderBy('time_appointment')
             ->get()
@@ -300,9 +304,9 @@ class AdminPergiBarengController extends Controller
             ->where('initiator_id', Auth::id())
             ->findOrFail($id);
 
-        // Hanya yang berstatus "selesai" (waktu janji sudah lewat) yang bisa dibuka ulang
-        $isFinished = Carbon::now()->gt($trip->time_appointment->copy()->endOfDay());
-        if (! $isFinished) {
+        // Hanya yang berstatus "selesai" (penyelenggara sudah menekan "Selesaikan")
+        // yang bisa dibuka ulang — tidak ada lagi penyelesaian otomatis by tanggal.
+        if ($trip->status() !== 'finish') {
             return redirect()->route('admin.pergi-bareng.index')->with('flash', [
                 'type' => 'info',
                 'message' => 'Hanya pergi bareng yang sudah selesai yang dapat dibuka ulang.',

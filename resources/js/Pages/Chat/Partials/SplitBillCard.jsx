@@ -5,6 +5,7 @@ import { FiCheckCircle, FiClock, FiCreditCard, FiAlertCircle } from "react-icons
 import { MdReceiptLong, MdAccountBalanceWallet } from "react-icons/md";
 import { useTranslation } from "@/lib/useTranslation";
 import { useMidtransSnap } from "@/lib/useMidtransSnap";
+import { toast } from "@/lib/toast";
 
 const rupiah = (n) =>
     "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
@@ -21,6 +22,9 @@ export default function SplitBillCard({ reference, state, clientKey }) {
     const snapReady = useMidtransSnap(clientKey);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
+    // Token Snap dari percobaan yang belum tuntas (popup ditutup / pending),
+    // supaya pembayaran bisa dilanjutkan tanpa membuat transaksi baru.
+    const [pendingToken, setPendingToken] = useState(null);
 
     // Tagihan sudah dihapus / tidak terlihat oleh user ini → tampilkan ringkasan
     // seadanya dari snapshot pesan supaya gelembung tidak kosong.
@@ -59,6 +63,9 @@ export default function SplitBillCard({ reference, state, clientKey }) {
             });
 
             if (data?.paid) {
+                toast.success(
+                    t("split_bill.pay_success", "Pembayaran berhasil! Bagianmu sudah lunas."),
+                );
                 router.reload();
                 return;
             }
@@ -73,6 +80,40 @@ export default function SplitBillCard({ reference, state, clientKey }) {
         }
     };
 
+    // snap.pay() hanya membuka popup lalu langsung kembali — jadi status "busy"
+    // dilepas di callback-nya, bukan di `finally`. Kalau dilepas di `finally`,
+    // tombol aktif lagi padahal popup masih terbuka.
+    const openSnap = (token) => {
+        window.snap.pay(token, {
+            // Muat ulang agar status kartu (dan dompet penyelenggara)
+            // ikut ter-update dari server.
+            onSuccess: () => {
+                setPendingToken(null);
+                toast.success(
+                    t("split_bill.pay_success", "Pembayaran berhasil! Bagianmu sudah lunas."),
+                );
+                router.reload();
+            },
+            onPending: () => {
+                // Pembayaran belum tuntas (mis. transfer bank menunggu). Simpan
+                // token supaya bisa dilanjutkan lewat tombol yang sama.
+                setPendingToken(token);
+                setBusy(false);
+                router.reload();
+            },
+            onError: () => {
+                setError(t("split_bill.pay_failed", "Pembayaran gagal."));
+                setBusy(false);
+            },
+            // Popup ditutup tanpa menyelesaikan pembayaran → simpan token supaya
+            // tombol berubah jadi "Lanjutkan Pembayaran", bukan menggantung.
+            onClose: () => {
+                setPendingToken(token);
+                setBusy(false);
+            },
+        });
+    };
+
     const pay = async () => {
         if (busy || !mine) return;
         setError(null);
@@ -83,25 +124,20 @@ export default function SplitBillCard({ reference, state, clientKey }) {
         }
 
         setBusy(true);
+
+        // Sudah punya token dari percobaan sebelumnya → langsung buka lagi,
+        // tanpa membuat transaksi baru di server.
+        if (pendingToken) {
+            openSnap(pendingToken);
+            return;
+        }
+
         try {
             const { data } = await axios.post(`/split-bill/shares/${mine.id}/pay`, {
                 payment_method: "midtrans",
             });
 
-            // snap.pay() hanya membuka popup lalu langsung kembali — jadi status
-            // "busy" dilepas di callback-nya, bukan di `finally`. Kalau dilepas di
-            // `finally`, tombol aktif lagi padahal popup masih terbuka.
-            window.snap.pay(data.snap_token, {
-                // Muat ulang agar status kartu (dan dompet penyelenggara)
-                // ikut ter-update dari server.
-                onSuccess: () => router.reload(),
-                onPending: () => router.reload(),
-                onError: () => {
-                    setError(t("split_bill.pay_failed", "Pembayaran gagal."));
-                    setBusy(false);
-                },
-                onClose: () => setBusy(false),
-            });
+            openSnap(data.snap_token);
         } catch (e) {
             setError(
                 e?.response?.data?.error ??
@@ -223,16 +259,34 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                                 </p>
                             ) : null}
 
+                            {/* Popup Midtrans ditutup tanpa selesai → jelaskan
+                                bahwa pembayaran masih bisa dilanjutkan. */}
+                            {pendingToken ? (
+                                <p className="flex items-start gap-1 px-0.5 text-[11px] text-amber-600">
+                                    <FiClock className="mt-0.5 h-3 w-3 shrink-0" />
+                                    {t(
+                                        "split_bill.payment_incomplete",
+                                        "Pembayaran belum selesai. Lanjutkan untuk menyelesaikannya.",
+                                    )}
+                                </p>
+                            ) : null}
+
                             <button
                                 type="button"
                                 onClick={pay}
                                 disabled={busy}
-                                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                                className={`flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                                    pendingToken
+                                        ? "bg-amber-500 text-white hover:bg-amber-600"
+                                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                                }`}
                             >
                                 <FiCreditCard className="h-3.5 w-3.5" />
                                 {busy
                                     ? t("split_bill.processing", "Memproses...")
-                                    : t("split_bill.pay_midtrans", "Bayar via Midtrans")}
+                                    : pendingToken
+                                      ? t("split_bill.continue_payment", "Lanjutkan Pembayaran")
+                                      : t("split_bill.pay_midtrans", "Bayar via Midtrans")}
                             </button>
                         </div>
                     )}

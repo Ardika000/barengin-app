@@ -467,6 +467,7 @@ class ProfileHistoryController extends Controller
             ->select(
                 'pergi_barengs.id', 'pergi_barengs.name', 'pergi_barengs.img_name',
                 'pergi_barengs.departure_loc', 'pergi_barengs.time_appointment',
+                'pergi_barengs.finished_at',
                 'users.id as org_id', 'users.full_name as org_name', 'users.profile_image as org_image',
             )
             ->distinct()
@@ -479,13 +480,13 @@ class ProfileHistoryController extends Controller
                     ->exists();
 
                 $image = $this->resolveImage($p->img_name, $pbDefault);
-                // Pergi bareng (tanpa tanggal selesai terpisah): sebelum hari janji =
-                // menunggu, pada hari janji = berlangsung, setelahnya = selesai.
-                $appt = Carbon::parse($p->time_appointment);
-                $now  = Carbon::now();
-                $status = $now->lt($appt->copy()->startOfDay())
-                    ? 'waiting'
-                    : ($now->lte($appt->copy()->endOfDay()) ? 'ongoing' : 'finish');
+                // Selaras dengan PergiBareng::status(): sebelum JAM janji = menunggu,
+                // sejak jam janji = berlangsung, dan tetap berlangsung sampai
+                // penyelenggara menyelesaikan (`finished_at`). Tidak ada penyelesaian
+                // otomatis berdasarkan tanggal.
+                $status = $p->finished_at
+                    ? 'finish'
+                    : (Carbon::now()->lt(Carbon::parse($p->time_appointment)) ? 'waiting' : 'ongoing');
 
                 return [
                     'key'        => 'pb-' . $p->id,
