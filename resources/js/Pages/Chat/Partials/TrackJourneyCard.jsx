@@ -16,7 +16,7 @@ export default function TrackJourneyCard({ reference }) {
     const trackUrl = reference?.url || `/pergi-bareng/${reference?.id}/track`;
 
     return (
-        <div className="w-full min-w-[240px] overflow-hidden rounded-xl border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-3">
+        <div className="w-[260px] max-w-full overflow-hidden rounded-xl border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-3">
             <div className="flex items-start gap-2">
                 <span className="relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-500 opacity-60" />
@@ -37,7 +37,7 @@ export default function TrackJourneyCard({ reference }) {
                 </div>
             </div>
 
-            <p className="mt-2 text-xs text-neutral-600">
+            <p className="mt-2 line-clamp-2 text-xs text-neutral-600">
                 {t(
                     "track.card_hint",
                     "Lihat posisi live rombongan, titik kumpul, dan tujuan di peta.",

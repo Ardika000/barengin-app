@@ -15,7 +15,7 @@ import L from 'leaflet';
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
     FaMapMarkerAlt, FaCar, FaInfoCircle, FaHeart, FaRegHeart,
-    FaMinus, FaPlus, FaLock
+    FaMinus, FaPlus, FaLock, FaLocationArrow
 } from "react-icons/fa";
 import { BsChatDots, BsPeople } from "react-icons/bs";
 
@@ -58,6 +58,14 @@ export default function Show({ trip }) {
     const { auth } = usePage().props;
     const isLoggedIn = Boolean(auth?.user);
     const { t } = useTranslation();
+
+    // Anggota (peserta disetujui atau penyelenggara) boleh memantau posisi live
+    // ketika perjalanan sedang berlangsung. Di luar itu, peta hanya untuk dilihat.
+    const isMember = Boolean(trip.is_participant || trip.organizer?.is_self);
+    const isOngoing = trip.status === "ongoing";
+    const canTrack = isMember && isOngoing;
+
+    const goToTrack = () => router.visit(`/pergi-bareng/${trip.id}/track`);
 
     const [origin, setOrigin] = useState(null);          // titik kumpul
     const [destination, setDestination] = useState(null); // titik tujuan
@@ -258,6 +266,15 @@ export default function Show({ trip }) {
                                         <div className="flex items-center gap-1.5"><FaCalendarAlt className="text-primary-600"/> {trip.date}</div>
                                         <div className="flex items-center gap-1.5"><FaRegClock className="text-primary-600"/> {trip.time}</div>
                                         <div className="flex items-center gap-1.5"><FaUserFriends className="text-primary-600"/> {trip.joined}/{trip.capacity} {t("pb.show.seats_filled")}</div>
+                                        {isOngoing && (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success-500 opacity-70" />
+                                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-success-600" />
+                                                </span>
+                                                {t("pb.show.status_ongoing", "Sedang Berlangsung")}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 
@@ -506,21 +523,51 @@ export default function Show({ trip }) {
                                         <MapView origin={origin} destination={destination} />
                                     </MapContainer>
 
-                                    <Button
-                                        size="sm"
-                                        variant="solid"
-                                        className="absolute bottom-3 right-3 z-[1000] bg-primary-600 text-white shadow-md hover:bg-primary-700"
-                                        onClick={() => {
-                                            const o = encodeURIComponent(trip?.details?.titik_kumpul || "");
-                                            const d = encodeURIComponent(trip?.details?.titik_tujuan || "");
-                                            const url = trip?.details?.titik_tujuan
-                                                ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`
-                                                : `https://www.google.com/maps/search/?api=1&query=${o}`;
-                                            window.open(url, "_blank");
-                                        }}
-                                    >
-                                        Buka di Google Maps
-                                    </Button>
+                                    {/* Anggota + perjalanan berlangsung → seluruh peta jadi tombol
+                                        menuju pantau perjalanan live. Di luar itu peta hanya dilihat. */}
+                                    {canTrack && (
+                                        <button
+                                            type="button"
+                                            onClick={goToTrack}
+                                            aria-label={t("pb.show.track_live", "Pantau Perjalanan Anda")}
+                                            title={t("pb.show.track_map_hint", "Klik peta untuk pantau perjalanan")}
+                                            className="group absolute inset-0 z-[500] cursor-pointer bg-transparent transition-colors hover:bg-primary-600/10"
+                                        >
+                                            <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-primary-700 shadow-sm">
+                                                <FaLocationArrow className="text-[10px]" />
+                                                {t("pb.show.track_map_hint", "Klik peta untuk pantau perjalanan")}
+                                            </span>
+                                        </button>
+                                    )}
+
+                                    <div className="absolute bottom-3 inset-x-3 z-[1000] flex flex-wrap justify-end gap-2">
+                                        {canTrack && (
+                                            <Button
+                                                size="sm"
+                                                variant="solid"
+                                                className="bg-success-600 text-white shadow-md hover:bg-success-700 gap-1.5"
+                                                onClick={goToTrack}
+                                            >
+                                                <FaLocationArrow className="text-xs" />
+                                                {t("pb.show.track_live", "Pantau Perjalanan Anda")}
+                                            </Button>
+                                        )}
+                                        <Button
+                                            size="sm"
+                                            variant="solid"
+                                            className="bg-primary-600 text-white shadow-md hover:bg-primary-700"
+                                            onClick={() => {
+                                                const o = encodeURIComponent(trip?.details?.titik_kumpul || "");
+                                                const d = encodeURIComponent(trip?.details?.titik_tujuan || "");
+                                                const url = trip?.details?.titik_tujuan
+                                                    ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`
+                                                    : `https://www.google.com/maps/search/?api=1&query=${o}`;
+                                                window.open(url, "_blank");
+                                            }}
+                                        >
+                                            Buka di Google Maps
+                                        </Button>
+                                    </div>
                                 </div>
                                 <div className="p-5">
                                     <h4 className="font-bold text-sm mb-3">{t("pb.show.estimate_title")}</h4>

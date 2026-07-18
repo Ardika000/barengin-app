@@ -19,6 +19,7 @@ import {
     FiFlag,
     FiCheckCircle,
     FiAlertCircle,
+    FiMapPin,
 } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -351,7 +352,7 @@ export default function Track({ trip }) {
 
             {/* ── Bar atas ─────────────────────────────────────────────── */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] p-3 sm:p-4">
-                <div className="pointer-events-auto mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-white/60 bg-white/90 px-3 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-md">
+                <div className="pointer-events-auto mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 shadow-lg">
                     <button
                         type="button"
                         onClick={goBack}
@@ -364,7 +365,7 @@ export default function Track({ trip }) {
                         <p className="text-[10px] font-bold uppercase tracking-wider text-primary-700">
                             {t("track.page_title", "Pantau Perjalanan")}
                         </p>
-                        <p className="truncate text-sm font-semibold text-neutral-800">
+                        <p className="truncate text-sm font-semibold text-neutral-700">
                             {trip.name}
                         </p>
                     </div>
@@ -390,14 +391,14 @@ export default function Track({ trip }) {
 
                 {/* Peringatan izin lokasi / tujuan tidak ketemu */}
                 {geoMessage ? (
-                    <div className="pointer-events-auto mx-auto mt-2 flex max-w-2xl items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/95 px-3 py-2 text-xs text-amber-700 shadow-md backdrop-blur">
+                    <div className="pointer-events-auto mx-auto mt-2 flex max-w-2xl items-start gap-2 rounded-xl border border-warning-100 bg-warning-50 px-3 py-2 text-xs text-warning-700 shadow-md">
                         <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>{geoMessage}</span>
                     </div>
                 ) : null}
 
                 {destination === null && (origin !== null || userPos !== null) ? (
-                    <div className="pointer-events-auto mx-auto mt-2 flex max-w-2xl items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/95 px-3 py-2 text-xs text-amber-700 shadow-md backdrop-blur">
+                    <div className="pointer-events-auto mx-auto mt-2 flex max-w-2xl items-start gap-2 rounded-xl border border-warning-100 bg-warning-50 px-3 py-2 text-xs text-warning-700 shadow-md">
                         <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>{t("track.dest_missing", "Lokasi tujuan tidak ditemukan di peta.")}</span>
                     </div>
@@ -410,7 +411,7 @@ export default function Track({ trip }) {
                     type="button"
                     onClick={centerMe}
                     disabled={!userPos}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/90 text-primary-700 shadow-lg backdrop-blur-md transition hover:bg-primary-50 active:scale-95 disabled:opacity-40"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-primary-700 shadow-lg transition hover:bg-primary-50 active:scale-95 disabled:opacity-40"
                     title={t("track.recenter_me", "Ke lokasiku")}
                 >
                     <FiCrosshair className="h-5 w-5" />
@@ -418,7 +419,7 @@ export default function Track({ trip }) {
                 <button
                     type="button"
                     onClick={fitAll}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/90 text-neutral-700 shadow-lg backdrop-blur-md transition hover:bg-neutral-100 active:scale-95"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-lg transition hover:bg-neutral-100 active:scale-95"
                     title={t("track.fit_all", "Tampilkan semua")}
                 >
                     <FiMaximize className="h-5 w-5" />
@@ -427,9 +428,9 @@ export default function Track({ trip }) {
 
             {/* ── Bottom sheet estimasi ────────────────────────────────── */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] p-3 sm:p-4">
-                <div className="pointer-events-auto mx-auto w-full max-w-lg rounded-t-[28px] border border-white/60 bg-white/90 p-4 pb-5 shadow-[0_-8px_40px_rgba(0,0,0,0.16)] backdrop-blur-md sm:rounded-[28px]">
+                <div className="pointer-events-auto mx-auto w-full max-w-lg rounded-t-2xl border border-neutral-200 bg-white p-4 pb-5 shadow-2xl sm:rounded-2xl">
                     {/* Grip bottom-sheet (visual) */}
-                    <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-neutral-300 sm:hidden" />
+                    <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-neutral-200 sm:hidden" />
 
                     {arrived ? (
                         <div className="flex flex-col items-center py-2 text-center">
@@ -457,28 +458,28 @@ export default function Track({ trip }) {
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="flex items-center gap-3 rounded-2xl bg-primary-50 px-3.5 py-3">
-                                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm">
+                                <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-3">
+                                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white">
                                         <FiNavigation className="h-5 w-5" />
                                     </span>
                                     <div className="min-w-0">
                                         <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                                             {t("track.distance", "Jarak")}
                                         </p>
-                                        <p className="truncate text-xl font-extrabold leading-tight text-neutral-800">
+                                        <p className="truncate text-xl font-extrabold leading-tight text-neutral-700">
                                             {distanceText}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 rounded-2xl bg-success-50 px-3.5 py-3">
-                                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success-600 text-white shadow-sm">
+                                <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-3">
+                                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-600 text-white">
                                         <FiClock className="h-5 w-5" />
                                     </span>
                                     <div className="min-w-0">
                                         <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                                             {t("track.eta", "Estimasi waktu")}
                                         </p>
-                                        <p className="truncate text-xl font-extrabold leading-tight text-neutral-800">
+                                        <p className="truncate text-xl font-extrabold leading-tight text-neutral-700">
                                             {etaText}
                                         </p>
                                     </div>
@@ -499,13 +500,35 @@ export default function Track({ trip }) {
                                 </div>
                                 <div className="relative h-2 overflow-hidden rounded-full bg-neutral-200">
                                     <div
-                                        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary-500 to-primary-700 transition-[width] duration-700 ease-out"
+                                        className="absolute inset-y-0 left-0 rounded-full bg-primary-600 transition-[width] duration-700 ease-out"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
                             </div>
                         </>
                     )}
+
+                    {/* Titik kumpul & tujuan — selaras dengan detail perjalanan */}
+                    <div className="mt-4 space-y-3 border-t border-neutral-100 pt-4">
+                        <div className="flex items-start gap-3 text-sm">
+                            <FiMapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                            <div className="min-w-0">
+                                <p className="text-xs text-neutral-500">
+                                    {t("track.origin", "Titik Kumpul")}
+                                </p>
+                                <p className="text-neutral-700">{trip.departure_loc}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3 text-sm">
+                            <FiFlag className="mt-0.5 h-4 w-4 shrink-0 text-success-600" />
+                            <div className="min-w-0">
+                                <p className="text-xs text-neutral-500">
+                                    {t("track.destination", "Tujuan")}
+                                </p>
+                                <p className="text-neutral-700">{trip.destination_loc}</p>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Legenda titik */}
                     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-neutral-100 pt-3 text-[11px] text-neutral-500">

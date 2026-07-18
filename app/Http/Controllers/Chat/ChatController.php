@@ -314,7 +314,30 @@ class ChatController extends Controller
         ]);
     }
 
-    /** Perbarui last_seen_at dengan throttle agar tidak menulis DB tiap poll. */
+    public static function unreadCountFor($user): int
+    {
+        if (! $user) {
+            return 0;
+        }
+
+        return (int) \Illuminate\Support\Facades\DB::table('messages as m')
+            ->join('conversation_participants as cp', function ($join) use ($user) {
+                $join->on('cp.conversation_id', '=', 'm.conversation_id')
+                    ->where('cp.user_id', '=', $user->id);
+            })
+            ->where('m.sender_id', '!=', $user->id)
+            ->where(function ($q) {
+                $q->whereNull('cp.last_read_at')
+                    ->orWhereColumn('m.created_at', '>', 'cp.last_read_at');
+            })
+            ->count();
+    }
+
+    public function unreadCount(Request $request)
+    {
+        return response()->json(['count' => self::unreadCountFor($request->user())]);
+    }
+
     private function touchLastSeen($user): void
     {
         if (! $user->last_seen_at || $user->last_seen_at->lt(now()->subSeconds(15))) {
@@ -328,7 +351,6 @@ class ChatController extends Controller
             && Carbon::parse($lastSeenAt)->gt(now()->subSeconds(self::ONLINE_WINDOW_SECONDS));
     }
 
-    /** Bentuk data pesan yang konsisten untuk render awal & polling. */
     private function mapMessage(Message $m): array
     {
         return [
