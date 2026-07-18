@@ -62,6 +62,7 @@ class PergiBarengController extends Controller
             'capacity' => $trip->people_amount,
             'joined' => $joined,
             'remaining' => $remaining,
+            'status' => $trip->status(),
             'is_participant' => $isParticipant,
             'has_requested' => $hasRequested,
             'description' => $trip->description,

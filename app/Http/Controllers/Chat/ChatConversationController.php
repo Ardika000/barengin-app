@@ -171,7 +171,12 @@ class ChatConversationController extends Controller
         foreach ($toAttach as $uid) {
             $conv->participants()->attach($uid, ['last_read_at' => now()]);
         }
-        
+
+        // Begitu perjalanan berlangsung, kartu "pantau perjalanan" muncul sendiri
+        // di grup saat anggota membukanya — tanpa menunggu penyelenggara menekan
+        // tombol di dasbor. Idempoten: hanya terkirim sekali per perjalanan.
+        \App\Services\Chat\PergiBarengTrackShare::share($trip);
+
         return redirect("/chat/{$conversationId}?tab=groups");
     }
 
