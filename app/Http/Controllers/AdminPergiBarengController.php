@@ -523,7 +523,10 @@ class AdminPergiBarengController extends Controller
                     (int) $uid,
                     'group.joined',
                     ['name' => $trip->name, 'kind' => 'pergi_bareng'],
-                    '/chat?conversation=' . $conversation->id,
+                    // Langsung ke percakapannya. `/chat?conversation=` tidak
+                    // pernah dibaca halaman indeks, jadi notifikasinya cuma
+                    // mendarat di daftar chat dan anggota harus mencari sendiri.
+                    '/chat/' . $conversation->id,
                     'group.joined:conv:' . $conversation->id . ':user:' . $uid,
                 );
             }

@@ -14,7 +14,7 @@ import Avatar from "./Partials/Avatar";
 import ImageLightbox from "@/Components/ImageLightbox";
 import NewChatModal from "./Partials/NewChatModal";
 import GroupMembersModal from "./Partials/GroupMembersModal";
-import { GROUP_TYPE_STYLES } from "./Partials/groupType";
+import { GROUP_TYPE_STYLES, GROUP_STATUS_STYLES } from "./Partials/groupType";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
 import { FiArrowLeft, FiChevronRight, FiExternalLink, FiFilter, FiPaperclip, FiSend, FiX, FiCornerUpLeft } from "react-icons/fi";
@@ -161,6 +161,18 @@ export default function ChatShow({
     // dengan alasan yang sama: kartunya harus menutup diri saat perjalanan usai.
     const [liveTrackStates, setLiveTrackStates] = useState(trackStates ?? {});
     useEffect(() => setLiveTrackStates(trackStates ?? {}), [trackStates]);
+
+    // Status perjalanan induk grup, disegarkan tiap poll juga: perjalanan bisa
+    // memasuki jam berangkat atau ditutup penyelenggara sementara anggota sedang
+    // membuka grupnya, dan lencana yang basi justru menyesatkan.
+    const [liveGroupStatus, setLiveGroupStatus] = useState(
+        conversation?.group_status ?? null,
+    );
+    useEffect(
+        () => setLiveGroupStatus(conversation?.group_status ?? null),
+        [conversation?.group_status],
+    );
+    const groupStatusStyle = GROUP_STATUS_STYLES[liveGroupStatus];
 
     // Referensi pesan terkini untuk menghitung id terakhir saat polling.
     const messagesRef = useRef(localMessages);
@@ -390,6 +402,11 @@ export default function ChatShow({
                 // "Bayar" hilang & rekap penyelenggara berubah tanpa refresh.
                 if (data.splitBills) setLiveSplitBills(data.splitBills);
                 if (data.trackStates) setLiveTrackStates(data.trackStates);
+                // `undefined` = tidak dikirim; `null` = grup tanpa status (jastip),
+                // jadi dibedakan agar lencana tidak tersangkut di nilai lama.
+                if (data.group_status !== undefined) {
+                    setLiveGroupStatus(data.group_status);
+                }
             } catch {
                 /* diamkan; coba lagi tick berikutnya */
             }
@@ -753,6 +770,43 @@ export default function ChatShow({
                                     </div>
                                     <FiChevronRight className="h-5 w-5 shrink-0 text-neutral-400 transition group-hover:text-neutral-600" />
                                 </button>
+                            ) : null}
+
+                            {/* Lencana status perjalanan (menunggu / berlangsung /
+                                selesai). Hanya untuk grup trip & pergi bareng —
+                                grup jastip mengirim null. Diletakkan sebagai
+                                saudara tombol anggota, bukan di dalamnya, agar
+                                tidak ikut terpotong oleh `truncate` judul. */}
+                            {conversation?.is_group && groupStatusStyle ? (
+                                <span
+                                    className={cn(
+                                        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+                                        groupStatusStyle.chip,
+                                    )}
+                                >
+                                    <span className="relative flex h-1.5 w-1.5">
+                                        {groupStatusStyle.pulse ? (
+                                            <span
+                                                className={cn(
+                                                    "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                                                    groupStatusStyle.dot,
+                                                )}
+                                            />
+                                        ) : null}
+                                        <span
+                                            className={cn(
+                                                "relative inline-flex h-1.5 w-1.5 rounded-full",
+                                                groupStatusStyle.dot,
+                                            )}
+                                        />
+                                    </span>
+                                    <span>
+                                        {t(groupStatusStyle.key) ===
+                                        groupStatusStyle.key
+                                            ? groupStatusStyle.fallback
+                                            : t(groupStatusStyle.key)}
+                                    </span>
+                                </span>
                             ) : null}
 
                             {/* Penanda jenis grup + pintasan ke halaman induknya

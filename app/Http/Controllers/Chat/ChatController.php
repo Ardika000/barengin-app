@@ -49,8 +49,10 @@ class ChatController extends Controller
 
         $conversation->load([
             'participants:id,full_name,profile_image',
-            'trip:id,name,guider_id,image,start_date,end_date',
-            'pergi_bareng:id,name,img_name,initiator_id,time_appointment',
+            // `status`/`finished_at` ikut diambil karena lencana status grup
+            // dihitung darinya — tanpa keduanya status() selalu membaca null.
+            'trip:id,name,guider_id,image,start_date,end_date,status,finished_at',
+            'pergi_bareng:id,name,img_name,initiator_id,time_appointment,finished_at',
             'jastip_item:id,name,user_id',
             'jastip_item.jastip_item_images:id,jastip_item_id,image_name',
         ]);
@@ -124,6 +126,10 @@ class ChatController extends Controller
                 // Penanda & tautan induk grup (trip / pergi bareng / jastip).
                 'group_type' => $conversation->is_group ? $this->groupType($conversation) : null,
                 'group_url' => $conversation->is_group ? $this->groupUrl($conversation) : null,
+                // Status perjalanan induk (menunggu/berlangsung/selesai). Ikut
+                // dikirim ulang oleh pollMessages agar lencananya berubah sendiri
+                // saat perjalanan memasuki jam berangkat atau ditutup.
+                'group_status' => $conversation->is_group ? $this->groupStatus($conversation) : null,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->full_name,
@@ -295,6 +301,12 @@ class ChatController extends Controller
             // Kartu pantau perjalanan ikut berubah jadi "sudah selesai" tanpa
             // perlu refresh, sama seperti kartu tagihan.
             'trackStates' => $this->trackStates($referenceMessages),
+            // Lencana status di header ikut hidup: perjalanan yang memasuki jam
+            // berangkat atau ditutup penyelenggara berubah sendiri di layar
+            // anggota yang sedang membuka grup.
+            'group_status' => $conversation->is_group
+                ? $this->groupStatus($conversation->loadMissing(['trip', 'pergi_bareng']))
+                : null,
         ]);
     }
 
@@ -784,6 +796,41 @@ class ChatController extends Controller
      * Jenis grup — dipakai frontend untuk menandai percakapan ini milik trip /
      * pergi bareng / jastip, bukan grup biasa. null untuk grup tanpa induk.
      */
+    /**
+     * Status perjalanan induk grup, untuk lencana kecil di header chat:
+     * `waiting` (belum berangkat) / `ongoing` (sedang berlangsung) / `finished`.
+     *
+     * Hanya grup trip & pergi bareng yang punya status — grup jastip memakai
+     * siklus hidupnya sendiri (masa pesan/ambil) yang tidak sepadan dengan tiga
+     * tahap ini, jadi dibiarkan null agar tidak memaksakan kosakata yang keliru.
+     *
+     * Sengaja memakai sumber yang sama dengan halaman masing-masing
+     * (`PergiBareng::status()` dan kolom `trips.status`) supaya lencana di chat
+     * tidak pernah berbeda dengan status di dasbor/detailnya.
+     */
+    private function groupStatus(Conversation $conversation): ?string
+    {
+        if ($conversation->pergi_bareng) {
+            return match ($conversation->pergi_bareng->status()) {
+                'will_start' => 'waiting',
+                'ongoing'    => 'ongoing',
+                'finish'     => 'finished',
+                default      => null,
+            };
+        }
+
+        if ($conversation->trip) {
+            return match ($conversation->trip->status) {
+                \App\Models\Trip::STATUS_DRAFT, \App\Models\Trip::STATUS_CREATED => 'waiting',
+                \App\Models\Trip::STATUS_ONGOING => 'ongoing',
+                \App\Models\Trip::STATUS_DONE    => 'finished',
+                default => null,
+            };
+        }
+
+        return null;
+    }
+
     private function groupType(Conversation $conversation): ?string
     {
         if ($conversation->trip) {

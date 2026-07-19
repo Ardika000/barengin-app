@@ -125,10 +125,15 @@ class SplitBillController extends Controller
             return $bill;
         });
 
-        $this->postBillToGroup($trip, $bill);
+        $conversationId = $this->postBillToGroup($trip, $bill);
 
         // Kabari tiap anggota yang ditagih (penyelenggara tidak menagih dirinya
         // sendiri; kalaupun ikut, dedupe per-share menjaga satu notifikasi saja).
+        //
+        // Tujuannya kartu tagihan di grup chat, BUKAN Riwayat Transaksi: tagihan
+        // yang belum dibayar belum punya transaksi, jadi tab itu masih kosong saat
+        // notifikasi ini diklik. Tombol bayarnya justru ada di kartu grup.
+        // Riwayat Transaksi tetap jadi cadangan kalau grupnya sudah tidak ada.
         foreach ($bill->shares()->with('user')->get() as $share) {
             \App\Models\UserNotification::send(
                 (int) $share->user_id,
@@ -138,7 +143,7 @@ class SplitBillController extends Controller
                     'amount' => (float) $share->amount,
                     'name' => $trip->name,
                 ],
-                '/profile-history?tab=transactions',
+                $conversationId ? '/chat/' . $conversationId : '/profile-history?tab=transactions',
                 'split_bill.created:share:' . $share->id,
             );
         }
@@ -386,14 +391,19 @@ class SplitBillController extends Controller
      * menyimpan ringkasan; status terkini (lunas/belum) dikirim terpisah oleh
      * ChatController agar tidak basi.
      */
-    private function postBillToGroup(PergiBareng $trip, SplitBill $bill): void
+    /**
+     * Kirim kartu tagihan ke grup, lalu kembalikan id percakapannya agar
+     * notifikasi bisa menautkan anggota langsung ke kartu itu (null bila grupnya
+     * tidak ada).
+     */
+    private function postBillToGroup(PergiBareng $trip, SplitBill $bill): ?int
     {
         $conversation = Conversation::where('pergi_bareng_id', $trip->id)
             ->where('is_group', true)
             ->first();
 
         if (! $conversation) {
-            return;
+            return null;
         }
 
         $message = Message::create([
@@ -410,5 +420,7 @@ class SplitBillController extends Controller
         ]);
 
         broadcast(new \App\Events\MessageSent($message))->toOthers();
+
+        return (int) $conversation->id;
     }
 }

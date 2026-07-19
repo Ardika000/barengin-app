@@ -298,6 +298,13 @@ class MidtransController extends Controller
             (int) $share->id,
         );
 
+        // Ke kartu tagihan di grup, tempat rekap "siapa sudah bayar" berada —
+        // itulah yang ingin dilihat penyelenggara saat ada bagian yang lunas.
+        // Riwayat Profil tetap jadi cadangan bila grupnya sudah tidak ada.
+        $conversationId = \App\Models\Conversation::where('pergi_bareng_id', $bill->pergi_bareng_id)
+            ->where('is_group', true)
+            ->value('id');
+
         // Penyelenggara dikabari bahwa bagian ini masuk ke dompetnya. Aman dari
         // duplikat lewat dedupe_key + penjaga status PAID di atas.
         \App\Models\UserNotification::send(
@@ -308,7 +315,7 @@ class MidtransController extends Controller
                 'amount' => (float) $share->amount,
                 'payer' => \App\Models\User::find($share->user_id)?->full_name,
             ],
-            '/profile-history',
+            $conversationId ? '/chat/' . $conversationId : '/profile-history',
             'split_bill.settled:share:' . $share->id,
         );
 
@@ -399,7 +406,9 @@ class MidtransController extends Controller
                     (int) $uid,
                     'group.joined',
                     ['name' => $trip->name, 'kind' => 'trip'],
-                    '/chat?conversation=' . $conversation->id,
+                    // Langsung ke percakapannya — lihat catatan yang sama pada
+                    // grup pergi bareng.
+                    '/chat/' . $conversation->id,
                     'group.joined:conv:' . $conversation->id . ':user:' . $uid,
                 );
             }
