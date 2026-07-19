@@ -91,7 +91,7 @@ export default function AvatarEditor({ profile, editable = true }) {
 
     return (
         <div className="relative w-fit" ref={menuRef}>
-            <div className="relative h-48 w-48 overflow-hidden rounded-full ring-1 ring-neutral-200">
+            <div className="relative h-40 w-40 overflow-hidden rounded-full ring-1 ring-neutral-200">
                 <img
                     src={avatarSrc}
                     alt={profile.full_name}
@@ -112,7 +112,7 @@ export default function AvatarEditor({ profile, editable = true }) {
                     <button
                         type="button"
                         onClick={() => setOpen((v) => !v)}
-                        className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary-700 text-white ring-4 ring-white transition-transform hover:scale-105"
+                        className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary-700 text-white ring-4 ring-white transition-transform hover:scale-105"
                         aria-label="Edit foto profil"
                     >
                         <FaPen className="h-3.5 w-3.5" />
