@@ -21,7 +21,10 @@ class HomeController extends Controller
     public function index()
     {
         return inertia('Home/Index', [
-            'galleryImages' => $this->galleryImages(),
+            // Closure = dievaluasi hanya saat prop ini benar-benar dikirim, jadi
+            // partial reload yang tak memintanya (mis. hanya 'latestJastip') tak
+            // menyentuh galeri sama sekali.
+            'galleryImages' => fn () => $this->galleryImages(),
             'popularTrips'  => $this->popularTrips(),
             'latestJastip'  => $this->latestJastip(),
         ]);
@@ -49,20 +52,39 @@ class HomeController extends Controller
             : $prefix . $name;
     }
 
-    /** Sebagian gambar acak dari postingan forum untuk galeri beranda. */
+    /**
+     * Sebagian gambar acak dari postingan forum untuk galeri beranda.
+     *
+     * Diacak ulang HANYA saat halaman dimuat penuh (refresh browser / kunjungan
+     * langsung) — permintaan itu tak membawa header `X-Inertia`. Pada kunjungan
+     * Inertia (partial reload, mis. klik "suka" di kartu jastip) susunan yang
+     * tersimpan di session dipakai ulang, sehingga galeri tak ikut teracak ulang
+     * di tengah interaksi. Session bersifat per-pengguna, jadi tiap orang dapat
+     * susunannya sendiri sampai me-refresh.
+     */
     private function galleryImages(): array
     {
+        $key = 'home.gallery_images';
+
+        if (request()->header('X-Inertia') && session()->has($key)) {
+            return session($key);
+        }
+
         // asset() memangkas garis miring di belakang, jadi pemisahnya ditambahkan
         // sendiri — tanpa itu 'foo.jpg' jadi '.../postsfoo.jpg'. Nilai untuk nama
         // kosong sengaja dibiarkan tanpa garis miring, persis seperti sebelumnya.
         $prefix = asset('storage/posts') . '/';
 
-        return PostImage::inRandomOrder()
+        $images = PostImage::inRandomOrder()
             ->limit(7)
             ->pluck('img_name')
             ->map(fn ($name) => $this->imageUrl($name, asset('storage/posts/'), $prefix))
             ->values()
             ->all();
+
+        session([$key => $images]);
+
+        return $images;
     }
 
     /** Trip populer (sudah dipublish), diurutkan rating tertinggi. */

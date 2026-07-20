@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import Button from "@/Components/Button.jsx";
 import NavDropdown from "@/Components/NavDropdown.jsx";
-import NavLink from "@/Components/NavLink.jsx";
+import NavLink, {
+    isNavActive,
+    isDropdownItemActive,
+} from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
 import NotificationBell from "@/Components/NotificationBell.jsx";
@@ -15,7 +18,7 @@ import { FiLogOut, FiSettings } from "react-icons/fi";
 import Container from "@/Components/Container.jsx";
 
 export default function NavbarAuth() {
-    const { props } = usePage();
+    const { props, url } = usePage();
     const user = props?.auth?.user;
     const { t } = useTranslation();
 
@@ -34,6 +37,18 @@ export default function NavbarAuth() {
         { label: t("nav.trip_bareng"), href: "/trip-bareng", icon: FaRoute },
         { label: t("nav.pergi_bareng"), href: "/pergi-bareng", icon: FaCarSide },
     ];
+
+    // "Jalan Bareng" ikut tersorot bila salah satu rute anaknya sedang dibuka.
+    const jalanBarengActive = dropdownItems.some((item) =>
+        isNavActive(url, item.href),
+    );
+
+    // Kelas item menu mobile — versi aktif menyala seperti dropdown desktop.
+    const mobileItemClass = (active) =>
+        "block px-3 py-3 rounded-md text-base font-medium transition-colors flex items-center " +
+        (active
+            ? "text-primary-700 bg-primary-50"
+            : "text-neutral-600 hover:text-primary-700 hover:bg-neutral-50");
 
     const avatarUrl = user?.public_profile_image ||
         user?.avatar_url ||
@@ -85,6 +100,7 @@ export default function NavbarAuth() {
                     <NavDropdown
                         label={t("nav.jalan_bareng")}
                         items={dropdownItems}
+                        isActive={jalanBarengActive}
                         isOpen={isDesktopDropdownOpen}
                         onToggle={() => setIsDesktopDropdownOpen((v) => !v)}
                         onNavigate={() => setIsDesktopDropdownOpen(false)}
@@ -245,7 +261,11 @@ export default function NavbarAuth() {
                             <Link
                                 href={dashboardHref}
                                 onClick={closeAll}
-                                className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                                className={mobileItemClass(
+                                    isDropdownItemActive(url, dashboardHref, [
+                                        "settings",
+                                    ]),
+                                )}
                             >
                                 <MdDashboard className="w-5 h-5 mr-2 text-current" />
                                 {t("nav.dashboard")}
@@ -254,7 +274,13 @@ export default function NavbarAuth() {
                             <Link
                                 href="/profile-history"
                                 onClick={closeAll}
-                                className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                                className={mobileItemClass(
+                                    isDropdownItemActive(
+                                        url,
+                                        "/profile-history",
+                                        ["settings"],
+                                    ),
+                                )}
                             >
                                 <MdHistory className="w-5 h-5 mr-2 text-current" />
                                 {t("nav.profile_history")}
@@ -263,7 +289,13 @@ export default function NavbarAuth() {
                             <Link
                                 href="/profile-history?tab=settings"
                                 onClick={closeAll}
-                                className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                                className={mobileItemClass(
+                                    isDropdownItemActive(
+                                        url,
+                                        "/profile-history?tab=settings",
+                                        ["settings"],
+                                    ),
+                                )}
                             >
                                 <FiSettings className="w-5 h-5 mr-2 text-current" />
                                 {t("settings.title")}
@@ -291,14 +323,20 @@ export default function NavbarAuth() {
                             label={t("nav.jalan_bareng")}
                             isOpen={isMobileDropdownOpen}
                             onToggle={() => setIsMobileDropdownOpen((v) => !v)}
-                            buttonClassName="text-neutral-600"
+                            buttonClassName={
+                                jalanBarengActive
+                                    ? "text-primary-700"
+                                    : "text-neutral-600"
+                            }
                         >
                             {dropdownItems.map((item) => (
                                 <Link
                                     key={item.href}
                                     href={item.href}
                                     onClick={closeAll}
-                                    className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                                    className={mobileItemClass(
+                                        isNavActive(url, item.href),
+                                    )}
                                 >
                                     {item.icon ? (
                                         <item.icon className="w-4 h-4 mr-2 text-current" />

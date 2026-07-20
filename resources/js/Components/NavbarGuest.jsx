@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import Button from "@/Components/Button.jsx";
 import NavDropdown from "@/Components/NavDropdown.jsx";
-import NavLink from "@/Components/NavLink.jsx";
+import NavLink, { isNavActive } from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
 import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
@@ -12,6 +12,7 @@ import Container from "@/Components/Container.jsx";
 
 export default function NavbarGuest() {
     const { t } = useTranslation();
+    const { url } = usePage();
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,6 +21,11 @@ export default function NavbarGuest() {
         { label: t("nav.trip_bareng"), href: "/trip-bareng", icon: FaRoute },
         { label: t("nav.pergi_bareng"), href: "/pergi-bareng", icon: FaCarSide },
     ];
+
+    // "Jalan Bareng" ikut tersorot bila salah satu rute anaknya sedang dibuka.
+    const jalanBarengActive = dropdownItems.some((item) =>
+        isNavActive(url, item.href),
+    );
 
     const closeAll = () => {
         setIsDesktopDropdownOpen(false);
@@ -49,6 +55,7 @@ export default function NavbarGuest() {
                     <NavDropdown
                         label={t("nav.jalan_bareng")}
                         items={dropdownItems}
+                        isActive={jalanBarengActive}
                         isOpen={isDesktopDropdownOpen}
                         onToggle={() => setIsDesktopDropdownOpen((v) => !v)}
                         onNavigate={() => setIsDesktopDropdownOpen(false)}
@@ -129,13 +136,21 @@ export default function NavbarGuest() {
                             label={t("nav.jalan_bareng")}
                             isOpen={isMobileDropdownOpen}
                             onToggle={() => setIsMobileDropdownOpen((v) => !v)}
+                            buttonClassName={
+                                jalanBarengActive ? "text-primary-700" : ""
+                            }
                         >
                             {dropdownItems.map((item) => (
                                 <Link
                                     key={item.href}
                                     href={item.href}
                                     onClick={closeAll}
-                                    className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                                    className={
+                                        "block px-3 py-3 rounded-md text-base font-medium transition-colors flex items-center " +
+                                        (isNavActive(url, item.href)
+                                            ? "text-primary-700 bg-primary-50"
+                                            : "text-neutral-600 hover:text-primary-700 hover:bg-neutral-50")
+                                    }
                                 >
                                     {item.icon ? (
                                         <item.icon className="w-4 h-4 mr-2 text-current" />

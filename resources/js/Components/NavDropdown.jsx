@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import { FaChevronDown } from "react-icons/fa";
+import { isDropdownItemActive, splitHref } from "@/Components/NavLink.jsx";
 
 export default function NavDropdown({
     label,
@@ -11,6 +12,9 @@ export default function NavDropdown({
     onNavigate = () => {},
     align = "left",
     className = "",
+
+    // Sorot label saat salah satu rute anaknya sedang aktif.
+    isActive = false,
 
     // Custom trigger (e.g. avatar)
     trigger = null,
@@ -23,6 +27,17 @@ export default function NavDropdown({
     withDividers = true,
 }) {
     const rootRef = useRef(null);
+
+    const { url } = usePage();
+    // Tab yang secara eksplisit dimiliki item lain (mis. "settings"). Item tanpa
+    // tab tidak boleh ikut nyala saat salah satu tab milik item lain sedang aktif.
+    const claimedTabs = items
+        .map((item) => splitHref(item.href).tab)
+        .filter(Boolean);
+
+    const isItemActive = (item) =>
+        item.as !== "button" && // aksi (Keluar), bukan tujuan
+        isDropdownItemActive(url, item.href, claimedTabs);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -48,10 +63,13 @@ export default function NavDropdown({
 
     const MenuItem = ({ item }) => {
         const Icon = item.icon;
+        const active = isItemActive(item);
 
         const rowClass =
-            "w-full flex items-center gap-3 px-5 py-4 text-left text-base font-medium " +
-            "text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors";
+            "w-full flex items-center gap-3 px-5 py-4 text-left text-base font-medium transition-colors " +
+            (active
+                ? "bg-primary-50 text-primary-700"
+                : "text-neutral-600 hover:bg-primary-50 hover:text-primary-700");
 
         // POST / button-like (Logout)
         if (item.as === "button") {
@@ -79,6 +97,7 @@ export default function NavDropdown({
         return (
             <Link
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 onClick={() => {
                     onNavigate();
                     onClose();
@@ -112,7 +131,7 @@ export default function NavDropdown({
                     type="button"
                     className={[
                         "cursor-pointer font-medium transition-colors flex items-center gap-2 focus:outline-none",
-                        isOpen
+                        isOpen || isActive
                             ? "text-primary-700"
                             : "text-neutral-600 hover:text-primary-700",
                     ].join(" ")}

@@ -49,7 +49,9 @@ export default function Footer() {
                     >
                         {t("footer.privacy")}
                     </a>
-                    <span>{t("footer.rights")}</span>
+                    <span>
+                        &copy;{new Date().getFullYear()} {t("footer.rights")}
+                    </span>
                 </Container>
             </div>
         </footer>
