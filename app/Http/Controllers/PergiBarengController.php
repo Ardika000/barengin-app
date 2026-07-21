@@ -240,6 +240,19 @@ class PergiBarengController extends Controller
             'financing_estimate'
         ])->findOrFail($id);
 
+        // Perjalanan yang sudah selesai jadi arsip milik rombongan: isinya (titik
+        // kumpul, daftar peserta, estimasi biaya) tak ada gunanya bagi orang luar.
+        // Listing sudah menyembunyikannya, ini menutup akses lewat URL langsung /
+        // tautan lama (favorit, riwayat, kartu referensi di chat).
+        if ($trip->status() === 'finish' && ! $this->isMemberOf($trip)) {
+            return redirect()
+                ->route('pergi-bareng.index')
+                ->with('flash', [
+                    'type' => 'info',
+                    'message' => 'Perjalanan ini sudah selesai dan detailnya hanya untuk pesertanya.',
+                ]);
+        }
+
         $data = $this->formatTripData($trip);
         $data['liked'] = request()->user()
             ? DB::table('favorites')
@@ -352,12 +365,8 @@ class PergiBarengController extends Controller
     {
         $trip = PergiBareng::with('pergi_bareng_participants')->findOrFail($id);
 
-        $userId = (int) Auth::id();
-        $isMember = (int) $trip->initiator_id === $userId
-            || $trip->pergi_bareng_participants->contains('user_id', $userId);
-
         // Peta membocorkan posisi rombongan, jadi non-anggota dipulangkan ke detail.
-        if (! $isMember) {
+        if (! $this->isMemberOf($trip)) {
             return redirect()
                 ->route('pergi-bareng.show', $trip->id)
                 ->with('flash', [
@@ -383,9 +392,23 @@ class PergiBarengController extends Controller
                 'departure_loc' => $trip->departure_loc,
                 'destination_loc' => $trip->destination_loc,
                 'status' => $trip->status(),
-                'is_creator' => (int) $trip->initiator_id === $userId,
+                'is_creator' => (int) $trip->initiator_id === (int) Auth::id(),
             ],
         ]);
+    }
+
+    // Anggota rombongan = penyelenggara atau peserta. Dipakai bersama oleh detail
+    // perjalanan selesai & halaman pantau, supaya aturannya cuma ada di satu tempat.
+    private function isMemberOf(PergiBareng $trip): bool
+    {
+        $userId = (int) Auth::id();
+
+        if (! $userId) {
+            return false;
+        }
+
+        return (int) $trip->initiator_id === $userId
+            || $trip->pergi_bareng_participants->contains('user_id', $userId);
     }
 
     private function resolvePergiImage(?string $path): string
