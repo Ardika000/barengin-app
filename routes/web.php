@@ -262,6 +262,8 @@ Route::prefix('admin')->group(function () {
         Route::delete('/{id}/requests/{requestId}', [AdminPergiBarengController::class, 'reject'])->whereNumber('id')->whereNumber('requestId')->name('requests.reject');
 
         Route::delete('/{id}/participants/{userId}', [AdminPergiBarengController::class, 'kickParticipant'])->whereNumber('id')->whereNumber('userId')->name('participants.kick');
+        // Lepas satu kursi saja; {participantId} adalah baris peserta, bukan user id.
+        Route::delete('/{id}/participant-seats/{participantId}', [AdminPergiBarengController::class, 'removeParticipantSeat'])->whereNumber('id')->whereNumber('participantId')->name('participant-seats.remove');
     });
 
     // Jastip

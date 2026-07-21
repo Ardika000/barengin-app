@@ -1325,6 +1325,8 @@
     "admin.pergi.participants_empty": "Belum ada peserta menyertai.",
     "admin.pergi.kick": "Keluarkan",
     "admin.pergi.kick_confirm": "Keluarkan :name dari pergi bareng ini? Dia juga akan dikeluarkan dari kumpulan sembang.",
+    "admin.pergi.seat_of": "Kerusi :seat daripada :total",
+    "admin.pergi.kick_seat_confirm": "Lepaskan 1 kerusi milik :name? Kerusi lain kekal, dan dia masih dalam kumpulan chat.",
     "admin.pergi.seats_suffix": "kerusi",
     "admin.trip.participants_title": "Peserta Trip",
     "admin.trip.participants_subtitle": "Peserta yang telah membayar. Mengeluarkan peserta akan memulangkan dananya ke dompet.",

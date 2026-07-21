@@ -1325,6 +1325,8 @@
     "admin.pergi.participants_empty": "No participants have joined yet.",
     "admin.pergi.kick": "Remove",
     "admin.pergi.kick_confirm": "Remove :name from this pergi bareng? They will also be removed from the group chat.",
+    "admin.pergi.seat_of": "Seat :seat of :total",
+    "admin.pergi.kick_seat_confirm": "Release 1 seat held by :name? Their other seats stay, and they remain in the group chat.",
     "admin.pergi.seats_suffix": "seats",
     "admin.trip.participants_title": "Trip Participants",
     "admin.trip.participants_subtitle": "Participants who have paid. Removing a participant refunds them to their wallet.",

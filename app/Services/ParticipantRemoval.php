@@ -44,6 +44,56 @@ class ParticipantRemoval
         return true;
     }
 
+    // Lepas SATU kursi saja, bukan seluruh kursi milik peserta.
+    //
+    // Satu orang bisa punya beberapa baris peserta (dari permintaan terpisah), jadi
+    // pelepasan dari grup chat & notifikasinya baru dijalankan setelah dia benar-benar
+    // tidak punya kursi tersisa di perjalanan ini.
+    public function removeSeatFromPergiBareng(PergiBareng $trip, int $participantId): string
+    {
+        $row = PergiBarengParticipant::where('pergi_bareng_id', $trip->id)
+            ->whereKey($participantId)
+            ->first();
+
+        if (! $row) {
+            return 'not_found';
+        }
+
+        $userId = (int) $row->user_id;
+
+        if ((int) $row->quantity > 1) {
+            $row->decrement('quantity');
+        } else {
+            $row->delete();
+        }
+
+        $seatsLeft = (int) PergiBarengParticipant::where('pergi_bareng_id', $trip->id)
+            ->where('user_id', $userId)
+            ->sum('quantity');
+
+        if ($seatsLeft > 0) {
+            ActivityLog::record('Mengurangi 1 kursi peserta di pergi bareng: ' . $trip->name);
+
+            return 'seat_removed';
+        }
+
+        $this->detachFromGroup(
+            Conversation::where('pergi_bareng_id', $trip->id)->where('is_group', true)->first(),
+            $userId,
+        );
+
+        UserNotification::send(
+            $userId,
+            'group.removed',
+            ['name' => $trip->name, 'kind' => 'pergi_bareng'],
+            '/pergi-bareng/' . $trip->id,
+        );
+
+        ActivityLog::record('Mengeluarkan peserta dari pergi bareng: ' . $trip->name);
+
+        return 'fully_removed';
+    }
+
     // Peserta trip sudah bayar, jadi dananya dikembalikan ke dompet dulu.
     public function fromTrip(Trip $trip, int $userId): bool
     {

@@ -371,15 +371,26 @@ class AdminPergiBarengController extends Controller
             ],
         ])->values();
 
+        // Satu baris per kursi, selaras dengan daftar "Teman Pergi Bareng" di halaman
+        // detail. Tombol keluarkan menyasar baris pesertanya (participant_id) dan
+        // hanya melepas satu kursi, bukan seluruh kursi milik orang itu.
         $participants = $trip->pergi_bareng_participants
             ->filter(fn ($p) => $p->user)
-            ->map(fn ($p) => [
-                'user_id' => (int) $p->user_id,
-                'quantity' => (int) $p->quantity,
-                'name' => $p->user->full_name ?? 'Peserta',
-                'username' => $p->user->username,
-                'avatar' => $p->user->public_profile_image ?? '/assets/default-profile.png',
-            ])->values();
+            ->flatMap(function ($p) {
+                $qty = max(1, (int) $p->quantity);
+
+                $entry = [
+                    'participant_id' => (int) $p->id,
+                    'user_id' => (int) $p->user_id,
+                    'quantity' => $qty,
+                    'name' => $p->user->full_name ?? 'Peserta',
+                    'username' => $p->user->username,
+                    'avatar' => $p->user->public_profile_image ?? '/assets/default-profile.png',
+                ];
+
+                return collect(range(1, $qty))
+                    ->map(fn ($seat) => array_merge($entry, ['seat' => $seat]));
+            })->values();
 
         return Inertia::render('Admin/PergiBareng/Requests', [
             'trip' => [
@@ -394,6 +405,22 @@ class AdminPergiBarengController extends Controller
             'requests' => $requests,
             'participants' => $participants,
         ]);
+    }
+
+    // Tombol "Keluarkan" di daftar peserta melepas satu kursi, bukan seluruh kursi
+    // milik orang itu - daftarnya memang dipecah per kursi.
+    public function removeParticipantSeat($id, $participantId)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        $result = (new \App\Services\ParticipantRemoval())
+            ->removeSeatFromPergiBareng($trip, (int) $participantId);
+
+        return back()->with('flash', match ($result) {
+            'seat_removed'  => ['type' => 'success', 'message' => '1 kursi peserta dilepas.'],
+            'fully_removed' => ['type' => 'success', 'message' => 'Kursi terakhirnya dilepas, peserta keluar dari pergi bareng & grup chat.'],
+            default         => ['type' => 'info', 'message' => 'Kursi peserta tidak ditemukan.'],
+        });
     }
 
     public function kickParticipant($id, $userId)

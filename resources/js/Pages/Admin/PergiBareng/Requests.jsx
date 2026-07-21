@@ -27,17 +27,30 @@ export default function Requests({ trip, requests = [], participants = [] }) {
         });
     };
 
+    // Daftar dipecah per kursi, jadi tombol ini melepas SATU kursi milik baris itu.
+    // Peserta baru benar-benar keluar (dan dilepas dari grup) saat kursi terakhirnya
+    // habis - itu ditentukan server.
+    const seatKey = (p) => `${p.participant_id}-${p.seat}`;
+
+    const seatLabel = (p) =>
+        p.quantity > 1
+            ? t("admin.pergi.seat_of")
+                  .replace(":seat", p.seat)
+                  .replace(":total", p.quantity)
+            : `1 ${t("admin.pergi.seats_suffix")}`;
+
     const kick = (p) => {
-        if (
-            !window.confirm(
-                t("admin.pergi.kick_confirm").replace(":name", p.name),
-            )
-        ) {
+        const isLastSeat = p.quantity <= 1;
+        const message = isLastSeat
+            ? t("admin.pergi.kick_confirm").replace(":name", p.name)
+            : t("admin.pergi.kick_seat_confirm").replace(":name", p.name);
+
+        if (!window.confirm(message)) {
             return;
         }
-        setKickingId(p.user_id);
+        setKickingId(seatKey(p));
         router.delete(
-            `/admin/pergi-bareng/${trip.id}/participants/${p.user_id}`,
+            `/admin/pergi-bareng/${trip.id}/participant-seats/${p.participant_id}`,
             {
                 preserveScroll: true,
                 onFinish: () => setKickingId(null),
@@ -153,7 +166,7 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                     <div className="space-y-3">
                         {participants.map((p) => (
                             <div
-                                key={p.user_id}
+                                key={seatKey(p)}
                                 className="flex items-center justify-between gap-4 p-4 border border-neutral-100 rounded-xl hover:bg-neutral-50/60 transition"
                             >
                                 {p.username ? (
@@ -161,7 +174,7 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                                         <img src={p.avatar} alt={p.name} className="w-11 h-11 rounded-full object-cover border border-neutral-200" onError={(e) => (e.target.src = "/assets/default-profile.png")} />
                                         <div className="min-w-0">
                                             <p className="font-semibold text-neutral-700 text-sm truncate">{p.name}</p>
-                                            <p className="text-xs text-neutral-500">{p.quantity} {t("admin.pergi.seats_suffix")}</p>
+                                            <p className="text-xs text-neutral-500">{seatLabel(p)}</p>
                                         </div>
                                     </Link>
                                 ) : (
@@ -169,13 +182,13 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                                         <img src={p.avatar} alt={p.name} className="w-11 h-11 rounded-full object-cover border border-neutral-200" onError={(e) => (e.target.src = "/assets/default-profile.png")} />
                                         <div className="min-w-0">
                                             <p className="font-semibold text-neutral-700 text-sm truncate">{p.name}</p>
-                                            <p className="text-xs text-neutral-500">{p.quantity} {t("admin.pergi.seats_suffix")}</p>
+                                            <p className="text-xs text-neutral-500">{seatLabel(p)}</p>
                                         </div>
                                     </div>
                                 )}
                                 <button
                                     onClick={() => kick(p)}
-                                    disabled={kickingId === p.user_id}
+                                    disabled={kickingId === seatKey(p)}
                                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50 shrink-0"
                                     title={t("admin.pergi.kick")}
                                 >
