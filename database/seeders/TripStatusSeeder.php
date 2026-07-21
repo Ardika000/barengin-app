@@ -8,10 +8,14 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-// Satu trip bareng untuk tiap status, semuanya dipandu akun admin supaya halaman
-// Managemen Trip menampilkan seluruh status sekaligus.
+// Trip bareng contoh milik akun admin untuk status yang belum terwakili seeder
+// utama, supaya halaman Managemen Trip menampilkan tiap status.
 //
 // Status (Trip::STATUS_*): draft -> created (terjadwal) -> ongoing -> done.
+// STATUS_CREATED sengaja tidak dibuat di sini: TripSeeder sudah menghasilkan
+// beberapa trip berjadwal (fase 'future'), jadi menambah satu lagi cuma bikin
+// etalase trip terlihat kembar.
+//
 // Tanggalnya sengaja dibuat konsisten dengan statusnya supaya Trip::refreshStatuses()
 // tidak menariknya balik ke status lain.
 class TripStatusSeeder extends Seeder
@@ -36,15 +40,6 @@ class TripStatusSeeder extends Seeder
                 'start' => $now->copy()->addDays(45),
                 'end' => $now->copy()->addDays(50),
                 'price' => 8500000,
-            ],
-            [
-                'status' => Trip::STATUS_CREATED,
-                'name' => 'Trip Bali - Terjadwal',
-                'slug' => 'bali',
-                'location' => 'Bali',
-                'start' => $now->copy()->addDays(20),
-                'end' => $now->copy()->addDays(24),
-                'price' => 3800000,
             ],
             [
                 'status' => Trip::STATUS_ONGOING,
@@ -132,6 +127,6 @@ class TripStatusSeeder extends Seeder
             }
         }
 
-        $this->command?->info('TripStatusSeeder: 4 trip bareng contoh (draft, terjadwal, berlangsung, selesai) dibuat untuk ' . $guider->email . '.');
+        $this->command?->info('TripStatusSeeder: 3 trip bareng contoh (draft, berlangsung, selesai) dibuat untuk ' . $guider->email . '.');
     }
 }

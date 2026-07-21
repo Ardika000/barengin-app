@@ -20,7 +20,8 @@ class TripSeeder extends Seeder
             ['slug' => 'toba',       'name' => 'Danau Toba',     'location' => 'Sumatera Utara',       'phase' => 'past'],
             ['slug' => 'bandung',    'name' => 'Bandung',        'location' => 'Jawa Barat',           'phase' => 'ongoing'],
             ['slug' => 'yogyakarta', 'name' => 'Yogyakarta',     'location' => 'DI Yogyakarta',        'phase' => 'ongoing'],
-            ['slug' => 'bali',       'name' => 'Bali',           'location' => 'Bali',                 'phase' => 'future'],
+            // 'activities' menetapkan jumlah aktivitas; tanpa itu diacak 3-8.
+            ['slug' => 'bali',       'name' => 'Bali',           'location' => 'Bali',                 'phase' => 'future', 'activities' => 2],
             ['slug' => 'raja-ampat', 'name' => 'Raja Ampat',     'location' => 'Papua Barat Daya',     'phase' => 'future'],
             ['slug' => 'komodo',     'name' => 'Pulau Komodo',   'location' => 'Nusa Tenggara Timur',  'phase' => 'future'],
             ['slug' => 'ijen',       'name' => 'Kawah Ijen',     'location' => 'Jawa Timur',           'phase' => 'future'],
@@ -119,7 +120,7 @@ class TripSeeder extends Seeder
                 ]);
             }
 
-            $totalActivities = $faker->numberBetween(3, 8);
+            $totalActivities = $dest['activities'] ?? $faker->numberBetween(3, 8);
             for ($act = 1; $act <= $totalActivities; $act++) {
                 if ($act === 1) {
                     $actName = 'Penjemputan & Briefing';

@@ -37,6 +37,19 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
     const err = (key) => errors?.[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
 
+    // Error server didahulukan; kalau belum ada, pakai temuan sisi klien supaya
+    // pengguna langsung tahu tanpa menunggu submit.
+    const fieldErr = (key, clientMsg) => {
+        const msg = errors?.[key] || clientMsg;
+        return msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+    };
+
+    const toMinutes = (time) => {
+        if (!time) return null;
+        const [h, m] = String(time).split(":").map(Number);
+        return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+    };
+
     const toggleFacility = (name) => {
         const has = data.facilities.includes(name);
         setData("facilities", has ? data.facilities.filter((f) => f !== name) : [...data.facilities, name]);
@@ -157,14 +170,33 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                 const prev = i > 0 ? data.activities[i - 1] : null;
                                 const dateMin = prev?.date || data.start_date || minStartDate;
                                 const dateMax = data.end_date || undefined;
-                                // Jam mulai hanya dibatasi bila aktivitas ini pada
-                                // tanggal yang sama dengan aktivitas sebelumnya -
-                                // kalau beda hari, jamnya bebas.
-                                const startTimeMin =
-                                    prev && prev.date && act.date && prev.date === act.date
-                                        ? prev.end_time || undefined
-                                        : undefined;
-                                const endTimeMin = act.start_time || undefined;
+                                // Jam hanya dibatasi bila aktivitas ini pada tanggal
+                                // yang sama dengan aktivitas sebelumnya - kalau beda
+                                // hari, jamnya bebas.
+                                const sameDayAsPrev = Boolean(prev?.date && act.date && prev.date === act.date);
+                                const startTimeMin = sameDayAsPrev ? prev.end_time || undefined : undefined;
+                                // Jam selesai harus lewat dari jam mulai DAN dari
+                                // selesainya aktivitas sebelumnya (yang terakhir).
+                                const endTimeMin =
+                                    [act.start_time, sameDayAsPrev ? prev.end_time : null]
+                                        .filter(Boolean)
+                                        .sort()
+                                        .pop() || undefined;
+
+                                const startMinutes = toMinutes(act.start_time);
+                                const endMinutes = toMinutes(act.end_time);
+                                const prevEndMinutes = sameDayAsPrev ? toMinutes(prev.end_time) : null;
+
+                                const startIssue =
+                                    startMinutes !== null && prevEndMinutes !== null && startMinutes < prevEndMinutes
+                                        ? t("admin.trip.form.err_start_after_prev")
+                                        : null;
+                                const endIssue =
+                                    endMinutes !== null && startMinutes !== null && endMinutes <= startMinutes
+                                        ? t("admin.trip.form.err_end_after_start")
+                                        : endMinutes !== null && prevEndMinutes !== null && endMinutes <= prevEndMinutes
+                                          ? t("admin.trip.form.err_end_after_prev")
+                                          : null;
 
                                 return (
                                 <div key={i} className="rounded-2xl border border-neutral-200 p-5 relative">
@@ -198,17 +230,17 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                         <div>
                                             <label className={labelClass}>{t("admin.trip.form.start_time")}<Req /></label>
                                             <Input type="time" size="sm" min={startTimeMin} value={act.start_time} onChange={(e) => updateActivity(i, "start_time", e.target.value)} />
-                                            {startTimeMin && (
+                                            {startTimeMin && !startIssue && (
                                                 <p className="text-xs text-neutral-400 mt-1">
                                                     {t("admin.trip.form.activity_after_prev").replace(":time", startTimeMin)}
                                                 </p>
                                             )}
-                                            {err(`activities.${i}.start_time`)}
+                                            {fieldErr(`activities.${i}.start_time`, startIssue)}
                                         </div>
                                         <div>
                                             <label className={labelClass}>{t("admin.trip.form.end_time")}<Req /></label>
                                             <Input type="time" size="sm" min={endTimeMin} value={act.end_time} onChange={(e) => updateActivity(i, "end_time", e.target.value)} />
-                                            {err(`activities.${i}.end_time`)}
+                                            {fieldErr(`activities.${i}.end_time`, endIssue)}
                                         </div>
                                     </div>
 
@@ -278,6 +310,9 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                             className="mt-4 w-full border border-neutral-200 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 transition">
                             <FiPlus /> {t("admin.trip.form.add_facility")}
                         </button>
+                        {/* Server memvalidasi "minimal 1 fasilitas"; tanpa baris ini
+                            pesannya tidak pernah terlihat. */}
+                        {err("facilities")}
                     </div>
 
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
