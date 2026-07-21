@@ -24,8 +24,8 @@ export const GROUP_TYPE_STYLES = {
     },
 };
 
-// Lencana status perjalanan induk grup. `status` datang dari
-// ChatController::groupStatus dan hanya terisi untuk grup trip & pergi bareng.
+// Lencana status entitas induk grup. `status` datang dari
+// ChatController::groupStatus (grup trip, pergi bareng, & jastip).
 //
 // Ketiganya sengaja berbeda rona, bukan bergradasi dari satu warna: "menunggu"
 // dan "selesai" sama-sama keadaan tenang, jadi kalau keduanya abu-abu anggota
@@ -52,5 +52,32 @@ export const GROUP_STATUS_STYLES = {
         chip: "bg-neutral-200 text-neutral-600",
         dot: "bg-neutral-400",
         pulse: false,
+    },
+
+    // Jastip punya fase sendiri, jadi tidak dipaksa masuk ketiga status di atas:
+    // "menunggu" tidak membedakan masa pesan dan masa belanja, padahal bagi pembeli
+    // dua itu sangat berbeda artinya. Titik berdenyut tetap disimpan hanya untuk
+    // waktu ambil - satu-satunya fase yang menuntut pembeli bergerak sekarang, dan
+    // satu-satunya yang petanya hidup.
+    jastip_order: {
+        key: "chat.group_status.jastip_order",
+        fallback: "Masa Pesan",
+        chip: "bg-sky-100 text-sky-700",
+        dot: "bg-sky-500",
+        pulse: false,
+    },
+    jastip_buying: {
+        key: "chat.group_status.jastip_buying",
+        fallback: "Masa Beli",
+        chip: "bg-amber-100 text-amber-700",
+        dot: "bg-amber-500",
+        pulse: false,
+    },
+    jastip_pickup: {
+        key: "chat.group_status.jastip_pickup",
+        fallback: "Waktu Ambil",
+        chip: "bg-green-100 text-green-700",
+        dot: "bg-green-500",
+        pulse: true,
     },
 };

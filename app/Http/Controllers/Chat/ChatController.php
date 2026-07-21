@@ -258,7 +258,7 @@ class ChatController extends Controller
             'splitBills' => $this->splitBillStates($referenceMessages, $user),
             'trackStates' => $this->trackStates($referenceMessages),
             'group_status' => $conversation->is_group
-                ? $this->groupStatus($conversation->loadMissing(['trip', 'pergi_bareng']))
+                ? $this->groupStatus($conversation->loadMissing(['trip', 'pergi_bareng', 'jastip_item']))
                 : null,
         ]);
     }
@@ -721,6 +721,18 @@ class ChatController extends Controller
                 \App\Models\Trip::STATUS_ONGOING => 'ongoing',
                 \App\Models\Trip::STATUS_DONE    => 'finished',
                 default => null,
+            };
+        }
+
+        if ($conversation->jastip_item) {
+            // Fase jastip dipetakan ke lencananya sendiri (lihat groupType.js);
+            // draft tidak diberi lencana karena grupnya belum layak ada.
+            return match ($conversation->jastip_item->jastiperStatus()) {
+                'published'   => 'jastip_order',
+                'buy_time'    => 'jastip_buying',
+                'pickup_time' => 'jastip_pickup',
+                'finished'    => 'finished',
+                default       => null,
             };
         }
 
