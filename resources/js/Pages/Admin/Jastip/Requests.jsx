@@ -18,7 +18,7 @@ const REQUEST_STATUS_BADGE = {
     cancelled: "bg-neutral-100 text-neutral-500",
 };
 
-// "Permintaan Titipan" — request barang di luar katalog yang masuk ke
+// "Permintaan Titipan" - request barang di luar katalog yang masuk ke
 // destinasi jastiper. Aksi: beri penawaran (harga + biaya) atau tolak.
 export default function Requests({ requests = {}, item_options = [], filters = {} }) {
     const { t } = useTranslation();
@@ -211,10 +211,10 @@ export default function Requests({ requests = {}, item_options = [], filters = {
                                         <td className="px-5 py-3.5 text-center text-sm font-semibold tabular-nums text-neutral-700">{req.quantity}</td>
                                         <td className="px-5 py-3.5 text-sm text-neutral-700 whitespace-nowrap">
                                             {req.status === "pending"
-                                                ? (req.budget != null ? rupiah(req.budget) : <span className="text-xs text-neutral-400">—</span>)
+                                                ? (req.budget != null ? rupiah(req.budget) : <span className="text-xs text-neutral-400">-</span>)
                                                 : req.quoted_total != null
                                                     ? <span className="font-semibold">{rupiah(req.quoted_total)}</span>
-                                                    : <span className="text-xs text-neutral-400">—</span>}
+                                                    : <span className="text-xs text-neutral-400">-</span>}
                                         </td>
                                         <td className="px-5 py-3.5">
                                             <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${REQUEST_STATUS_BADGE[req.status] || "bg-neutral-100 text-neutral-500"}`}>

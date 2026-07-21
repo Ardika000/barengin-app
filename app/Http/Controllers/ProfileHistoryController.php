@@ -17,18 +17,10 @@ use Illuminate\Validation\Rule;
 
 class ProfileHistoryController extends Controller
 {
-    /**
-     * Halaman riwayat & profil pengguna.
-     *
-     * Catatan: skema database belum punya tabel "favorit/like" untuk trip & jastip,
-     * jadi tab "Kesukaan" menampilkan item yang berkaitan dengan user
-     * (trip & jastip yang pernah dipesan, pergi bareng yang diikuti/dibuat).
-     */
     public function index(Request $request)
     {
         $user = $request->user();
 
-        // Sinkronkan status transaksi yang masih pending langsung dari Midtrans
         $this->syncPendingTransactions($user);
 
         return inertia('ProfileHistory/Index', [
@@ -41,48 +33,29 @@ class ProfileHistoryController extends Controller
             'pergi_barengs'     => $this->pergiBarengs($user),
             'jastip_favorites'  => $this->jastipFavorites($user),
             'jastip_requests'   => $this->jastipRequests($user),
-            // Preferensi lengkap (kategori yang belum diatur ikut terisi `true`),
-            // jadi tab Pengaturan tidak perlu tahu daftar kategori default.
+            // Kategori yang belum diatur ikut terisi `true` di sini.
             'notification_prefs' => $user->notificationPrefs(),
             'tab'               => $request->query('tab', 'transactions'),
             'midtrans_client_key' => config('midtrans.client_key'),
         ]);
     }
 
-    /**
-     * Cek ulang ke Midtrans untuk transaksi yang ordernya masih pending/unpaid,
-     * lalu update status di DB (agar hasil simulasi pembayaran ter-refleksi).
-     */
     private function syncPendingTransactions(User $user): void
     {
         MidtransController::syncPendingForUser($user->id);
     }
 
-    /* ===================== DATA BUILDERS ===================== */
-
-    /**
-     * Tautan ke profil publik seorang pengguna. Null bila username tidak diketahui,
-     * sehingga pemanggil bisa menampilkan namanya sebagai teks biasa alih-alih
-     * tautan yang menuju halaman 404.
-     */
     private function userProfileUrl(?string $username): ?string
     {
         return $username ? '/forum/users/' . $username : null;
     }
 
-    /**
-     * Dompet pengguna: saldo + mutasi terakhir. Saldo bertambah saat pengguna
-     * mengisi saldo, dan saat anggota melunasi bagian split bill dari pergi
-     * bareng yang ia selenggarakan.
-     */
     private function walletPayload(User $user): array
     {
         $wallet = \App\Models\Wallet::forUser($user->id);
 
         return [
             'balance' => (float) $wallet->balance,
-            // Daftar mutasi di kartu dompet tingginya dibatasi & bisa digulir, jadi
-            // aman mengirim lebih dari sekadar segelintir baris terakhir.
             'entries' => $wallet->wallet_transactions()
                 ->latest()
                 ->take(20)
@@ -100,7 +73,7 @@ class ProfileHistoryController extends Controller
 
     private function profilePayload(User $user): array
     {
-        // Rating yang DITERIMA user per kategori (sama seperti forum profile).
+        // Rating yang DITERIMA user, bukan yang ia beri.
         $ratingFor = function (string $type) use ($user) {
             $avg   = $user->receivedRatingAvg($type);
             $count = $user->receivedRatingCount($type);
@@ -153,15 +126,11 @@ class ProfileHistoryController extends Controller
         };
     }
 
-    /**
-     * Riwayat transaksi (trip & jastip) milik user, terpaginasi.
-     */
     private function transactions(User $user)
     {
         $transactions = Transaction::query()
             ->where('user_id', $user->id)
-            // Hanya transaksi pembelian; request titipan (type 'jastip_request')
-            // dikelola sepenuhnya di tab "Titipan Saya".
+            // 'jastip_request' sengaja dikecualikan, tempatnya di tab Titipan Saya.
             ->whereIn('type', ['jastip', 'trip', 'split_bill'])
             ->with([
                 'trip_order.trip',
@@ -188,18 +157,13 @@ class ProfileHistoryController extends Controller
         return $transactions;
     }
 
-    /**
-     * Pembayaran bagian patungan (split bill) pergi bareng. Bentuknya mengikuti
-     * kartu transaksi lain agar tab Riwayat Transaksi bisa merendernya apa adanya.
-     */
+    // Bentuknya wajib sama dengan kartu transaksi lain.
     private function mapSplitBillTransaction(Transaction $t): array
     {
         $share = $t->split_bill_share;
         $bill  = $share?->split_bill;
         $trip  = $bill?->pergi_bareng;
 
-        // Status share ('paid' | 'pending' | 'unpaid') dipetakan ke kosakata UI
-        // yang sama dengan transaksi lain.
         $status = $share?->status === 'paid' ? 'completed' : 'waiting_payment';
 
         $image = $this->resolveImage($trip?->img_name, asset('assets/default-image.png'));
@@ -254,7 +218,7 @@ class ProfileHistoryController extends Controller
         $image = $this->resolveImage($trip?->image, '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');
         $qty   = (int) ($order?->quantity ?? 1);
 
-        // Rincian biaya (mengikuti logika checkout: layanan & asuransi @5.000/orang)
+        // Ikut logika checkout: layanan & asuransi 5.000/orang.
         $service   = 5000 * $qty;
         $insurance = 5000 * $qty;
         $subtotal  = max(0, (float) $t->total_amount - $service - $insurance);
@@ -323,10 +287,7 @@ class ProfileHistoryController extends Controller
         $itemCount  = $order?->jastip_order_items?->count() ?? 1;
         $status     = $this->normalizeStatus('jastip', $order?->order_status);
 
-        // Jastip yang lunas masih 'in_progress' selama jastiper belum selesai
-        // membelikan & menyerahkan barang. Pesanan baru benar-benar selesai
-        // setelah masa pengambilan SELURUH itemnya lewat — tanpa ini, pesanan
-        // jastip tidak pernah bisa berstatus selesai sama sekali.
+        // Tanpa ini pesanan jastip tak pernah berstatus selesai.
         if ($status === 'in_progress' && $this->jastipOrderFinished($order)) {
             $status = 'completed';
         }
@@ -343,9 +304,6 @@ class ProfileHistoryController extends Controller
             ];
         })->values()->all() ?? [];
 
-        // Penjual pesanan ini = jastiper pemilik item pertama. Sebelumnya sengaja
-        // dikosongkan, sehingga detail jastip satu-satunya yang tidak menampilkan
-        // lawan transaksinya.
         $jastiper = $firstItem
             ? DB::table('users')->where('id', $firstItem->user_id)->first(['id', 'full_name', 'username', 'profile_image'])
             : null;
@@ -369,7 +327,6 @@ class ProfileHistoryController extends Controller
             'total'      => (float) $t->total_amount,
             'status'     => $status,
             'snap_token' => $t->snap_token,
-            // Tautkan ke halaman produk jastip (item pertama pada pesanan).
             'detail_url' => $firstItem ? '/jastip/' . $firstItem->id : null,
             'detail'     => [
                 'order_no'       => 'TRX-' . strtoupper(substr((string) $t->id, 0, 8)),
@@ -396,17 +353,13 @@ class ProfileHistoryController extends Controller
         ];
     }
 
-    /**
-     * Riwayat "Jalan Bareng" (Trip Bareng & Pergi Bareng yang sudah diikuti)
-     * untuk diberi ulasan. Dua sumber digabung lalu dipaginasi manual.
-     */
+    // Gabungan trip + pergi bareng, jadi paginasinya manual.
     private function jalanBarengHistory(User $user)
     {
         $tripDefault  = '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg';
         $pbDefault    = '/assets/default-image.png';
         $avatarFallback = asset('assets/default-profile.png');
 
-        // Trip yang sudah dibayar oleh user
         $trips = DB::table('trip_orders')
             ->join('trips', 'trip_orders.trip_id', '=', 'trips.id')
             ->join('users', 'trips.guider_id', '=', 'users.id')
@@ -459,7 +412,6 @@ class ProfileHistoryController extends Controller
                 ];
             });
 
-        // Pergi Bareng yang diikuti user
         $pergi = DB::table('pergi_bareng_participants')
             ->join('pergi_barengs', 'pergi_bareng_participants.pergi_bareng_id', '=', 'pergi_barengs.id')
             ->join('users', 'pergi_barengs.initiator_id', '=', 'users.id')
@@ -480,10 +432,8 @@ class ProfileHistoryController extends Controller
                     ->exists();
 
                 $image = $this->resolveImage($p->img_name, $pbDefault);
-                // Selaras dengan PergiBareng::status(): sebelum JAM janji = menunggu,
-                // sejak jam janji = berlangsung, dan tetap berlangsung sampai
-                // penyelenggara menyelesaikan (`finished_at`). Tidak ada penyelesaian
-                // otomatis berdasarkan tanggal.
+                // Harus selaras PergiBareng::status(): selesai hanya lewat finished_at,
+                // tidak pernah otomatis dari tanggal.
                 $status = $p->finished_at
                     ? 'finish'
                     : (Carbon::now()->lt(Carbon::parse($p->time_appointment)) ? 'waiting' : 'ongoing');
@@ -542,16 +492,7 @@ class ProfileHistoryController extends Controller
         };
     }
 
-    /**
-     * Status ternormalisasi untuk UI:
-     * completed | waiting_payment | in_progress
-     */
-    /**
-     * Seluruh item pada pesanan jastip sudah lewat masa pengambilannya.
-     *
-     * Satu pesanan bisa memuat beberapa item dengan jadwal berbeda; pesanan baru
-     * dianggap selesai kalau tidak ada lagi barang yang menunggu diambil.
-     */
+    // Satu pesanan bisa punya beberapa item dengan jadwal berbeda.
     private function jastipOrderFinished($order): bool
     {
         $items = $order?->jastip_order_items
@@ -571,16 +512,13 @@ class ProfileHistoryController extends Controller
             return $kind === 'jastip' ? 'in_progress' : 'completed';
         }
 
-        // Jastip dihapus oleh jastiper → dana dikembalikan (simulasi)
         if ($orderStatus === 'refunded') {
             return 'refunded';
         }
 
-        // pending / unpaid / null
-        return 'waiting_payment';
+        return 'waiting_payment'; // pending / unpaid / null
     }
 
-    /** Status jalan bareng: waiting (belum mulai) | ongoing (berlangsung) | finish (selesai). */
     private function jalanStatus($start, $end): string
     {
         $now = Carbon::now();
@@ -593,11 +531,6 @@ class ProfileHistoryController extends Controller
         return 'ongoing';
     }
 
-    /**
-     * Status pembelian jastip dari sisi pembeli:
-     *  order (masih waktu pesan) | buying (sedang dibelikan) |
-     *  ready_pickup (siap diambil) | closed (lewat batas pengambilan).
-     */
     private function jastipPurchaseStatus($endDate, $pickupStart, $pickupEnd): string
     {
         $now = Carbon::now();
@@ -610,14 +543,10 @@ class ProfileHistoryController extends Controller
         if ($pickupEnd && $now->lte(Carbon::parse($pickupEnd)->endOfDay())) {
             return 'ready_pickup';
         }
-        // Tak ada jendela pengambilan terdefinisi & sudah lewat masa order
         return $pickupEnd ? 'closed' : 'ready_pickup';
     }
 
-    /**
-     * Trip "kesukaan" -> trip yang di-like user (tabel favorites).
-     * Bentuk data disesuaikan dengan props TripCard.
-     */
+    // Bentuknya mengikuti props TripCard.
     private function tripFavorites(User $user)
     {
         $tripIds = DB::table('favorites')
@@ -677,10 +606,7 @@ class ProfileHistoryController extends Controller
         return $trips;
     }
 
-    /**
-     * Pergi bareng yang di-like user (tabel favorites).
-     * Bentuk data disesuaikan dengan props PergiBarengCard.
-     */
+    // Bentuknya mengikuti props PergiBarengCard.
     private function pergiBarengs(User $user)
     {
         $likedIds = DB::table('favorites')
@@ -733,10 +659,7 @@ class ProfileHistoryController extends Controller
         return $items;
     }
 
-    /**
-     * Jastip "kesukaan" -> item jastip yang di-like user (tabel favorites).
-     * Bentuk data disesuaikan dengan props JastipCard.
-     */
+    // Bentuknya mengikuti props JastipCard.
     private function jastipFavorites(User $user)
     {
         $likedIds = DB::table('favorites')
@@ -786,10 +709,6 @@ class ProfileHistoryController extends Controller
         return $items;
     }
 
-    /**
-     * Tab "Titipan Saya" — request titipan milik user beserta status &
-     * penawarannya. Saat quoted, kartu menampilkan tombol bayar (Snap).
-     */
     private function jastipRequests(User $user)
     {
         $requests = \App\Models\JastipRequest::query()
@@ -815,9 +734,7 @@ class ProfileHistoryController extends Controller
                 'quoted_item_price' => $req->quoted_item_price !== null ? (float) $req->quoted_item_price : null,
                 'quoted_fee'  => $req->quoted_fee !== null ? (float) $req->quoted_fee : null,
                 'quoted_total' => in_array($req->status, ['quoted', 'paid'], true) ? $req->quotedTotal() : null,
-                // Yang benar-benar ditagih = penawaran + biaya layanan. Dikirim dari
-                // server agar klien tidak perlu menduplikasi nilai biaya layanan
-                // saat memutuskan apakah saldo cukup.
+                // Dihitung di server biar klien tak perlu menduplikasi biaya layanan.
                 'payable_total' => $req->status === \App\Models\JastipRequest::STATUS_QUOTED
                     ? $req->quotedTotal() + \App\Http\Controllers\JastipRequestController::SERVICE_FEE
                     : null,
@@ -837,10 +754,7 @@ class ProfileHistoryController extends Controller
         return $requests;
     }
 
-    /**
-     * Riwayat pembelian jastip (order berbayar) untuk memberi ulasan jastiper.
-     * Satu baris per jastiper per order; reviewed = sudah menilai jastiper tsb.
-     */
+    // Satu baris per (order, jastiper).
     private function jastipHistory(User $user)
     {
         $avatarFallback = asset('assets/default-profile.png');
@@ -870,7 +784,6 @@ class ProfileHistoryController extends Controller
             )
             ->orderByDesc('jastip_orders.created_at')
             ->get()
-            // Satu baris per (order, jastiper) — item pertama mewakili
             ->unique(fn ($r) => $r->order_id . '-' . $r->seller_id)
             ->values()
             ->map(function ($r) use ($user, $avatarFallback) {
@@ -894,12 +807,11 @@ class ProfileHistoryController extends Controller
                     'type'       => 'jastip',
                     'type_label' => 'Jastip',
                     'title'      => $r->item_name,
-                    'subtitle'   => $from && $to ? ($from . ' → ' . $to) : ($to ?: $from ?: '-'),
+                    'subtitle'   => $from && $to ? ($from . ' - ' . $to) : ($to ?: $from ?: '-'),
                     'image'      => $image,
                     'date_label' => Carbon::parse($r->order_date)->translatedFormat('d M Y'),
                     'sort_date'  => Carbon::parse($r->order_date)->timestamp,
                     'status'     => $status,
-                    // Beri ulasan hanya setelah jastip selesai (lewat masa pengambilan)
                     'can_review' => $status === 'closed',
                     'group_chat_url' => '/chat/jastip/' . $r->item_id . '/group',
                     'reviewed'   => $reviewed,
@@ -907,7 +819,7 @@ class ProfileHistoryController extends Controller
                         'name'   => $r->seller_name,
                         'avatar' => $this->resolveImage($r->seller_image, $avatarFallback),
                     ],
-                    // id = user id jastiper (dinilai sebagai 'jastiper')
+                    // id di sini user id jastiper, bukan id item.
                     'review_target' => [
                         'type'  => 'jastip',
                         'id'    => $r->seller_id,
@@ -946,8 +858,6 @@ class ProfileHistoryController extends Controller
         return asset('storage/' . $path);
     }
 
-    /* ===================== PROFILE MUTATIONS ===================== */
-
     public function update(Request $request)
     {
         $user = $request->user();
@@ -980,7 +890,7 @@ class ProfileHistoryController extends Controller
 
         $user = $request->user();
 
-        // Hapus gambar lama (hanya file lokal, bukan URL google)
+        // Jangan sentuh avatar dari Google (URL absolut).
         if ($user->profile_image && ! str_starts_with($user->profile_image, 'http')) {
             Storage::disk('public')->delete($user->profile_image);
         }

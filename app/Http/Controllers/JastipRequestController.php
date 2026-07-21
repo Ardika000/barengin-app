@@ -10,25 +10,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-/**
- * Sisi pembeli fitur Request Titipan: telusuri jastip yang menerima request
- * (dikelompokkan per jastiper + destinasi), ajukan permintaan, lalu bayar
- * setelah ditawar. Request terikat langsung ke sebuah jastip_item.
- */
+// Sisi pembeli fitur Request Titipan. Tiap request terikat ke satu jastip_item.
 class JastipRequestController extends Controller
 {
-    /**
-     * Biaya layanan tetap — selaras dengan checkout jastip biasa. Public agar
-     * ProfileHistoryController bisa menghitung total tagihan yang sama persis
-     * tanpa menyalin angkanya.
-     */
+    // Public supaya ProfileHistoryController tak perlu menyalin angkanya.
     public const SERVICE_FEE = 5000;
 
-    /**
-     * Halaman "Request Titipan": jastip published yang menerima request,
-     * dikelompokkan per jastiper + destinasi + lokasi ambil + batas pesan.
-     * Satu kartu = satu "trip" jastiper (id = jastip_item perwakilan).
-     */
+    // Satu kartu = satu "trip" jastiper, id-nya jastip_item perwakilan.
     public function browse(Request $request)
     {
         $trips = JastipItem::query()
@@ -50,7 +38,6 @@ class JastipRequestController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        // Rating jastiper untuk semua pemilik di halaman ini — satu query agregat
         $ownerIds = collect($trips->items())->pluck('user_id')->unique()->values();
         $ratings = DB::table('user_ratings')
             ->whereIn('rated_user_id', $ownerIds)
@@ -64,7 +51,7 @@ class JastipRequestController extends Controller
             $rating = $ratings->get($trip->user_id);
 
             return [
-                'id'               => $trip->id, // jastip_item perwakilan → target request
+                'id'               => $trip->id,
                 'destination_city' => $trip->purchase_city ?: $trip->purchase_province,
                 'origin_city'      => $trip->pickup_city ?: $trip->pickup_province,
                 'deadline_label'   => optional($trip->end_date ? \Carbon\Carbon::parse($trip->end_date) : null)?->translatedFormat('d M Y'),
@@ -83,7 +70,6 @@ class JastipRequestController extends Controller
         return Inertia::render('Jastip/Requests/Browse', ['trips' => $trips]);
     }
 
-    /** Ajukan request titipan yang terikat ke sebuah jastip (item). */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -96,7 +82,6 @@ class JastipRequestController extends Controller
             'image'     => 'nullable|image|max:5120',
         ]);
 
-        // Pastikan item masih menerima request & belum lewat batas pesan
         $item = JastipItem::openForRequests()->findOrFail($validated['jastip_item_id']);
 
         if ($item->user_id === $request->user()->id) {
@@ -120,8 +105,6 @@ class JastipRequestController extends Controller
             'status'    => JastipRequest::STATUS_PENDING,
         ]);
 
-        // Aba-aba bagi jastiper untuk memberi penawaran — pasangan dari
-        // notifikasi 'jastip_request.quoted' yang nanti diterima pemohon.
         \App\Models\UserNotification::send(
             (int) $item->user_id,
             'selling.request_received',
@@ -140,28 +123,19 @@ class JastipRequestController extends Controller
         ]);
     }
 
-    /**
-     * Bayar request yang sudah ditawar — membuat transaksi Midtrans khusus
-     * (type: jastip_request) dan mengembalikan Snap token.
-     */
     public function pay(Request $request, $id)
     {
         $user = $request->user();
 
-        // Tanpa eager load: relasinya bernama `jastipItem` (bukan `jastip`, yang
-        // membuat endpoint ini selalu 500), dan method ini toh hanya memakai kolom
-        // milik request itu sendiri.
         $req = JastipRequest::where('user_id', $user->id)->findOrFail($id);
 
         if ($req->status !== JastipRequest::STATUS_QUOTED) {
             return response()->json(['error' => 'Request ini belum/tidak bisa dibayar.'], 422);
         }
 
-        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
         $payWithWallet = $request->input('payment_method') === 'wallet';
 
-        // Masih ada transaksi berjalan? Pakai ulang snap token-nya bila belum kedaluwarsa.
-        // Hanya berlaku untuk Midtrans — pembayaran saldo tidak memakai token.
+        // Pakai ulang snap token yang belum kedaluwarsa.
         if (! $payWithWallet && $req->transaction_id) {
             $existing = DB::table('transactions')->where('id', $req->transaction_id)->first();
             if ($existing && $existing->snap_token && now()->lt($existing->expired_at)) {
@@ -172,27 +146,16 @@ class JastipRequestController extends Controller
             }
         }
 
-        // Semua nominal dibulatkan ke integer agar gross_amount = sum(item_details)
-        // persis (aturan Midtrans, lihat #12 di checkout jastip).
+        // Dibulatkan ke integer, kalau tidak gross_amount != sum(item_details).
         $itemPrice = (int) round((float) $req->quoted_item_price);
         $fee       = (int) round((float) $req->quoted_fee);
         $qty       = (int) $req->quantity;
         $totalAmount = $itemPrice * $qty + $fee + self::SERVICE_FEE;
 
-        // Bayar dari saldo: tidak ada popup Snap — request langsung dilunasi lewat
-        // jalur pelunasan yang sama dengan Midtrans.
-        //
-        // Seluruh langkahnya dijalankan di dalam satu transaksi database sambil
-        // mengunci baris request. Tanpa kunci itu, dua klik yang datang hampir
-        // bersamaan sama-sama lolos pemeriksaan `status === QUOTED` di atas lalu
-        // masing-masing membuat baris `transactions` sendiri; saldo tetap aman
-        // (Wallet::debit() idempoten terhadap sumbernya) tetapi menyisakan satu
-        // transaksi kembar yang ditandai lunas tanpa punya debit sendiri.
-        // Aman memegang kunci di sini justru karena jalur saldo tidak memanggil
-        // layanan luar — beda dengan jalur Midtrans di bawah.
+        // Dikunci karena dua klik beruntun sama-sama lolos cek QUOTED di atas dan
+        // menyisakan transaksi kembar. Aman ditahan di sini: jalur saldo tidak
+        // memanggil layanan luar, beda dengan jalur Midtrans di bawah.
         if ($payWithWallet) {
-            // Dicek di luar kunci lebih dulu supaya kasus "saldo jelas-jelas kurang"
-            // tidak perlu membuka transaksi sama sekali.
             $wallet = \App\Models\Wallet::forUser((int) $user->id);
             if (! $wallet->hasSufficientBalance($totalAmount)) {
                 return response()->json([
@@ -225,8 +188,6 @@ class JastipRequestController extends Controller
 
                     $locked->update(['transaction_id' => $transactionId]);
 
-                    // Di dalam kunci: setelahnya status sudah bukan `quoted` lagi,
-                    // jadi permintaan kedua yang antre pasti melihatnya dan mundur.
                     (new \App\Services\WalletPayment())->settle(
                         (int) $user->id,
                         $transactionId,
@@ -239,8 +200,7 @@ class JastipRequestController extends Controller
                     return $transactionId;
                 });
             } catch (\App\Exceptions\InsufficientBalanceException $e) {
-                // Rollback transaksi database sudah membersihkan baris transaksi &
-                // pointer transaction_id, jadi tak ada sisa yang perlu dihapus.
+                // Rollback DB sudah bersihkan baris transaksi & pointer-nya.
                 return response()->json([
                     'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
                 ], 422);
@@ -333,7 +293,6 @@ class JastipRequestController extends Controller
                 'transaction_id' => $transactionId,
             ]);
         } catch (\Throwable $e) {
-            // Rollback bila Midtrans gagal — lepaskan transaksi dari request
             $req->update(['transaction_id' => null]);
             DB::table('transactions')->where('id', $transactionId)->delete();
 
@@ -345,7 +304,6 @@ class JastipRequestController extends Controller
         }
     }
 
-    /** Batalkan request sendiri (selama belum dibayar). */
     public function cancel(Request $request, $id)
     {
         $req = JastipRequest::where('user_id', $request->user()->id)->findOrFail($id);

@@ -16,8 +16,6 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 
 const createEmptyParticipant = () => ({ name: "", passport: "", phone: "", nik: "" });
 
-// Normalisasi nomor telepon ke format field (prefix +62 sudah ada di UI):
-// buang non-digit lalu awalan 62/0 → sisakan bagian setelahnya (mis. 812...).
 const toLocalPhone = (raw) => {
     let d = String(raw || "").replace(/\D/g, "");
     if (d.startsWith("62")) d = d.slice(2);
@@ -25,31 +23,22 @@ const toLocalPhone = (raw) => {
     return d;
 };
 
-// Validasi nomor HP Indonesia (dipakai bersama prefix +62).
-// Mengembalikan "empty", "invalid", atau null (valid).
 const validatePhone = (raw) => {
     let digits = String(raw || "").replace(/\D/g, "");
-    // Toleransi bila user mengawali dengan 0 (mis. 0812...) padahal sudah ada +62
     if (digits.startsWith("0")) digits = digits.slice(1);
     if (!digits) return "empty";
-    // Nomor HP Indonesia diawali 8, total 9–12 digit (tanpa 0/+62)
     if (!/^8\d{8,11}$/.test(digits)) return "invalid";
     return null;
 };
 
-// NIK Indonesia = 16 digit. Paspor = 5–12 huruf/angka. Keduanya opsional,
-// tetapi bila diisi tidak boleh mengandung simbol/karakter aneh.
 const isValidNik = (raw) => /^\d{16}$/.test(String(raw || ""));
 const isValidPassport = (raw) => /^[A-Za-z0-9]{5,12}$/.test(String(raw || ""));
 
 export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0 }) {
     const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
-    // storageKey harus didefinisikan PERTAMA sebelum dipakai di useState
     const storageKey = `trip_${trip.id}_participants`;
 
-    // Peserta pertama diprefill dari akun yang login (nama & no. HP) agar user
-    // tak perlu mengetik ulang datanya sendiri. Peserta berikutnya tetap kosong.
     const makeFirstParticipant = () => ({
         name: authUser?.full_name || authUser?.name || "",
         passport: "",
@@ -57,7 +46,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
         nik: "",
     });
 
-    // ── STATE ──────────────────────────────────────────────
     const [quantity, setQuantity] = useState(() => {
         try {
             const saved = localStorage.getItem(storageKey);
@@ -86,14 +74,10 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
     const [errors,       setErrors]       = useState([]);
     const [paymentMethod, setPaymentMethod] = useState("midtrans");
 
-    // ── EFFECTS ────────────────────────────────────────────
-
-    // Simpan participants ke localStorage setiap berubah
     useEffect(() => {
         localStorage.setItem(storageKey, JSON.stringify(participants));
     }, [participants, storageKey]);
 
-    // Sinkronisasi jumlah form dengan quantity
     useEffect(() => {
         setParticipants((prev) => {
             if (prev.length === quantity) return prev;
@@ -104,16 +88,14 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
         });
     }, [quantity]);
 
-    // Load Midtrans Snap script (hanya sekali)
     useEffect(() => {
         const existing = document.querySelector('script[src*="midtrans.com/snap/snap.js"]');
         if (existing) { setSnapReady(true); return; }
 
         const script = document.createElement("script");
         script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-        // Fallback = client key merchant M334317500 (pasangan MIDTRANS_SERVER_KEY).
-        // Key lama "Mid-client-XtaGQOWVJKpMUwg0" milik akun lain — popup gagal
-        // bila snap.js dimuat pertama kali dengan key tsb.
+        // Fallback = client key merchant M334317500; key lama milik akun lain
+        // dan bikin popup gagal kalau snap.js dimuat pertama kali dengan itu.
         script.setAttribute("data-client-key", midtrans_client_key || "Mid-client-mGla22pQRRj2Oeks");
         script.onload  = () => setSnapReady(true);
         script.onerror = () => setSnapReady(false);
@@ -124,17 +106,12 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
         };
     }, [midtrans_client_key]);
 
-    // ── KALKULASI ──────────────────────────────────────────
     const subtotal     = useMemo(() => trip.price * quantity,              [trip.price, quantity]);
     const serviceFee   = useMemo(() => 5000 * quantity,                    [quantity]);
     const insuranceFee = useMemo(() => 5000 * quantity,                    [quantity]);
     const total        = useMemo(() => subtotal + serviceFee + insuranceFee,[subtotal, serviceFee, insuranceFee]);
 
-    // ── HANDLERS ───────────────────────────────────────────
-
     const handleParticipantChange = (index, field, value) => {
-        // Cegah simbol/karakter aneh langsung saat mengetik: HP & NIK hanya angka,
-        // paspor hanya huruf/angka (huruf dibuat kapital agar seragam).
         let v = value;
         if (field === "phone") v = value.replace(/\D/g, "").slice(0, 12);
         else if (field === "nik") v = value.replace(/\D/g, "").slice(0, 16);
@@ -143,7 +120,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
         setParticipants((prev) =>
             prev.map((item, idx) => (idx === index ? { ...item, [field]: v } : item))
         );
-        // Hapus error field saat user mulai mengetik
         if (errors[index]?.[field]) {
             setErrors((prev) => {
                 const next = [...prev];
@@ -165,7 +141,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
     };
 
     const handlePayment = async () => {
-        // 1. Validasi form partisipan
         let newErrors = [];
         let firstInvalidIndex = -1;
 
@@ -174,7 +149,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
             if (!p.name.trim())  { err.name  = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
             const phoneErr = validatePhone(p.phone);
             if (phoneErr) { err.phone = phoneErr; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
-            // NIK & paspor opsional — hanya divalidasi bila diisi.
             if (p.nik?.trim() && !isValidNik(p.nik)) { err.nik = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
             if (p.passport?.trim() && !isValidPassport(p.passport)) { err.passport = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
             newErrors[idx] = err;
@@ -189,8 +163,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
             return;
         }
 
-        // 2. Bayar dari saldo: tidak lewat Snap sama sekali — server memotong
-        //    saldo lalu langsung melunasi pesanan.
         if (paymentMethod === "wallet") {
             setIsProcessing(true);
             try {
@@ -208,7 +180,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
 
                 throw new Error("Respons pembayaran saldo tidak dikenali.");
             } catch (error) {
-                // 422 dari server membawa alasan yang berguna (mis. saldo kurang)
                 const message = error?.response?.data?.error;
                 toast.error(message || "Terjadi kesalahan sistem. Coba beberapa saat lagi.");
                 setIsProcessing(false);
@@ -216,19 +187,16 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
             return;
         }
 
-        // 3. Cek Snap siap
         if (!snapReady || !window.snap) {
             toast.warning("Sistem pembayaran belum siap. Coba refresh halaman.");
             return;
         }
 
-        // 4. Buka kembali popup jika token sudah ada
         if (snapToken) {
             openMidtransPopup(snapToken);
             return;
         }
 
-        // 5. Buat transaksi baru
         setIsProcessing(true);
         try {
             const response = await axios.post(`/trip-bareng/${trip.id}/payment`, {
@@ -257,7 +225,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                 router.visit(`/trip-bareng/${trip.id}/success`);
             },
             onPending: () => {
-                // Transaksi tercatat sebagai "Menunggu Pembayaran"
                 localStorage.removeItem(storageKey);
                 router.visit("/profile-history?tab=transactions");
             },
@@ -266,21 +233,16 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                 setIsProcessing(false);
             },
             onClose: () => {
-                // Transaksi sudah dibuat (pending) -> arahkan ke riwayat transaksi
                 router.visit("/profile-history?tab=transactions");
             },
         });
     };
 
-    // ── RENDER ─────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-gray-50 pb-20 pt-6">
             <Head title="Checkout Trip - Barengin" />
             <Container>
 
-                {/* Header — kembali ke halaman sebelumnya (detail) lewat history
-                    agar tidak menumpuk entri detail baru. Efeknya: checkout →
-                    kembali → detail, lalu detail → kembali → daftar trip. */}
                 <div className="mb-8">
                     <button
                         type="button"
@@ -299,10 +261,8 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                    {/* ── LEFT: Forms ── */}
                     <div className="lg:col-span-8 space-y-6">
 
-                        {/* Trip Summary & Quantity */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
                             <div className="flex gap-4 items-center pb-6 border-b border-neutral-100">
                                 <img
@@ -349,7 +309,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                             </div>
                         </div>
 
-                        {/* Participant Forms — jumlah sesuai quantity */}
                         {participants.map((p, idx) => (
                             <div
                                 key={idx}
@@ -368,7 +327,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                 </div>
 
                                 <div className="space-y-5">
-                                    {/* Nama */}
                                     <div>
                                         <Input
                                             label={<>{t("auth.onboard.full_name")} <span className="text-red-500">*</span></>}
@@ -384,7 +342,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                         )}
                                     </div>
 
-                                    {/* Paspor */}
                                     <div>
                                         <Input
                                             label={t("trip.checkout.passport")}
@@ -401,7 +358,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                         )}
                                     </div>
 
-                                    {/* Telepon & NIK */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
                                             <Input
@@ -444,7 +400,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                         ))}
                     </div>
 
-                    {/* ── RIGHT: Summary ── */}
                     <div className="lg:col-span-4">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 sticky top-24">
                             <div className="flex items-center gap-2 mb-6">
@@ -472,8 +427,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                 <span className="text-lg font-bold text-neutral-700">Rp {Number(total).toLocaleString("id-ID")}</span>
                             </div>
 
-                            {/* Metode pembayaran — dikunci setelah token Snap dibuat
-                                agar pilihan tidak berubah di tengah transaksi */}
                             <div className="mb-6">
                                 <PaymentMethodSelector
                                     value={paymentMethod}
@@ -496,7 +449,6 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                 disabled={
                                     isProcessing ||
                                     quantity < 1 ||
-                                    // Snap hanya jadi syarat saat memang membayar lewat Midtrans
                                     (paymentMethod === "midtrans" && !snapReady)
                                 }
                                 type="button"

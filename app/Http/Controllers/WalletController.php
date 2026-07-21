@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
  */
 class WalletController extends Controller
 {
-    /** Batas isi saldo sekali jalan — Midtrans menolak nominal < Rp1. */
+    /** Batas isi saldo sekali jalan - Midtrans menolak nominal < Rp1. */
     private const MIN_TOPUP = 10000;
     private const MAX_TOPUP = 10000000;
 
@@ -85,7 +85,7 @@ class WalletController extends Controller
             ],
             // URL tujuan setelah pembayaran untuk channel yang REDIRECT keluar
             // halaman (VA, sebagian e-wallet). WAJIB di-set: tanpa ini Midtrans
-            // memakai "Finish Redirect URL" default dashboard — yang bisa mengarah
+            // memakai "Finish Redirect URL" default dashboard - yang bisa mengarah
             // ke halaman trip success, sehingga isi saldo malah mendarat di sana.
             // Channel popup tetap ditangani callback JS (onSuccess) di WalletCard.
             'callbacks' => [

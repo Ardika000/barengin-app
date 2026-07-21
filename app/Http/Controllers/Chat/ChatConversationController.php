@@ -18,7 +18,6 @@ class ChatConversationController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            // Referensi opsional (kartu konteks Trip / Pergi Bareng / Jastip) untuk pesan pertama.
             'ref_type' => ['nullable', 'in:trip,pergi_bareng,jastip'],
             'ref_id' => ['nullable', 'integer'],
         ]);
@@ -53,8 +52,6 @@ class ChatConversationController extends Controller
             $conversationId = $conversation->id;
         }
 
-        // Teruskan referensi (bila ada) sebagai query agar halaman chat menampilkan
-        // kartu konteks yang terpasang di komposer.
         $params = ['conversation' => $conversationId];
         if (! empty($data['ref_type']) && ! empty($data['ref_id'])) {
             $params['ref_type'] = $data['ref_type'];
@@ -92,9 +89,7 @@ class ChatConversationController extends Controller
             $conversationId = $conversation->id;
         }
 
-        // Hanya pembeli berbayar pada RUN AKTIF (setelah re-trip terakhir). Ini
-        // menjaga agar peserta run lama tidak ikut ditambahkan kembali setelah
-        // grup di-reset saat re-trip.
+        // Batasi ke run aktif, biar peserta run sebelum re-trip tidak ikut masuk lagi.
         $buyerIds = DB::table('trip_orders')
             ->where('trip_id', $trip->id)
             ->where('order_status', 'paid')
@@ -172,24 +167,16 @@ class ChatConversationController extends Controller
             $conv->participants()->attach($uid, ['last_read_at' => now()]);
         }
 
-        // Begitu perjalanan berlangsung, kartu "pantau perjalanan" muncul sendiri
-        // di grup saat anggota membukanya — tanpa menunggu penyelenggara menekan
-        // tombol di dasbor. Idempoten: hanya terkirim sekali per perjalanan.
         \App\Services\Chat\PergiBarengTrackShare::share($trip);
 
         return redirect("/chat/{$conversationId}?tab=groups");
     }
 
-    /**
-     * Grup chat jastip: jastiper (pemilik produk) mengobrol dengan semua pembeli
-     * yang sudah membayar produk jastip ini. (#15)
-     */
     public function openOrCreateJastipGroup(Request $request, $id)
     {
         $item = JastipItem::findOrFail($id);
         $me = $request->user();
 
-        // Semua pembeli yang sudah membayar produk ini
         $buyerIds = DB::table('jastip_order_items')
             ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
             ->join('transactions', 'jastip_orders.transaction_id', '=', 'transactions.id')
@@ -244,8 +231,7 @@ class ChatConversationController extends Controller
 
         abort_unless((bool) $conversation->is_group, 403, 'Hanya berlaku untuk grup.');
 
-        // Kolom nama & current_run_started_at dibutuhkan ParticipantRemoval untuk
-        // notifikasi & menghitung run trip yang aktif.
+        // name & current_run_started_at dipakai ParticipantRemoval, jangan dibuang.
         $conversation->loadMissing([
             'trip:id,guider_id,name,current_run_started_at',
             'pergi_bareng:id,initiator_id,name',
@@ -268,10 +254,7 @@ class ChatConversationController extends Controller
             'Pemilik grup tidak dapat dikeluarkan.'
         );
 
-        // Keluarkan dari grup TERIKAT juga mengeluarkan dari entitasnya:
-        //  - pergi bareng → hapus peserta (bebaskan kursi)
-        //  - trip         → kembalikan dana ke dompet & bebaskan kursi
-        //  - jastip / grup biasa → cukup keluar dari chat (perilaku lama)
+        // Keluar dari grup terikat = keluar dari entitasnya juga (kursi & refund).
         $removal = new \App\Services\ParticipantRemoval();
 
         if ($conversation->pergi_bareng) {

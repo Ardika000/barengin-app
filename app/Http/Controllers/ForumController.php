@@ -281,7 +281,7 @@ class ForumController extends Controller
         ]);
 
         // Selalu kembalikan dalam urutan "Terbaru" agar komentar baru tampil di
-        // paling atas — tidak melompat ke bawah walau pengguna sedang di "Populer".
+        // paling atas - tidak melompat ke bawah walau pengguna sedang di "Populer".
         return redirect()->route('forum.show', ['id' => $post->id, 'sort' => 'newest'])
             ->with('flash', ['type' => 'success', 'message' => 'Komentar berhasil ditambahkan.']);
     }

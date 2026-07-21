@@ -41,7 +41,7 @@ class ForumProfileController extends Controller
 
     /**
      * Payload user profil termasuk rating yang DITERIMA per kategori
-     * (jastip, pergi bareng, trip) — cara ambil ratingnya sama seperti
+     * (jastip, pergi bareng, trip) - cara ambil ratingnya sama seperti
      * di halaman dashboard (tabel user_ratings, kolom type).
      */
     private function profileUserPayload(User $profileUser): array

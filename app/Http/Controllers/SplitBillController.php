@@ -13,20 +13,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-/**
- * Bagi tagihan (split bill) untuk pergi bareng yang sudah selesai.
- *
- * Alur: penyelenggara membuat tagihan → tiap anggota mendapat satu "share" →
- * anggota membayar lewat Midtrans → webhook menandai share lunas dan menambah
- * saldo dompet penyelenggara (lihat MidtransController::applyStatus).
- */
+// Bagi tagihan pergi bareng. Pelunasan share diselesaikan webhook Midtrans,
+// lihat MidtransController::applyStatus.
 class SplitBillController extends Controller
 {
-    /**
-     * Anggota yang bisa ditagih + usulan pembagian rata.
-     * Penyelenggara ikut dihitung sebagai 1 orang saat membagi, tetapi tidak
-     * ditagih — dialah yang menalangi biayanya.
-     */
     public function create($pergiBarengId)
     {
         $trip = PergiBareng::with('pergi_bareng_participants.user')
@@ -41,7 +31,6 @@ class SplitBillController extends Controller
                 'name' => $trip->name,
                 'is_finished' => $trip->status() === 'finish',
             ],
-            // Penyelenggara + rombongan tiap anggota.
             'total_people' => $this->totalPeople($trip),
             'members' => $members->values(),
         ]);
@@ -53,7 +42,6 @@ class SplitBillController extends Controller
             ->where('initiator_id', Auth::id())
             ->findOrFail($pergiBarengId);
 
-        // Tagihan hanya masuk akal setelah perjalanan selesai.
         if ($trip->status() !== 'finish') {
             return back()->with('flash', [
                 'type' => 'error',
@@ -61,8 +49,6 @@ class SplitBillController extends Controller
             ]);
         }
 
-        // Satu pergi bareng hanya boleh ditagih sekali agar anggota tidak
-        // ditagih dua kali untuk grup yang sama.
         if ($trip->split_bills()->exists()) {
             return back()->with('flash', [
                 'type' => 'error',
@@ -84,7 +70,6 @@ class SplitBillController extends Controller
             'note' => ['nullable', 'string', 'max:2000'],
             'shares' => ['required', 'array', 'min:1'],
             'shares.*.user_id' => ['required', 'integer'],
-            // Midtrans menolak nominal < Rp1 dan hanya menerima bilangan bulat.
             'shares.*.amount' => ['required', 'integer', 'min:1'],
         ]);
 
@@ -107,8 +92,6 @@ class SplitBillController extends Controller
                 'creator_id' => Auth::id(),
                 'title' => $data['title'],
                 'note' => $data['note'] ?? null,
-                // Total yang ditagih = jumlah seluruh bagian, bukan angka bebas,
-                // supaya total selalu cocok dengan rinciannya.
                 'total_amount' => $rows->sum(fn ($s) => (int) $s['amount']),
                 'status' => 'open',
             ]);
@@ -127,13 +110,7 @@ class SplitBillController extends Controller
 
         $conversationId = $this->postBillToGroup($trip, $bill);
 
-        // Kabari tiap anggota yang ditagih (penyelenggara tidak menagih dirinya
-        // sendiri; kalaupun ikut, dedupe per-share menjaga satu notifikasi saja).
-        //
-        // Tujuannya kartu tagihan di grup chat, BUKAN Riwayat Transaksi: tagihan
-        // yang belum dibayar belum punya transaksi, jadi tab itu masih kosong saat
-        // notifikasi ini diklik. Tombol bayarnya justru ada di kartu grup.
-        // Riwayat Transaksi tetap jadi cadangan kalau grupnya sudah tidak ada.
+        // Diarahkan ke kartu grup: tagihan belum dibayar belum punya transaksi.
         foreach ($bill->shares()->with('user')->get() as $share) {
             \App\Models\UserNotification::send(
                 (int) $share->user_id,
@@ -156,29 +133,11 @@ class SplitBillController extends Controller
         ]);
     }
 
-    /**
-     * Lunasi satu bagian tagihan memakai saldo dompet.
-     *
-     * Seluruh langkahnya — pemeriksaan status, pembuatan transaksi, pemotongan
-     * saldo, sampai pelunasan — dijalankan di dalam SATU transaksi database
-     * sambil mengunci baris bagian tagihan. Tanpa kunci itu, dua klik yang datang
-     * hampir bersamaan sama-sama lolos pemeriksaan `status === PAID` (keduanya
-     * membacanya sebelum salah satunya sempat menulis), lalu masing-masing
-     * membuat baris `transactions` sendiri. Saldo tetap aman karena
-     * `Wallet::debit()` idempoten terhadap sumbernya, tetapi hasilnya satu
-     * transaksi kembar yang ditandai lunas tanpa punya debit sendiri.
-     *
-     * Kunci dipegang sampai status menjadi `paid`, sehingga permintaan kedua baru
-     * dilepas setelah melihat status akhirnya lalu ditolak. Ini aman dilakukan
-     * justru karena jalur saldo tidak memanggil layanan luar sama sekali —
-     * berbeda dengan jalur Midtrans, yang tidak boleh memegang kunci baris selama
-     * menunggu HTTP ke Snap.
-     */
+    // lockForUpdate di bawah: tanpa itu dua klik beruntun sama-sama lolos cek PAID
+    // dan bikin baris transactions kembar.
     private function payShareWithWallet($user, SplitBillShare $share, int $amount)
     {
-        // Dicek di luar kunci lebih dulu supaya kasus "saldo jelas-jelas kurang"
-        // tidak perlu membuka transaksi sama sekali. Pengecekan yang mengikat
-        // tetap di Wallet::debit(), yang mengunci baris dompet.
+        // Cek longgar di luar kunci; yang mengikat ada di Wallet::debit().
         $wallet = \App\Models\Wallet::forUser((int) $user->id);
 
         if (! $wallet->hasSufficientBalance($amount)) {
@@ -215,8 +174,6 @@ class SplitBillController extends Controller
                     'status' => SplitBillShare::STATUS_PENDING,
                 ])->save();
 
-                // Di dalam kunci: begitu ini selesai statusnya sudah `paid`, jadi
-                // permintaan kedua yang antre pasti melihatnya dan mundur.
                 (new \App\Services\WalletPayment())->settle(
                     (int) $user->id,
                     $transactionId,
@@ -229,8 +186,6 @@ class SplitBillController extends Controller
                 return $transactionId;
             });
         } catch (\App\Exceptions\InsufficientBalanceException $e) {
-            // Transaksi database sudah ter-rollback seluruhnya oleh lemparan ini,
-            // jadi tak ada baris transaksi/status menggantung yang perlu dibersihkan.
             return response()->json([
                 'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
             ], 422);
@@ -246,17 +201,12 @@ class SplitBillController extends Controller
         ]);
     }
 
-    /**
-     * Buat transaksi Midtrans untuk bagian milik user yang sedang login.
-     * Mengembalikan snap token agar frontend membuka popup pembayaran.
-     */
     public function pay(Request $request, $shareId)
     {
         $user = $request->user();
 
         $share = SplitBillShare::with('split_bill.pergi_bareng')->findOrFail($shareId);
 
-        // Hanya pemilik bagian yang boleh membayarnya.
         if ((int) $share->user_id !== (int) $user->id) {
             return response()->json(['error' => 'Ini bukan tagihan kamu.'], 403);
         }
@@ -265,8 +215,7 @@ class SplitBillController extends Controller
             return response()->json(['error' => 'Tagihan ini sudah dibayar.'], 422);
         }
 
-        // Sudah pernah dibuat & belum kedaluwarsa → pakai token lama supaya
-        // tidak menumpuk transaksi menggantung di Midtrans.
+        // Pakai token lama biar tak menumpuk transaksi menggantung di Midtrans.
         if ($share->transaction_id) {
             $existing = DB::table('transactions')->where('id', $share->transaction_id)->first();
 
@@ -280,10 +229,8 @@ class SplitBillController extends Controller
 
         $amount = (int) round((float) $share->amount);
 
-        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
         $payWithWallet = $request->input('payment_method') === 'wallet';
 
-        // Pembayaran saldo diselesaikan di jalurnya sendiri, di dalam kunci baris.
         if ($payWithWallet) {
             return $this->payShareWithWallet($user, $share, $amount);
         }
@@ -342,8 +289,7 @@ class SplitBillController extends Controller
                 'transaction_id' => $transactionId,
             ]);
         } catch (\Throwable $e) {
-            // Midtrans gagal → batalkan transaksi agar anggota bisa mencoba lagi
-            // dengan transaksi baru dan bagiannya tidak tersangkut di 'pending'.
+            // Batalkan, kalau tidak share-nya tersangkut di 'pending'.
             $share->forceFill([
                 'transaction_id' => null,
                 'status' => SplitBillShare::STATUS_UNPAID,
@@ -359,16 +305,11 @@ class SplitBillController extends Controller
         }
     }
 
-    /** Total kepala yang ikut: rombongan tiap anggota + penyelenggara (1). */
     private function totalPeople(PergiBareng $trip): int
     {
         return (int) $trip->pergi_bareng_participants->sum('quantity') + 1;
     }
 
-    /**
-     * Anggota yang bisa ditagih: seluruh peserta selain penyelenggara, lengkap
-     * dengan usulan nominal (dibagi rata per kepala, mengikuti `quantity`).
-     */
     private function billableMembers(PergiBareng $trip)
     {
         $totalPeople = max(1, $this->totalPeople($trip));
@@ -386,16 +327,7 @@ class SplitBillController extends Controller
             ->values();
     }
 
-    /**
-     * Kirim kartu tagihan ke grup chat pergi bareng. Kartu di gelembung hanya
-     * menyimpan ringkasan; status terkini (lunas/belum) dikirim terpisah oleh
-     * ChatController agar tidak basi.
-     */
-    /**
-     * Kirim kartu tagihan ke grup, lalu kembalikan id percakapannya agar
-     * notifikasi bisa menautkan anggota langsung ke kartu itu (null bila grupnya
-     * tidak ada).
-     */
+    // Gelembungnya cuma ringkasan; status lunas dikirim terpisah oleh ChatController.
     private function postBillToGroup(PergiBareng $trip, SplitBill $bill): ?int
     {
         $conversation = Conversation::where('pergi_bareng_id', $trip->id)

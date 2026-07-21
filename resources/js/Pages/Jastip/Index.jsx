@@ -56,14 +56,11 @@ export default function Index({
     const [showAllCats, setShowAllCats] = useState(false); // #2: tampilkan 5 kategori dulu
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false); // collapse filter di mobile
 
-    // Search bar sticky di bawah navbar; versi kompak saat menempel (stuck).
     const [stuck, setStuck] = useState(false);
     const [barMounted, setBarMounted] = useState(false); // tetap terpasang selama animasi keluar
     const [navHeight, setNavHeight] = useState(0);
     const sentinelRef = useRef(null);
 
-    // Saat menempel → pasang bar (memicu slide-down). Saat lepas, bar dibiarkan
-    // terpasang sampai animasi slide-up selesai (lihat onAnimationEnd).
     useEffect(() => {
         if (stuck) setBarMounted(true);
     }, [stuck]);
@@ -73,10 +70,10 @@ export default function Index({
         const h = nav ? Math.ceil(nav.getBoundingClientRect().height) : 0;
         setNavHeight(h);
 
+        // Sentinel keluar viewport (terdorong ke atas navbar) -> bar menempel.
         const sentinel = sentinelRef.current;
         if (!sentinel || typeof IntersectionObserver === "undefined") return;
 
-        // Sentinel keluar viewport (terdorong ke atas navbar) → bar menempel.
         const observer = new IntersectionObserver(
             ([entry]) => setStuck(!entry.isIntersecting),
             { rootMargin: `-${h + 1}px 0px 0px 0px`, threshold: 0 }
@@ -101,8 +98,6 @@ export default function Index({
             schedule,
             ...overrides,
         };
-        // Validasi rentang harga: maksimal harus lebih besar dari minimal.
-        // Bila terbalik, beri tahu pengguna & jangan terapkan filter.
         const min = params.price_min;
         const max = params.price_max;
         if (
@@ -113,7 +108,6 @@ export default function Index({
             toast.info(t("jastip.shop.price_invalid"));
             return;
         }
-        // Bersihkan nilai kosong agar URL rapi
         Object.keys(params).forEach((k) => {
             if (params[k] === "" || params[k] == null || (Array.isArray(params[k]) && params[k].length === 0)) {
                 delete params[k];
@@ -133,7 +127,6 @@ export default function Index({
         router.get("/jastip", {}, { preserveScroll: true, preserveState: true, replace: true });
     };
 
-    // #9: filter jadwal (semua / sedang berlangsung / akan dibuka)
     const selectSchedule = (value) => {
         const next = schedule === value ? "" : value;
         setSchedule(next);
@@ -148,7 +141,6 @@ export default function Index({
         applyFilters({ categories: next });
     };
 
-    // Isi kolom "Dibeli di"/"Diambil di" dengan lokasi user (reverse geocode).
     const geolocateInto = (field) => {
         if (!navigator.geolocation) return;
         setLocatingField(field);
@@ -178,10 +170,6 @@ export default function Index({
         );
     };
 
-    // Catatan: kolom "Diambil di" sengaja TIDAK diisi otomatis dari lokasi user.
-    // Pengguna dapat mengisinya manual atau memakai tombol crosshair di bawah.
-
-    // Tombol crosshair kecil di dalam input lokasi
     const LocateButton = ({ field }) => (
         <button
             type="button"
@@ -205,7 +193,6 @@ export default function Index({
         <div className="min-h-screen bg-neutral-50 pb-16 pt-10 md:pt-12">
             <Head title="Jastip - Barengin" />
             <Container>
-                {/* ── Kartu pencarian: kata kunci + Dibeli di + Diambil di ── */}
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
@@ -253,14 +240,8 @@ export default function Index({
                     </div>
                 </form>
 
-                {/* Sentinel: diletakkan tepat di bawah kartu pencarian. Bar tersemat
-                    baru muncul setelah SELURUH kartu terlewat scroll (bukan saat
-                    baru sebagian tertutup navbar), sehingga tidak ada tumpang tindih. */}
                 <div ref={sentinelRef} aria-hidden="true" className="-mt-8 h-px" />
 
-                {/* ── Bar pencarian tersemat: strip putih selebar layar yang
-                    menempel di bawah navbar saat kartu pencarian terlewat scroll.
-                    Satu baris kompak — terlihat seperti perpanjangan navbar. ── */}
                 {barMounted && (
                     <div
                         className={`${stuck ? "animate-slide-down" : "animate-slide-up"} fixed inset-x-0 z-40 border-b border-neutral-200 bg-white/95 shadow-sm backdrop-blur`}
@@ -316,10 +297,8 @@ export default function Index({
                 )}
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
-                    {/* ── Sidebar filter ── */}
                     <aside className="h-fit rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm md:p-7">
                         <div className="flex items-center justify-between border-b border-neutral-100 pb-3 lg:mb-4">
-                            {/* Judul = tombol collapse di mobile; statis di desktop */}
                             <button
                                 type="button"
                                 onClick={() => setMobileFiltersOpen((v) => !v)}
@@ -348,9 +327,7 @@ export default function Index({
                             )}
                         </div>
 
-                        {/* Isi filter — dapat dilipat di mobile, selalu tampil di desktop */}
                         <div className={`pt-4 lg:pt-0 ${mobileFiltersOpen ? "block" : "hidden"} lg:block`}>
-                        {/* #9: filter jadwal jastip */}
                         <FilterSection title={t("jastip.shop.filter_schedule")}>
                             {[
                                 { value: "", label: t("jastip.shop.schedule_all") },
@@ -430,11 +407,9 @@ export default function Index({
                         </div>
                     </aside>
 
-                    {/* ── Grid produk ── */}
                     <div>
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                             <h2 className="text-xl font-bold text-neutral-700">{t("jastip.shop.products")}</h2>
-                            {/* Pintu masuk fitur Request Titipan */}
                             <Link
                                 href="/jastip/requests"
                                 className="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-100"
@@ -444,7 +419,6 @@ export default function Index({
                             </Link>
                         </div>
 
-                        {/* Saran typo: "Mungkin maksud Anda ..." */}
                         {foreignPickup && (
                             <div className="mb-5 rounded-xl border border-orange-200/60 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-800">
                                 {t("jastip.shop.pickup_id_only")}

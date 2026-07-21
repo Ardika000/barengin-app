@@ -61,7 +61,7 @@ export default function Message({ messages = {}, filters = {} }) {
     // Fungsi Ganti Halaman
     const handlePageChange = (page) => visit({ page });
 
-    // Pencarian live (debounce) — konsisten dengan halaman dashboard lain.
+    // Pencarian live (debounce) - konsisten dengan halaman dashboard lain.
     // Lewati eksekusi pertama saat mount agar tidak memicu reload tanpa perlu.
     const didMount = useRef(false);
     useEffect(() => {

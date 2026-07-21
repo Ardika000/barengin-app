@@ -63,7 +63,7 @@ class AdminUserController extends Controller
         ActivityLog::record('Mengubah izin pengguna: ' . $user->full_name);
 
         // Toast sukses ditangani di sisi klien (EditUser) agar terlokalisasi &
-        // mendukung status gagal — jadi tidak perlu flash dari server di sini.
+        // mendukung status gagal - jadi tidak perlu flash dari server di sini.
         return redirect()->route('management-user');
     }
 

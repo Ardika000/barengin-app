@@ -79,7 +79,7 @@ class TripParticipantSeeder extends Seeder
 
         // Masukkan peserta berbayar ke grup chat tiap trip. Di alur nyata ini
         // dilakukan saat pembayaran lunas (webhook Midtrans), yang tak berjalan di
-        // seed — tanpa ini peserta hasil seeder tak muncul di grup trip.
+        // seed - tanpa ini peserta hasil seeder tak muncul di grup trip.
         $groupService = app(\App\Services\Chat\GroupConversationService::class);
         foreach ($trips as $trip) {
             $groupService->syncTripGroupMembers((int) $trip->id);

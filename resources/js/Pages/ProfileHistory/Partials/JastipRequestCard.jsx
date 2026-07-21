@@ -42,7 +42,7 @@ export default function JastipRequestCard({ request, onPay, walletBalance = 0 })
 
             if (method === "wallet") {
                 if (data.paid) {
-                    // Saldo & status request berubah di server — muat ulang keduanya.
+                    // Saldo & status request berubah di server - muat ulang keduanya.
                     router.reload({ only: ["jastip_requests", "wallet"] });
                     return;
                 }

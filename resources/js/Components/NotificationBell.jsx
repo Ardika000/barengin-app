@@ -19,7 +19,7 @@ export default function NotificationBell({ className = "", onNavigate }) {
     const [unread, setUnread] = useState(Number(props?.notif_unread_count ?? 0));
     const label = unread > 99 ? "99+" : String(unread);
 
-    // Selaraskan lagi setiap kunjungan Inertia — mis. setelah menandai semua
+    // Selaraskan lagi setiap kunjungan Inertia - mis. setelah menandai semua
     // terbaca, lencana harus langsung hilang tanpa menunggu poll berikutnya.
     useEffect(() => {
         setUnread(Number(props?.notif_unread_count ?? 0));
@@ -30,7 +30,7 @@ export default function NotificationBell({ className = "", onNavigate }) {
             const { data } = await axios.get("/notifications/poll");
             if (typeof data?.unread === "number") setUnread(data.unread);
         } catch {
-            /* diamkan — lencana cukup pakai nilai terakhir */
+            /* diamkan - lencana cukup pakai nilai terakhir */
         }
     }, []);
 

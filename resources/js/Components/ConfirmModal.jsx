@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { FiAlertCircle } from "react-icons/fi";
 import Button from "@/Components/Button";
 
-// Dialog konfirmasi standar (hapus/publish/verifikasi/dll) — dipakai konsisten
+// Dialog konfirmasi standar (hapus/publish/verifikasi/dll) - dipakai konsisten
 // di semua halaman admin. Layout: ikon kotak + judul/deskripsi rata kiri, dengan
 // bar aksi di bawah. Tanpa blur backdrop, ukuran & gaya seragam.
 export default function ConfirmModal({
@@ -19,7 +19,7 @@ export default function ConfirmModal({
     confirmType = "danger", // primary | danger | success | warning | neutral
     processing = false,
 }) {
-    // Esc menutup dialog — sama seperti menekan Batal, jadi aman untuk dialog
+    // Esc menutup dialog - sama seperti menekan Batal, jadi aman untuk dialog
     // hapus sekalipun. Hook di atas early return agar urutannya tetap.
     useEffect(() => {
         if (!open) return;

@@ -9,26 +9,6 @@ import {
 } from "react-icons/fi";
 import useLockBodyScroll from "@/Hooks/useLockBodyScroll";
 
-/**
- * ImageLightbox — modal untuk melihat gambar tanpa terpotong (object-contain).
- *
- * Komponen umum & bisa dipakai ulang di mana saja: cukup kirim daftar `images`
- * (URL) dan indeks awal. Mendukung navigasi kiri/kanan (tombol & panah keyboard),
- * tutup lewat tombol X / klik latar / tombol Esc.
- *
- * Zoom: tombol +/−, gulir mouse (scroll), dobel-klik untuk perbesar/kecilkan,
- * dan seret (drag) untuk menggeser saat gambar diperbesar. Pintasan keyboard
- * "+" / "−" memperbesar/memperkecil dan "0" mengembalikan ke ukuran semula.
- *
- * Contoh:
- *   const [lb, setLb] = useState({ open: false, index: 0 });
- *   <ImageLightbox
- *       images={urls}
- *       index={lb.index}
- *       open={lb.open}
- *       onClose={() => setLb((s) => ({ ...s, open: false }))}
- *   />
- */
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const STEP = 0.5;
@@ -43,10 +23,9 @@ export default function ImageLightbox({
     const list = Array.isArray(images) ? images.filter(Boolean) : [];
     const [current, setCurrent] = useState(index);
 
-    // Zoom & geser (pan).
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
-    const dragRef = useRef(null); // { startX, startY } saat menyeret
+    const dragRef = useRef(null);
     const [dragging, setDragging] = useState(false);
     const imgWrapRef = useRef(null);
 
@@ -59,13 +38,11 @@ export default function ImageLightbox({
         setOffset({ x: 0, y: 0 });
     }, []);
 
-    // Sinkronkan indeks saat modal dibuka dari thumbnail berbeda.
     useEffect(() => {
         if (open) setCurrent(Math.min(Math.max(0, index), Math.max(0, list.length - 1)));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, index]);
 
-    // Kembalikan zoom ke semula tiap ganti gambar atau buka/tutup modal.
     useEffect(() => {
         resetZoom();
     }, [current, open, resetZoom]);
@@ -113,7 +90,6 @@ export default function ImageLightbox({
         });
     }, []);
 
-    // Navigasi, zoom & tutup lewat keyboard.
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -128,8 +104,7 @@ export default function ImageLightbox({
         return () => document.removeEventListener("keydown", onKey);
     }, [open, hasMany, goPrev, goNext, onClose, zoomIn, zoomOut, resetZoom]);
 
-    // Gulir mouse untuk zoom. Pakai listener non-pasif agar preventDefault
-    // bekerja (mencegah halaman ikut tergulir di balik modal).
+    // Listener wheel harus non-pasif supaya preventDefault jalan.
     useEffect(() => {
         const el = imgWrapRef.current;
         if (!el || !open) return;
@@ -146,7 +121,6 @@ export default function ImageLightbox({
         return () => el.removeEventListener("wheel", onWheel);
     }, [open]);
 
-    // Seret untuk menggeser gambar saat diperbesar.
     const onDragStart = (e) => {
         if (scale <= 1) return;
         e.preventDefault();
@@ -187,7 +161,6 @@ export default function ImageLightbox({
             role="dialog"
             aria-modal="true"
         >
-            {/* Kontrol zoom (kiri atas) */}
             <div
                 className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-full bg-white/10 p-1 text-white"
                 onClick={(e) => e.stopPropagation()}
@@ -230,7 +203,6 @@ export default function ImageLightbox({
                 </button>
             </div>
 
-            {/* Tombol tutup */}
             <button
                 type="button"
                 onClick={(e) => {
@@ -264,9 +236,6 @@ export default function ImageLightbox({
                 </>
             )}
 
-            {/* Area gambar — bisa di-zoom & digeser (utuh, tidak dipotong).
-                Tanpa overflow-hidden agar gambar yang diperbesar meluber ke
-                seluruh layar, bukan terpotong pada ukuran aslinya. */}
             <div
                 ref={imgWrapRef}
                 className="flex items-center justify-center"

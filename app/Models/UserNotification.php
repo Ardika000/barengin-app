@@ -4,16 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * Notifikasi untuk seorang penerima.
- *
- * Dinamai `UserNotification` (bukan `Notification`) dengan sengaja: User memakai
- * trait Notifiable milik Laravel yang sudah mendefinisikan relasi `notifications()`
- * ke tabel `notifications`. Memakai nama yang sama akan bentrok.
- */
+// Bukan `Notification` karena bentrok dengan relasi bawaan trait Notifiable.
 class UserNotification extends Model
 {
-    /** Kategori = kunci preferensi di users.notification_prefs. */
+    // Kategori = kunci preferensi di users.notification_prefs.
     public const CATEGORY_PERGI_BARENG   = 'pergi_bareng';
     public const CATEGORY_GROUP          = 'group';
     public const CATEGORY_ORDER          = 'order';
@@ -25,10 +19,8 @@ class UserNotification extends Model
     public const CATEGORY_FORUM          = 'forum';
     public const CATEGORY_ACTIVITY       = 'activity';
 
-    /** Semua kategori yang bisa dimatikan pengguna, berikut tipe di dalamnya. */
+    // Kategori yang bisa dimatikan pengguna, berikut tipe di dalamnya.
     public const CATEGORIES = [
-        // Dua sisi sekaligus: pemohon dikabari hasil permintaannya, penyelenggara
-        // dikabari ada permintaan masuk yang perlu ditindak.
         self::CATEGORY_PERGI_BARENG => [
             'pergi_bareng.approved',
             'pergi_bareng.rejected',
@@ -38,20 +30,13 @@ class UserNotification extends Model
         self::CATEGORY_ORDER        => ['order.created'],
         self::CATEGORY_PAYMENT      => ['payment.paid'],
         self::CATEGORY_SPLIT_BILL   => ['split_bill.created', 'split_bill.settled'],
-        // Titipan yang diajukan pengguna ke jastiper.
         self::CATEGORY_JASTIP_REQUEST => [
             'jastip_request.quoted',
             'jastip_request.rejected',
         ],
-        // Sisi penjual: ada yang membeli / menitip padaku.
         self::CATEGORY_SELLING => ['selling.order_paid', 'selling.request_received'],
-        // Uang masuk/keluar dompet — dipicu dari Wallet::credit()/debit(), jadi
-        // setiap perubahan saldo dari sumber mana pun ikut terkabarkan.
         self::CATEGORY_WALLET => ['wallet.credited', 'wallet.debited'],
-        // Interaksi forum: ada yang mulai mengikuti pengguna.
         self::CATEGORY_FORUM => ['forum.followed'],
-        // Perkembangan perjalanan/jastip yang DIIKUTI pengguna: mulai berlangsung,
-        // waktu ambil (jastip), dan selesai. Dikirim command notifications:lifecycle.
         self::CATEGORY_ACTIVITY => [
             'activity.trip_ongoing',
             'activity.trip_finished',
@@ -79,19 +64,8 @@ class UserNotification extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Kirim satu notifikasi ke seorang pengguna.
-     *
-     * Mengembalikan null bila pengguna mematikan kategorinya, atau bila
-     * `dedupeKey` yang sama sudah pernah dipakai — pemanggil tidak perlu tahu
-     * bedanya, cukup panggil dan lupakan.
-     *
-     * `data` berisi PARAMETER kalimat (mis. ['trip' => 'Bali']), bukan kalimat
-     * jadi — perakitannya di frontend lewat t() agar ikut bahasa aktif.
-     *
-     * Dinamai `send()` dan bukan `push()`: Eloquent\Model sudah punya method
-     * push() non-static, jadi nama itu tidak bisa dipakai.
-     */
+    // $data berisi parameter kalimat (['trip' => 'Bali']), bukan kalimat jadi.
+    // Dirakit di frontend lewat t() supaya ikut bahasa aktif.
     public static function send(
         ?int $userId,
         string $type,
@@ -125,12 +99,10 @@ class UserNotification extends Model
             return self::create($attributes);
         }
 
-        // firstOrCreate + indeks unik pada dedupe_key: aman walau webhook Midtrans
-        // dan sync manual datang bersamaan.
+        // Indeks unik dedupe_key: aman walau webhook & sync manual datang bareng.
         return self::firstOrCreate(['dedupe_key' => $dedupeKey], $attributes);
     }
 
-    /** Kategori yang menaungi sebuah tipe; null bila tipe tidak dikenal. */
     public static function categoryOf(string $type): ?string
     {
         foreach (self::CATEGORIES as $category => $types) {

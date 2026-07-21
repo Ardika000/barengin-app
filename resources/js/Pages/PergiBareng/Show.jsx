@@ -21,8 +21,6 @@ import { BsChatDots, BsPeople } from "react-icons/bs";
 
 const JAKARTA = [-6.1751, 106.8272];
 
-// Pin berwarna (biru = titik kumpul, hijau = titik tujuan) agar konsisten
-// dengan warna label di detail perjalanan.
 const makePinIcon = (color) =>
     L.divIcon({
         className: "",
@@ -38,8 +36,6 @@ const makePinIcon = (color) =>
 const ORIGIN_ICON = makePinIcon("#0c8ce9"); // primary-600
 const DEST_ICON = makePinIcon("#2fb248");   // success-600
 
-// Menyesuaikan tampilan peta agar kedua titik terlihat (atau fokus ke satu
-// titik bila hanya satu yang tersedia).
 function MapView({ origin, destination }) {
     const map = useMap();
     useEffect(() => {
@@ -59,14 +55,9 @@ export default function Show({ trip }) {
     const isLoggedIn = Boolean(auth?.user);
     const { t } = useTranslation();
 
-    // Status berlangsung ditandai di header, dan (bila pengguna anggota) membuka
-    // tombol "Pantau Perjalanan" di kartu aksi menuju peta live.
     const isOngoing = trip.status === "ongoing";
 
-    // Anggota perjalanan = peserta yang sudah disetujui atau penyelenggaranya.
     const isMember = trip.is_participant || trip.organizer?.is_self;
-    // Tombol pantau perjalanan hanya untuk anggota saat perjalanan berlangsung
-    // (route track memang menolak non-anggota & status non-ongoing).
     const canTrack = isOngoing && isMember;
 
     const [origin, setOrigin] = useState(null);          // titik kumpul
@@ -74,7 +65,6 @@ export default function Show({ trip }) {
     const [routeLine, setRouteLine] = useState(null);     // jalur antar titik
     const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
 
-    // ── Join state ──────────────────────────────────────────
     const remaining = Math.max(0, trip.remaining ?? (trip.capacity - trip.joined));
     const isFull = remaining < 1;
     const [seats, setSeats] = useState(1);
@@ -128,9 +118,6 @@ export default function Show({ trip }) {
         );
     };
 
-    // Status "diikuti" per peserta, di-key per username. Peserta multi-kursi
-    // muncul beberapa baris, jadi state per-username menjaga semua barisnya tetap
-    // selaras saat tombol Ikuti/Mengikuti ditekan.
     const [participantFollows, setParticipantFollows] = useState(() => {
         const map = {};
         for (const p of trip.participants ?? []) {
@@ -160,9 +147,6 @@ export default function Show({ trip }) {
     useEffect(() => {
         const geocode = async (label) => {
             if (!label) return null;
-            // Coba beberapa varian: bias ke Indonesia (countrycodes=id) pada
-            // label mentah dulu — ini menemukan POI spesifik seperti "Bandung
-            // Factory Outlet" maupun nama kota. Fallback: tambah ", Indonesia".
             const base = "https://nominatim.openstreetmap.org/search?format=json&limit=1";
             const urls = [
                 `${base}&countrycodes=id&q=${encodeURIComponent(label)}`,
@@ -195,7 +179,6 @@ export default function Show({ trip }) {
             setDestination(d);
 
             if (o && d) {
-                // Coba ambil rute jalan sebenarnya (OSRM); fallback ke garis lurus
                 try {
                     const res = await fetch(
                         `https://router.project-osrm.org/route/v1/driving/${o[1]},${o[0]};${d[1]},${d[0]}?overview=full&geometries=geojson`
@@ -226,7 +209,6 @@ export default function Show({ trip }) {
             return;
         }
 
-        // Sertakan kartu referensi Pergi Bareng agar penyelenggara paham konteksnya.
         router.post("/chat/personal", {
             user_id: otherUserId,
             ref_type: "pergi_bareng",
@@ -257,9 +239,7 @@ export default function Show({ trip }) {
             <Container className="py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
-                    {/* Kiri: Detail Info */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Card Header dengan Gambar */}
                         <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden flex flex-col md:flex-row">
                             <div className="p-6 flex-1 flex flex-col justify-between">
                                 <div>
@@ -280,7 +260,6 @@ export default function Show({ trip }) {
                                     </div>
                                 </div>
                                 
-                                {/* Organizer Info */}
                                 <div className="flex items-center gap-4">
                                     <img src={trip.organizer.avatar} alt={trip.organizer.name} className="w-12 h-12 rounded-full object-cover border border-neutral-200" />
                                     <div className="flex-1">
@@ -305,7 +284,6 @@ export default function Show({ trip }) {
                                                 {t("pb.show.chat_organizer")}
                                             </Button>
                                         )}
-                                        {/* Grup chat perjalanan — hanya untuk anggota / penyelenggara */}
                                         {(trip.is_participant || trip.organizer?.is_self) && (
                                             <button
                                                 type="button"
@@ -321,7 +299,6 @@ export default function Show({ trip }) {
                                 </div>
                             </div>
                             
-                            {/* Gambar Bus */}
                             <div className="relative w-full md:w-1/3 bg-neutral-100 min-h-[250px] md:min-h-[200px]">
                                 <img
                                     src={
@@ -353,7 +330,6 @@ export default function Show({ trip }) {
                             </div>
                         </div>
 
-                        {/* Deskripsi */}
                         <div className="bg-white rounded-2xl border border-neutral-200 p-6">
                             <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
                                 <span className="p-1.5 bg-neutral-100 rounded-md"><FaInfoCircle className="text-neutral-600 text-sm"/></span>
@@ -384,7 +360,6 @@ export default function Show({ trip }) {
                             </ul>
                         </div>
 
-                        {/* Teman Pergi Bareng */}
                         <div className="bg-white rounded-2xl border border-neutral-200 p-6">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold text-lg flex items-center gap-2">
@@ -395,7 +370,6 @@ export default function Show({ trip }) {
                             </div>
 
                             <div className="space-y-3">
-                                {/* Organizer */}
                                 <div className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl bg-neutral-50">
                                     {trip.organizer.username ? (
                                         <Link
@@ -429,7 +403,6 @@ export default function Show({ trip }) {
                                     )}
                                 </div>
                                 
-                                {/* Participants (sudah diperluas sesuai jumlah kursi yang dipesan) */}
                                 {trip.participants.map((p, i) => (
                                     <div key={i} className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50 transition">
                                         {p.username ? (
@@ -452,7 +425,6 @@ export default function Show({ trip }) {
                                                 </div>
                                             </div>
                                         )}
-                                        {/* Tombol ikuti/mengikuti — tidak tampil untuk diri sendiri */}
                                         {p.username && !p.is_self && (
                                             <Button
                                                 size="xs"
@@ -466,7 +438,6 @@ export default function Show({ trip }) {
                                     </div>
                                 ))}
 
-                                {/* Empty Seats */}
                                 {[...Array(Math.max(0, trip.capacity - trip.joined))].map((_, i) => (
                                     <div key={`empty-${i}`} className="flex items-center gap-4 p-3 border border-dashed border-neutral-300 rounded-xl bg-neutral-50/50">
                                         <div className="w-10 h-10 rounded-full border border-dashed border-neutral-300 flex items-center justify-center text-neutral-400 text-sm font-medium">{trip.joined + i + 1}</div>
@@ -480,11 +451,9 @@ export default function Show({ trip }) {
                         </div>
                     </div>
 
-                    {/* Kanan: Sidebar Aksi */}
                     <div className="lg:col-span-1">
                         <div className="sticky top-24 space-y-4">
                             <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-                                {/* Map */}
                                 <div className="h-56 bg-neutral-200 relative z-0">
                                     <MapContainer
                                         center={origin || destination || JAKARTA}
@@ -563,7 +532,6 @@ export default function Show({ trip }) {
                                 </div>
                             </div>
                             
-                            {/* Tombol Aksi / Join */}
                             <div className="bg-white rounded-2xl border border-neutral-200 p-5">
                                 <p className="text-xs text-neutral-500 mb-1">{t("pb.show.join_now")}</p>
                                 <p className="text-sm font-bold mb-4">{trip.title}</p>
@@ -573,7 +541,6 @@ export default function Show({ trip }) {
                                         <FaLock className="text-xs" /> {t("pb.show.login_to_join")}
                                     </Button>
                                 ) : canTrack ? (
-                                    // Sedang berlangsung & pengguna anggota → pantau perjalanan.
                                     <Button
                                         isButtonLink
                                         href={`/pergi-bareng/${trip.id}/track`}
@@ -587,9 +554,6 @@ export default function Show({ trip }) {
                                         {t("pb.show.you_organizer")}
                                     </div>
                                 ) : trip.is_participant && trip.status !== "will_start" ? (
-                                    // Sudah tergabung & perjalanan sudah selesai → tak bisa
-                                    // menambah kursi lagi. (Yang berlangsung ditangani canTrack;
-                                    // yang belum mulai jatuh ke form agar bisa request tambahan.)
                                     <div className="bg-success-50 border border-success-100 rounded-xl p-3 text-center text-sm font-semibold text-success-700">
                                         {t("pb.show.already_joined")}
                                     </div>
@@ -608,7 +572,6 @@ export default function Show({ trip }) {
                                     </Button>
                                 ) : (
                                     <>
-                                        {/* Counter kursi */}
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
                                                 <p className="font-bold text-neutral-700 text-sm">{t("pb.show.seat_count")}</p>

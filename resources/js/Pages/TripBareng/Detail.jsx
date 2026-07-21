@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix Leaflet default marker icon (vite bundler issue)
+// Marker default Leaflet rusak kalau di-bundle Vite.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -47,9 +47,6 @@ export default function Detail({ trip }) {
 
     const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
 
-    // Gambar aktivitas dibuka di ImageLightbox (bisa di-zoom & digeser), sama
-    // seperti gambar di forum dan chat. `images` diisi per aktivitas yang diklik
-    // agar navigasi kiri/kanan tetap dalam satu aktivitas.
     const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
 
     const handleToggleLike = () => {
@@ -99,7 +96,6 @@ export default function Detail({ trip }) {
         "fa-user-tie":   FaUserTie,
     };
 
-    // Helper: toleran terhadap spasi, case, dan tanda hubung
     const getIcon = (name) => {
         if (!name) return FaCarSide;
         return (
@@ -110,10 +106,8 @@ export default function Detail({ trip }) {
         );
     };
 
-    // ── MAP STATE ──
     const [position, setPosition] = useState([-6.1751, 106.8272]); // Default: Jakarta
 
-    // Cari koordinat berdasarkan trip.location (nama destinasi trip)
     useEffect(() => {
         const lokasi = currentTrip?.location || currentTrip?.title;
         if (!lokasi) return;
@@ -139,8 +133,6 @@ export default function Detail({ trip }) {
         fetchCoordinates();
     }, [currentTrip?.location, currentTrip?.title]);
 
-
-
     const handleOpenChat = () => {
         const otherUserId = currentTrip?.host?.id;
 
@@ -149,7 +141,6 @@ export default function Detail({ trip }) {
             return;
         }
 
-        // Sertakan kartu referensi Trip Bareng sebagai konteks percakapan.
         router.post("/chat/personal", {
             user_id: otherUserId,
             ref_type: "trip",
@@ -162,13 +153,10 @@ export default function Detail({ trip }) {
     };
 
     return (
-        // Ruang bawah hanya perlu disisakan saat bar pemesanan tampil; pemilik trip
-        // tidak melihat bar itu, jadi tanpa ini halamannya berakhir dengan celah kosong.
         <div className={`min-h-screen bg-white ${isOwner ? "pb-12" : "pb-32"}`}>
             <Head title={`Trip ${currentTrip.title} - Barengin`} />
 
             <Container className="pt-6">
-                {/* HERO */}
                 <div className="relative h-[350px] md:h-[400px] w-full rounded-3xl overflow-hidden mb-10 shadow-sm">
                     <img
                         src={currentTrip.image || "/assets/trips/hero.jpg"}
@@ -208,7 +196,6 @@ export default function Detail({ trip }) {
                             <span>{currentTrip.duration}</span>
                         </div>
 
-                        {/* Avatar Group — peserta asli yang sudah bergabung */}
                         {currentTrip.joined_count > 0 && (
                             <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
                                 <div className="flex -space-x-3">
@@ -246,9 +233,7 @@ export default function Detail({ trip }) {
                     </div>
                 </div>
 
-                {/* MAIN CONTENT */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* LEFT */}
                     <div className="lg:col-span-2 space-y-10">
                         <section>
                             <h2 className="text-2xl font-bold text-neutral-700 mb-4">
@@ -268,7 +253,6 @@ export default function Detail({ trip }) {
 
                         <hr className="border-neutral-200" />
 
-                        {/* Itinerary Timeline */}
                         <section>
                             <div className="space-y-0 relative">
                                 {currentTrip.itinerary.map((item, idx) => (
@@ -327,17 +311,14 @@ export default function Detail({ trip }) {
                         </section>
                     </div>
 
-                    {/* RIGHT SIDEBAR */}
                     <div className="lg:col-span-1 space-y-6">
 
-                        {/* MAP CARD — react-leaflet + Nominatim */}
                         <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
                             <div className="px-4 pt-4 pb-2">
                                 <h3 className="text-[15px] font-bold text-neutral-700">{t("trip.detail.location")}</h3>
                                 <p className="text-xs text-neutral-500 mt-0.5">{currentTrip.location}</p>
                             </div>
 
-                            {/* Peta react-leaflet */}
                             <div className="h-52 bg-neutral-200 relative z-0">
                                 <MapContainer
                                     key={`${position[0]}-${position[1]}`}
@@ -358,7 +339,6 @@ export default function Detail({ trip }) {
                                     </Marker>
                                 </MapContainer>
 
-                                {/* Tombol buka Google Maps */}
                                 <Button
                                     size="sm"
                                     className="absolute bottom-3 right-3 z-[1000] bg-primary-600 text-white shadow-md hover:bg-primary-700 text-xs px-3 py-1.5"
@@ -375,7 +355,6 @@ export default function Detail({ trip }) {
                             </div>
                         </div>
 
-                        {/* Host Card */}
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <img
@@ -413,7 +392,6 @@ export default function Detail({ trip }) {
                                         <BsChatText className="text-lg" />
                                     </button>
                                 )}
-                                {/* Grup chat trip — hanya untuk peserta / pemandu */}
                                 {(currentTrip.already_joined || isOwner) && (
                                     <button
                                         type="button"
@@ -428,7 +406,6 @@ export default function Detail({ trip }) {
                             </div>
                         </div>
 
-                        {/* Pricing Card */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-200">
                             <h3 className="text-[17px] font-bold text-neutral-700 mb-2">{t("trip.detail.total_price")}</h3>
                             <div className="flex items-end gap-1 mb-6">
@@ -463,9 +440,6 @@ export default function Detail({ trip }) {
                                 </p>
                             </div>
 
-                            {/* Pemandu tidak melihat bar pemesanan, jadi keterangan ini
-                                yang menjelaskan kenapa tripnya tidak bisa dipesan.
-                                Gayanya disamakan dengan kartu serupa di Pergi Bareng. */}
                             {isOwner && (
                                 <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-center text-sm text-neutral-600">
                                     {t("trip.detail.you_organizer")}
@@ -476,8 +450,6 @@ export default function Detail({ trip }) {
                 </div>
             </Container>
 
-            {/* STICKY BOTTOM BAR — pemandu tidak bisa memesan tripnya sendiri,
-                jadi bar pemesanan (termasuk tombol suka) tidak ditampilkan untuknya. */}
             {!isOwner && (
             <div className="fixed bottom-0 left-0 w-full bg-white border-t border-neutral-200 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] z-[60]">
                 <Container className="py-4 flex flex-col md:flex-row items-center justify-between gap-4">

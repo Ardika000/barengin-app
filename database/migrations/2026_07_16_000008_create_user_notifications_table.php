@@ -29,7 +29,7 @@ return new class extends Migration
 
             // Kunci anti-duplikat. applyStatus() di MidtransController dipanggil
             // berulang (webhook retry + syncPendingForUser tiap halaman Profile
-            // History dibuka), jadi notifikasi pembayaran WAJIB dikunci di sini —
+            // History dibuka), jadi notifikasi pembayaran WAJIB dikunci di sini -
             // bukan hanya mengandalkan pemanggilnya. NULL = boleh berulang.
             $table->string('dedupe_key')->nullable()->unique();
 

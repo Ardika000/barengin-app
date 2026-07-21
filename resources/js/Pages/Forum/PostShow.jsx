@@ -191,7 +191,7 @@ export default function PostShow() {
 
         // Tampilkan komentar baru optimistik di paling atas. Server akan
         // mengembalikan halaman dalam urutan "Terbaru" (satu request via redirect),
-        // sehingga komentar tetap di atas — tidak melompat & tanpa request kedua.
+        // sehingga komentar tetap di atas - tidak melompat & tanpa request kedua.
         setLocalComments((prev) => [optimistic, ...(prev ?? [])]);
 
         router.post(

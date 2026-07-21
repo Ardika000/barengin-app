@@ -25,12 +25,10 @@ class TripsController extends Controller
         $query = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
-            // Sembunyikan trip yang SUDAH berlangsung (tanggal mulai < hari ini)
-            // maupun yang sudah lewat — hanya trip yang belum berangkat yang tampil.
+            // Cuma trip yang belum berangkat.
             ->whereDate('trips.start_date', '>=', now())
-            ->where('trips.status', '!=', 'draft') // hanya trip yang sudah dipublish
-            // Sembunyikan trip yang kursinya sudah HABIS (total kursi terjual pada
-            // run aktif >= kapasitas). Kursi = SUM(quantity) pesanan berbayar.
+            ->where('trips.status', '!=', 'draft')
+            // Sembunyikan yang kursinya sudah habis (SUM quantity berbayar >= kapasitas).
             ->whereRaw('trips.people_amount > (
                 SELECT COALESCE(SUM(o.quantity), 0)
                   FROM trip_orders o
@@ -39,8 +37,7 @@ class TripsController extends Controller
                    AND (trips.current_run_started_at IS NULL OR o.created_at >= trips.current_run_started_at)
             )', ['paid']);
 
-        // Pencarian longgar: "Bromo" ikut menemukan trip yang lokasinya ditulis
-        // sebagai provinsinya ("Jawa Timur"), termasuk trip lain di kota yang sama.
+        // Longgar: "Bromo" ikut menemukan trip yang lokasinya ditulis provinsinya.
         if ($tujuan !== '') {
             LocationFilter::freeText($query, $tujuan, ['trips.location', 'trips.name'], 'trips.id');
         }
@@ -51,13 +48,9 @@ class TripsController extends Controller
             $query->whereDate('trips.end_date', '<=', $endDate);
         }
 
-        // Sorting di sisi server agar konsisten di seluruh halaman (bukan hanya per halaman)
         switch ($sort) {
             case 'rating':
-                // Urutkan berdasarkan rating PEMANDU (rata-rata user_ratings, type
-                // trip_bareng) — nilai yang sama dengan yang tampil di kartu. Kolom
-                // `trips.rating` tidak dipakai di UI, jadi mengurutkannya membuat
-                // hasil terasa "acak". Trip tanpa rating (NULL) jatuh ke bawah.
+                // Pakai rating pemandu; trips.rating tidak dipakai di UI.
                 $query->orderByDesc(
                     DB::table('user_ratings')
                         ->selectRaw('AVG(rating_amount)')
@@ -97,19 +90,15 @@ class TripsController extends Controller
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
-            // Kursi terisi = TOTAL kursi yang dibayar (SUM quantity) pada run aktif.
-            // Satu orang bisa memesan beberapa kursi, jadi yang dihitung adalah
-            // jumlah kursi, bukan jumlah orang unik.
+            // Kursi, bukan orang unik - satu orang bisa pesan beberapa kursi.
             $joined = (int) DB::table('trip_orders')
                 ->where('trip_id', $trip->id)
                 ->where('order_status', 'paid')
                 ->when($trip->current_run_started_at, fn ($q) => $q->where('created_at', '>=', $trip->current_run_started_at))
                 ->sum('quantity');
 
-            // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
             $remaining = $trip->people_amount - $joined;
 
-            // Rating pemandu dari ulasan trip (type: trip_bareng)
             $guiderRating = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
                 ->where('type', 'trip_bareng')
@@ -128,7 +117,7 @@ class TripsController extends Controller
                 'capacity' => $joined . '/' . $trip->people_amount . ' orang',
                 'remaining_seats' => $remaining > 0 ? $remaining : 0,
                 'rating' => (float) $trip->rating,
-                'reviews' => rand(10, 150), // Ini review trip (bukan guide), bisa biarkan random dulu kalau belum ada tabelnya
+                'reviews' => rand(10, 150),
                 'price' => (float) $trip->price,
                 'guide_id' => $trip->guider_id, 
                 'guide' => $trip->guide_name,
@@ -147,7 +136,7 @@ class TripsController extends Controller
             'trips' => $tripsPaginated,
             'all_trips' => $all_trips,
             'filters' => [
-                'dari'       => $dari, // titik berangkat user (untuk prefill; trip tak punya kolom asal)
+                'dari'       => $dari, // trip tak punya kolom asal, ini cuma buat prefill
                 'tujuan'     => $tujuan,
                 'start_date' => $startDate,
                 'end_date'   => $endDate,
@@ -158,7 +147,6 @@ class TripsController extends Controller
 
     public function show(Request $request, $id)
     {
-        // 1. Ambil data spesifik trip
         $trip = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
@@ -166,9 +154,9 @@ class TripsController extends Controller
             ->first();
 
         if (!$trip) abort(404);
-        if ($trip->status === 'draft') abort(404); // draft belum dipublish
+        if ($trip->status === 'draft') abort(404);
 
-        // Peserta = user unik yang sudah membayar pada run aktif (bukan run lama)
+        // Peserta = user unik yang sudah membayar pada run aktif
         $participants = DB::table('trip_orders')
             ->join('users', 'trip_orders.user_id', '=', 'users.id')
             ->where('trip_orders.trip_id', $trip->id)
@@ -184,12 +172,9 @@ class TripsController extends Controller
             ])
             ->values();
 
-        // Kursi terisi = TOTAL kursi dibayar (SUM quantity). Daftar `participants`
-        // di atas tetap per-orang (untuk avatar), tetapi angka yang ditampilkan
-        // adalah kursi, bukan jumlah orang.
+        // Yang ditampilkan kursi, bukan jumlah orang.
         $joined = $this->joinedCount($trip->id);
 
-        // 2. Ambil Rata-Rata Rating Guide (type: trip_bareng)
         $guiderRating = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
             ->where('type', 'trip_bareng')
@@ -200,7 +185,6 @@ class TripsController extends Controller
             ->where('type', 'trip_bareng')
             ->count();
 
-        // 3. Ambil activities (itinerary)
         $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order', 'asc')->get();
 
         $itinerary = $activitiesDB->map(function ($act) {
@@ -223,7 +207,6 @@ class TripsController extends Controller
             ];
         });
 
-        // 4. Ambil fasilitas (Included)
         $facilities = DB::table('trip_facilities')
             ->join('facilities', 'trip_facilities.facility_id', '=', 'facilities.id')
             ->where('trip_facilities.trip_id', $id)
@@ -247,8 +230,7 @@ class TripsController extends Controller
             'participants' => $participants,
             'price'       => (float) $trip->price,
             'description' => $trip->description,
-            // Guider apa adanya: nama, rating & jumlah ulasan asli dari
-            // user_ratings. rating null = belum pernah diulas (bukan 0).
+            // rating null = belum pernah diulas, bukan 0.
             'host' => [
                 'id' => $trip->guider_id,
                 'name' => $trip->guide_name,
@@ -284,9 +266,7 @@ class TripsController extends Controller
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
-        // Pemandu tidak bisa memesan tripnya sendiri. Bar pemesanan memang sudah
-        // disembunyikan di halaman detail, tetapi URL checkout tetap bisa dibuka
-        // langsung — jadi penjagaannya harus ada di sini juga.
+        // URL checkout bisa dibuka langsung, jadi dijaga di sini juga.
         if ((int) $trip->guider_id === (int) $request->user()->id) {
             return redirect()->route('trip-bareng.show', $trip->id)->with('flash', [
                 'type' => 'error',
@@ -294,28 +274,26 @@ class TripsController extends Controller
             ]);
         }
 
-        // Jumlah peserta = user unik yang sudah membayar (konsisten dgn detail & index)
         $joined = $this->joinedCount($trip->id);
 
         $trip_check_out = [
             'id' => $trip->id,
             'title' => $trip->name,
             'price' => (float) $trip->price,
-            'joined_count' => $joined, // <--- Pakai data asli
+            'joined_count' => $joined,
             'capacity' => $trip->people_amount,
-            'remaining_quota' => $trip->people_amount - $joined, // <--- Hitungan sisa kursi akurat
+            'remaining_quota' => $trip->people_amount - $joined,
             'image' => $this->resolveTripImage($trip->image),
         ];
 
         return Inertia::render('TripBareng/Checkout', [
             'trip' => $trip_check_out,
-            // Client key pasangan MIDTRANS_SERVER_KEY — wajib sama merchant
+            // Client key wajib sepasang dengan MIDTRANS_SERVER_KEY
             'midtrans_client_key' => config('midtrans.client_key'),
             'wallet_balance' => (float) \App\Models\Wallet::forUser((int) $request->user()->id)->balance,
         ]);
     }
 
-    // Ini Fungsi Payment
     public function processPayment(Request $request, $id)
     {
         $trip = DB::table('trips')->where('id', $id)->first();
@@ -326,19 +304,16 @@ class TripsController extends Controller
             return response()->json(['error' => 'Silakan login terlebih dahulu.'], 401);
         }
 
-        // Penjagaan sebenarnya: halaman checkout boleh saja dilewati, tetapi
-        // pesanan tidak boleh terbentuk untuk trip milik sendiri.
+        // Pesanan tidak boleh terbentuk untuk trip milik sendiri.
         if ((int) $trip->guider_id === (int) $user->id) {
             return response()->json(['error' => 'Anda adalah pemandu trip ini.'], 403);
         }
 
         $quantity     = (int) $request->input('quantity', 1);
         $participants = $request->input('participants', []);
-        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
         $payWithWallet = $request->input('payment_method') === 'wallet';
 
-        // Jaring pengaman validasi peserta (selain validasi frontend): tolak data
-        // yang mengandung simbol/karakter aneh sebelum pesanan dibuat.
+        // Jaring pengaman kalau validasi frontend dilewati.
         if (! is_array($participants) || count($participants) < 1) {
             return response()->json(['error' => 'Data peserta tidak lengkap.'], 422);
         }
@@ -363,7 +338,6 @@ class TripsController extends Controller
             }
         }
 
-        // Validasi sisa kuota
         $joined    = $this->joinedCount($id);
         $remaining = $trip->people_amount - $joined;
 
@@ -371,14 +345,12 @@ class TripsController extends Controller
             return response()->json(['error' => "Kuota tidak cukup. Sisa: {$remaining} orang."], 422);
         }
 
-        // Hitung total — HARUS integer untuk Midtrans
+        // Midtrans hanya menerima integer
         $serviceFee   = 5000 * $quantity;
         $insuranceFee = 5000 * $quantity;
         $totalAmount  = (int) round(($trip->price * $quantity) + $serviceFee + $insuranceFee);
 
-        // Saldo dicek lebih dulu agar tidak meninggalkan pesanan menggantung saat
-        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di Wallet::debit()
-        // yang mengunci baris dompet.
+        // Cek longgar; yang mengikat ada di Wallet::debit().
         if ($payWithWallet) {
             $wallet = \App\Models\Wallet::forUser((int) $user->id);
             if (! $wallet->hasSufficientBalance($totalAmount)) {
@@ -393,7 +365,7 @@ class TripsController extends Controller
         $transactionId = (string) \Illuminate\Support\Str::uuid();
         $tripOrderId = null;
 
-        // Insert ke DB — TANPA va_number (kolom itu tidak ada di tabel)
+        // Tanpa va_number - kolomnya tidak ada di tabel
         try {
             DB::table('transactions')->insert([
                 'id'             => $transactionId,
@@ -401,7 +373,6 @@ class TripsController extends Controller
                 'total_amount'   => $totalAmount,
                 'type'           => 'trip',
                 'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
-                // TIDAK ADA va_number
                 'expired_at'     => now()->addHours(24),
                 'created_at'     => now(),
                 'updated_at'     => now(),
@@ -433,8 +404,7 @@ class TripsController extends Controller
             'order.created:trx:' . $transactionId,
         );
 
-        // Bayar dari saldo: tidak ada popup Snap — pesanan langsung dilunasi
-        // lewat jalur pelunasan yang sama dengan Midtrans.
+        // Bayar saldo: tanpa popup Snap, langsung dilunasi.
         if ($payWithWallet) {
             try {
                 (new \App\Services\WalletPayment())->settle(
@@ -460,7 +430,6 @@ class TripsController extends Controller
             ]);
         }
 
-        // Konfigurasi Midtrans — pakai config(), bukan env() langsung
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');
         \Midtrans\Config::$isProduction = config('midtrans.is_production', false);
         \Midtrans\Config::$isSanitized  = true;
@@ -496,11 +465,7 @@ class TripsController extends Controller
                 'email'      => $user->email,
                 'phone'      => $user->phone ?? '08000000000',
             ],
-            // URL tujuan setelah pembayaran untuk channel yang REDIRECT keluar
-            // halaman (VA, sebagian e-wallet). Tanpa ini, Midtrans memakai "Finish
-            // Redirect URL" dari dashboard yang defaultnya https://example.com —
-            // itulah "Example Domain" yang dilihat sebagian user. Channel popup
-            // tetap ditangani callback JS (onSuccess) di Checkout.
+            // Tanpa ini Midtrans pakai finish URL dashboard yang defaultnya example.com.
             'callbacks' => [
                 'finish' => route('trip-bareng.success', $id),
             ],
@@ -509,7 +474,6 @@ class TripsController extends Controller
         try {
             $snapToken = \Midtrans\Snap::getSnapToken($params);
 
-            // Simpan token agar pembayaran bisa dibuka kembali dari Profile History
             DB::table('transactions')->where('id', $transactionId)->update([
                 'snap_token' => $snapToken,
                 'updated_at' => now(),
@@ -520,7 +484,6 @@ class TripsController extends Controller
                 'transaction_id' => $transactionId,
             ]);
         } catch (\Exception $e) {
-            // Rollback jika Midtrans gagal
             DB::table('trip_orders')->where('transaction_id', $transactionId)->delete();
             DB::table('transactions')->where('id', $transactionId)->delete();
 
@@ -533,7 +496,6 @@ class TripsController extends Controller
 
     public function success(Request $request, $id)
     {
-        // Pastikan status pembayaran tersinkron (peserta & grup chat dibuat saat lunas)
         if ($request->user()) {
             MidtransController::syncPendingForUser($request->user()->id);
         }
@@ -544,9 +506,7 @@ class TripsController extends Controller
         $startDate = Carbon::parse($trip->start_date);
         $endDate = Carbon::parse($trip->end_date);
 
-        // "Teman yang menunggu" = jumlah ORANG lain yang sudah bergabung (bukan
-        // kursi): hitung peserta unik lalu kurangi 1 untuk si pembeli sendiri.
-        // Berbasis orang, jadi kursi ganda milik satu peserta tidak ikut dihitung.
+        // Berbasis orang, bukan kursi: kurangi 1 untuk pembeli sendiri.
         $runStart = $trip->current_run_started_at;
         $distinctParticipants = (int) DB::table('trip_orders')
             ->where('trip_id', $trip->id)
@@ -555,6 +515,10 @@ class TripsController extends Controller
             ->distinct()
             ->count('user_id');
 
+        // "Teman menunggu" = peserta lain (tanpa pembeli ini) + penyelenggara trip,
+        // yang belum ikut terhitung karena creator tidak membeli order sendiri.
+        $friendsWaiting = max(0, $distinctParticipants - 1) + 1;
+
         $order = [
             'transaction_id' => 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
             'trip_id' => (int) $trip->id,
@@ -562,7 +526,7 @@ class TripsController extends Controller
             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
             'quantity' => 1,
             'image' => $this->resolveTripImage($trip->image),
-            'friends_waiting' => max(0, $distinctParticipants - 1),
+            'friends_waiting' => $friendsWaiting,
         ];
 
         return Inertia::render('TripBareng/Success', [
@@ -570,24 +534,12 @@ class TripsController extends Controller
         ]);
     }
 
-    /**
-     * Ubah path gambar trip dari DB menjadi URL yang bisa dipakai <img>.
-     * - kosong  -> gambar contoh
-     * - http/.. -> dipakai apa adanya
-     * - relatif -> diarahkan ke storage link
-     */
-    /**
-     * Jumlah peserta yang sudah bergabung = user unik yang sudah membayar.
-     * Dipakai konsisten di index, detail, checkout, & success.
-     */
     private function joinedCount($tripId): int
     {
-        // Hanya pesanan pada run aktif — pesanan run lama (sebelum re-trip)
-        // tidak lagi menghitung kursi terisi.
+        // Hanya run aktif; pesanan sebelum re-trip tidak dihitung.
         $runStart = DB::table('trips')->where('id', $tripId)->value('current_run_started_at');
 
-        // TOTAL kursi terjual (SUM quantity), bukan jumlah orang unik: satu orang
-        // boleh memesan lebih dari satu kursi.
+        // SUM quantity: satu orang boleh pesan lebih dari satu kursi.
         return (int) DB::table('trip_orders')
             ->where('trip_id', $tripId)
             ->where('order_status', 'paid')

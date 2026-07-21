@@ -18,6 +18,7 @@ class JastipItem extends Model
         'purchase_province', 'purchase_city', 'purchase_address',
         'max_slot', 'base_price', 'jastip_fee', 'min_buy', 'has_variants', 'weight_gram',
         'status', 'allow_requests', 'start_date', 'end_date', 'pickup_start_date', 'pickup_end_date',
+        'track_shared_at',
     ];
 
     protected function casts()
@@ -32,6 +33,7 @@ class JastipItem extends Model
             'end_date'     => 'date',
             'pickup_start_date' => 'date',
             'pickup_end_date'   => 'date',
+            'track_shared_at'   => 'datetime',
         ];
     }
 
@@ -70,10 +72,6 @@ class JastipItem extends Model
         return $this->hasMany(JastipRequest::class);
     }
 
-    /**
-     * Item yang menerima request titipan & masih terbuka untuk memesan:
-     * published, allow_requests aktif, dan batas pemesanan belum lewat.
-     */
     public function scopeOpenForRequests($query)
     {
         return $query
@@ -83,39 +81,24 @@ class JastipItem extends Model
             ->whereDate('end_date', '>=', \Carbon\Carbon::today());
     }
 
-    // ── Helpers ──────────────────────────────────────────────
-
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;
     }
 
-    /**
-     * Hanya draft yang boleh dihapus — sejalan dengan Trip Bareng. Begitu
-     * dipublish, jastip tampil di etalase dan bisa dipesan, sehingga jastiper
-     * dianggap sudah berkomitmen membelikan barang.
-     */
+    // Sekali dipublish jastiper dianggap sudah berkomitmen, jadi tak bisa dihapus.
     public function canBeDeleted(): bool
     {
         return $this->isDraft();
     }
 
-    /** Harga total = harga dasar + biaya jastip (belum termasuk varian). */
+    // Belum termasuk varian.
     public function totalPrice(): float
     {
         return (float) $this->base_price + (float) $this->jastip_fee;
     }
 
-    /**
-     * Status untuk jastiper (pemilik jastip), 5 tahap:
-     *  - draft       : masih draft
-     *  - published   : masa pemesanan masih buka (hari ini <= end_date)
-     *  - buy_time    : masa pemesanan tutup, sebelum pengambilan dibuka
-     *                  (setelah end_date, sebelum pickup_start_date) → saatnya membelikan
-     *  - pickup_time : masa pengambilan sedang berjalan
-     *                  (pickup_start_date .. pickup_end_date) → serahkan barang ke pembeli
-     *  - finished    : masa pengambilan sudah lewat → bisa di-reopen
-     */
+    // Sisi jastiper: draft -> published -> buy_time -> pickup_time -> finished.
     public static function jastiperStatusOf(?string $status, $endDate, $pickupStartDate, $pickupEndDate = null): string
     {
         if ($status === self::STATUS_DRAFT) {
@@ -144,14 +127,7 @@ class JastipItem extends Model
         );
     }
 
-    /**
-     * Status siklus hidup jastip (untuk badge & kelayakan ulasan):
-     *  - upcoming    : belum dibuka (sebelum start_date)
-     *  - in_order    : masa pemesanan (start_date..end_date)
-     *  - in_process  : sedang dibelikan jastiper (setelah order, sebelum pickup)
-     *  - pickup      : masa pengambilan (pickup_start_date..pickup_end_date)
-     *  - finish      : selesai (setelah pickup_end_date) → bisa diulas
-     */
+    // Sisi pembeli: upcoming -> in_order -> in_process -> pickup -> finish.
     public function lifecycleStatus(): string
     {
         $today = \Carbon\Carbon::today();
@@ -171,10 +147,6 @@ class JastipItem extends Model
         return 'finish';
     }
 
-    /**
-     * Status jadwal: 'upcoming' (belum dibuka), 'ongoing' (sedang berlangsung),
-     * atau 'closed' (sudah lewat batas pemesanan).
-     */
     public function scheduleStatus(): string
     {
         $today = \Carbon\Carbon::today();
@@ -187,17 +159,11 @@ class JastipItem extends Model
         return 'ongoing';
     }
 
-    /**
-     * Filter status jastiper (draft/published/buy_time/pickup_time/finished) di SQL.
-     * Harus mencerminkan jastiperStatusOf() persis, termasuk kasus tanggal NULL:
-     * published butuh end_date terisi dan >= hari ini; item published dengan
-     * end_date NULL jatuh ke buy_time/pickup_time/finished — sama seperti versi PHP.
-     */
+    // Versi SQL dari jastiperStatusOf(); penanganan tanggal NULL harus sama persis.
     public function scopeJastiperStatus($query, ?string $status)
     {
         $today = \Carbon\Carbon::today();
 
-        // Sudah lewat masa pemesanan — prasyarat buy_time/pickup_time/finished.
         $orderClosed = function ($q) use ($today) {
             $q->where('jastip_items.status', self::STATUS_PUBLISHED)
                 ->where(function ($w) use ($today) {
@@ -205,7 +171,6 @@ class JastipItem extends Model
                 });
         };
 
-        // Masa pengambilan sudah dibuka — prasyarat pickup_time/finished.
         $pickupOpened = function ($q) use ($today) {
             $q->where(function ($w) use ($today) {
                 $w->whereNull('pickup_start_date')->orWhereDate('pickup_start_date', '<=', $today);
@@ -237,7 +202,6 @@ class JastipItem extends Model
         };
     }
 
-    /** Hanya jastip yang masih relevan: sedang berlangsung atau akan dibuka (bukan yang sudah lewat). */
     public function scopeActiveWindow($query)
     {
         return $query->where(function ($q) {
@@ -245,7 +209,6 @@ class JastipItem extends Model
         });
     }
 
-    /** Filter berdasarkan jadwal: 'ongoing' atau 'upcoming'. */
     public function scopeSchedule($query, ?string $schedule)
     {
         $today = \Carbon\Carbon::today();

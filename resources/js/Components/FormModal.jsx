@@ -4,7 +4,7 @@ import { FiAlertCircle } from "react-icons/fi";
 import Button from "@/Components/Button";
 
 // Varian ConfirmModal yang bisa memuat field input (children) di antara
-// deskripsi dan bar aksi — dipakai mis. modal Re-trip (tanggal baru) dan
+// deskripsi dan bar aksi - dipakai mis. modal Re-trip (tanggal baru) dan
 // modal Penawaran request jastip (harga + biaya). Gaya shell disamakan
 // dengan ConfirmModal agar konsisten di semua halaman admin.
 const SIZE_MAP = {
@@ -26,9 +26,9 @@ export default function FormModal({
     iconClass = "bg-blue-100 text-primary-700",
     confirmType = "primary", // primary | danger | success | warning | neutral
     processing = false,
-    size = "sm", // sm | md | lg — lebar shell modal
+    size = "sm", // sm | md | lg - lebar shell modal
 }) {
-    // Esc menutup modal — pasangan alami dari klik di luar. Hook harus berada di
+    // Esc menutup modal - pasangan alami dari klik di luar. Hook harus berada di
     // atas early return supaya urutannya tidak berubah antar render.
     useEffect(() => {
         if (!open) return;
@@ -73,7 +73,7 @@ export default function FormModal({
                     </div>
                 </div>
 
-                {/* Field input — area yang bisa di-scroll */}
+                {/* Field input - area yang bisa di-scroll */}
                 {children && (
                     <div className="flex-1 space-y-4 overflow-y-auto px-6 pb-2">{children}</div>
                 )}
@@ -106,7 +106,7 @@ export default function FormModal({
     );
 
     // Di-portal ke <body>: modal ini dipakai di dalam kartu/sidebar yang
-    // ber-position sticky, dan sticky selalu membuat stacking context baru —
+    // ber-position sticky, dan sticky selalu membuat stacking context baru -
     // sehingga z-index setinggi apa pun tetap terkurung di bawah navbar.
     return createPortal(overlay, document.body);
 }

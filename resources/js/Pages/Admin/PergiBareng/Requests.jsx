@@ -135,7 +135,7 @@ export default function Requests({ trip, requests = [], participants = [] }) {
             </div>
         </div>
 
-        {/* Daftar peserta yang sudah bergabung — bisa dikeluarkan */}
+        {/* Daftar peserta yang sudah bergabung - bisa dikeluarkan */}
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden mt-6">
             <div className="p-5 border-b border-neutral-100 flex items-center gap-2">
                 <span className="p-1.5 bg-neutral-100 rounded-md"><FiUsers className="text-neutral-600" size={16} /></span>

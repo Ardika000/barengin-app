@@ -10,24 +10,13 @@ import { toast } from "@/lib/toast";
 const rupiah = (n) =>
     "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
 
-/**
- * Kartu tagihan patungan di dalam gelembung chat.
- *
- * `reference` (snapshot pada pesan) hanya dipakai untuk judul; status lunas/belum
- * datang dari `state` yang dikirim ulang tiap render halaman, sehingga kartu lama
- * di riwayat chat tetap menampilkan keadaan terkini.
- */
 export default function SplitBillCard({ reference, state, clientKey }) {
     const { t } = useTranslation();
     const snapReady = useMidtransSnap(clientKey);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
-    // Token Snap dari percobaan yang belum tuntas (popup ditutup / pending),
-    // supaya pembayaran bisa dilanjutkan tanpa membuat transaksi baru.
     const [pendingToken, setPendingToken] = useState(null);
 
-    // Tagihan sudah dihapus / tidak terlihat oleh user ini → tampilkan ringkasan
-    // seadanya dari snapshot pesan supaya gelembung tidak kosong.
     if (!state) {
         return (
             <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
@@ -50,8 +39,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
         ? Math.max(0, Number(mine.amount) - Number(state.wallet_balance ?? 0))
         : 0;
 
-    // Bayar dari saldo: tidak lewat Snap — server memotong saldo lalu melunasi
-    // bagian ini, jadi cukup muat ulang untuk melihat status terbaru.
     const payWithWallet = async () => {
         if (busy || !mine) return;
         setError(null);
@@ -80,13 +67,10 @@ export default function SplitBillCard({ reference, state, clientKey }) {
         }
     };
 
-    // snap.pay() hanya membuka popup lalu langsung kembali — jadi status "busy"
-    // dilepas di callback-nya, bukan di `finally`. Kalau dilepas di `finally`,
-    // tombol aktif lagi padahal popup masih terbuka.
     const openSnap = (token) => {
+        // snap.pay cuma buka popup lalu balik, jadi busy dilepas di callback -
+        // kalau di finally tombolnya aktif lagi padahal popup masih terbuka.
         window.snap.pay(token, {
-            // Muat ulang agar status kartu (dan dompet penyelenggara)
-            // ikut ter-update dari server.
             onSuccess: () => {
                 setPendingToken(null);
                 toast.success(
@@ -95,8 +79,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                 router.reload();
             },
             onPending: () => {
-                // Pembayaran belum tuntas (mis. transfer bank menunggu). Simpan
-                // token supaya bisa dilanjutkan lewat tombol yang sama.
                 setPendingToken(token);
                 setBusy(false);
                 router.reload();
@@ -105,8 +87,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                 setError(t("split_bill.pay_failed", "Pembayaran gagal."));
                 setBusy(false);
             },
-            // Popup ditutup tanpa menyelesaikan pembayaran → simpan token supaya
-            // tombol berubah jadi "Lanjutkan Pembayaran", bukan menggantung.
             onClose: () => {
                 setPendingToken(token);
                 setBusy(false);
@@ -125,8 +105,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
 
         setBusy(true);
 
-        // Sudah punya token dari percobaan sebelumnya → langsung buka lagi,
-        // tanpa membuat transaksi baru di server.
         if (pendingToken) {
             openSnap(pendingToken);
             return;
@@ -170,7 +148,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                 </p>
             ) : null}
 
-            {/* Sudut pandang penyelenggara: rekap siapa yang sudah bayar. */}
             {state.is_creator ? (
                 <div className="mt-3 border-t border-amber-200 pt-2">
                     <p className="mb-1.5 text-xs font-semibold text-neutral-600">
@@ -209,7 +186,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                 </div>
             ) : null}
 
-            {/* Sudut pandang anggota: bagiannya sendiri. */}
             {mine ? (
                 <div className="mt-3 border-t border-amber-200 pt-2">
                     <div className="flex items-center justify-between gap-2">
@@ -228,9 +204,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                         </p>
                     ) : (
                         <div className="mt-2 space-y-1.5">
-                            {/* Bayar dari saldo — SELALU ditampilkan agar pembayar
-                                tahu opsinya. Nonaktif bila saldo kurang, disertai
-                                arahan mengisi saldo. Server tetap memvalidasi ulang. */}
                             <button
                                 type="button"
                                 onClick={payWithWallet}
@@ -259,8 +232,6 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                                 </p>
                             ) : null}
 
-                            {/* Popup Midtrans ditutup tanpa selesai → jelaskan
-                                bahwa pembayaran masih bisa dilanjutkan. */}
                             {pendingToken ? (
                                 <p className="flex items-start gap-1 px-0.5 text-[11px] text-amber-600">
                                     <FiClock className="mt-0.5 h-3 w-3 shrink-0" />

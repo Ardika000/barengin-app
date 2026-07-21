@@ -10,34 +10,26 @@ import ConfirmModal from "@/Components/ConfirmModal";
 import { toast } from "@/lib/toast";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiAlertTriangle } from "react-icons/fi";
-import { FaKey } from "react-icons/fa6"; // Menggunakan FaKey untuk icon verify
+import { FaKey } from "react-icons/fa6";
 
 const labelClass = "block text-sm font-semibold text-neutral-700 mb-1.5";
 
 export default function EditUser({ user }) {
     const { t } = useTranslation();
-    // Guard ringan agar tidak error bila prop user belum tersedia (tanpa data palsu).
     const safeUser = user ?? {};
 
-    // Inertia useForm untuk menghandle data yang BISA diubah (Roles & Verification)
     const { data, setData, put, processing } = useForm({
         is_guider: safeUser.is_guider,
         is_admin: safeUser.is_admin,
         verified: safeUser.is_verified === 1 || safeUser.is_verified === true,
     });
 
-    // State untuk Modal Verifikasi
     const [modalType, setModalType] = useState(null); // 'verify' | 'unverify' | null
 
-    // ==========================================
-    // LOGIKA TOGGLE VERIFICATION
-    // ==========================================
     const handleToggleClick = () => {
-        // Jika saat ini terverifikasi (true), maka munculkan popup unverify
         if (data.verified) {
             setModalType("unverify");
         } else {
-            // Jika saat ini belum terverifikasi (false), munculkan popup verify
             setModalType("verify");
         }
     };
@@ -48,17 +40,13 @@ export default function EditUser({ user }) {
         } else if (modalType === "unverify") {
             setData("verified", false);
         }
-        setModalType(null); // Tutup modal setelah konfirmasi
+        setModalType(null);
     };
 
     const closeModal = () => setModalType(null);
 
-    // ==========================================
-    // LOGIKA SUBMIT FORM
-    // ==========================================
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Kirim perubahan role & verifikasi ke backend
         put(`/admin/management-user/${safeUser.id}`, {
             preserveScroll: true,
             onSuccess: () => toast.success(t("admin.edit_user.toast_success")),
@@ -70,9 +58,6 @@ export default function EditUser({ user }) {
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden min-h-[500px] relative pb-10">
             <Head title="Edit Pengguna" />
 
-            {/* ==========================================
-                MODAL POPUP: VERIFY & UNVERIFY (pakai ConfirmModal global)
-            ========================================== */}
             <ConfirmModal
                 open={modalType === "verify"}
                 onClose={closeModal}
@@ -98,9 +83,6 @@ export default function EditUser({ user }) {
                 confirmType="danger"
             />
 
-            {/* ==========================================
-                HEADER HALAMAN
-            ========================================== */}
             <div className="p-6 border-b border-neutral-100 flex items-center gap-4">
                 <Link
                     href="/admin/management-user"
@@ -114,11 +96,7 @@ export default function EditUser({ user }) {
                 </div>
             </div>
 
-            {/* ==========================================
-                FORM AREA
-            ========================================== */}
             <form onSubmit={handleSubmit} className="p-6 max-w-3xl">
-                {/* --- Profile Picture --- */}
                 <div className="flex items-center gap-6 mb-8">
                     <img
                         src={safeUser.public_profile_image || "/assets/default-profile.png"}
@@ -129,7 +107,6 @@ export default function EditUser({ user }) {
                     <div>
                         <h4 className="font-semibold text-neutral-700 mb-1">{t("admin.edit_user.photo_label")}</h4>
                         <p className="text-xs text-neutral-500 mb-2">{t("admin.edit_user.photo_hint")}</p>
-                        {/* Fitur hapus gambar dinonaktifkan untuk aksi edit di dashboard admin */}
                         <button
                             type="button"
                             disabled
@@ -141,7 +118,6 @@ export default function EditUser({ user }) {
                     </div>
                 </div>
 
-                {/* --- READ ONLY FIELDS (Data Diri) --- */}
                 <div className="space-y-5 mb-8">
                     <div>
                         <label className={labelClass}>{t("admin.edit_user.full_name")}</label>
@@ -175,12 +151,10 @@ export default function EditUser({ user }) {
                     </div>
                 </div>
 
-                {/* --- EDITABLE FIELDS (Roles) --- */}
                 <div className="mb-8">
                     <label className={`${labelClass} mb-3`}>{t("admin.edit_user.roles_label")}</label>
                     <div className="border border-neutral-200 rounded-2xl p-4 flex flex-col gap-3">
 
-                        {/* Guider Checkbox Card */}
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_guider ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
                                 <div className="font-bold text-neutral-700 text-sm mb-0.5">{t("admin.edit_user.guider_title")}</div>
@@ -192,7 +166,6 @@ export default function EditUser({ user }) {
                             />
                         </label>
 
-                        {/* Admin Checkbox Card */}
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_admin ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
                                 <div className="font-bold text-neutral-700 text-sm mb-0.5">{t("admin.edit_user.admin_title")}</div>
@@ -207,7 +180,6 @@ export default function EditUser({ user }) {
                     </div>
                 </div>
 
-                {/* --- USER VERIFICATION TOGGLE --- */}
                 <div className="mb-10">
                     <label className={`${labelClass} mb-3`}>{t("admin.edit_user.verify_label")}</label>
                     <Toggle
@@ -218,7 +190,6 @@ export default function EditUser({ user }) {
                     />
                 </div>
 
-                {/* --- SUBMIT BUTTON --- */}
                 <Button type="primary" rounded={false} disabled={processing} className="rounded-xl font-semibold shadow-sm">
                     {t("admin.edit_user.submit")}
                 </Button>

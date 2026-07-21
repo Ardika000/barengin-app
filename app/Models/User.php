@@ -17,31 +17,19 @@ class User extends Authenticatable
 
     protected $appends = ['public_profile_image'];
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $guarded = [
         'id'
     ];
     
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -54,17 +42,12 @@ class User extends Authenticatable
         ];
     }
 
-    /** Notifikasi yang diterima pengguna ini (lihat model UserNotification). */
     public function user_notifications()
     {
         return $this->hasMany(UserNotification::class);
     }
 
-    /**
-     * Preferensi notifikasi lengkap: kategori yang belum pernah diatur dianggap
-     * AKTIF, sehingga kolom NULL pada pengguna lama tidak perlu di-backfill dan
-     * kategori baru otomatis menyala tanpa migrasi data.
-     */
+    // Kategori yang belum pernah diatur dianggap aktif, jadi tak perlu backfill.
     public function notificationPrefs(): array
     {
         $saved = $this->notification_prefs ?? [];
@@ -92,7 +75,7 @@ class User extends Authenticatable
             return asset('assets/default-profile.png');
         }
 
-        // jika sudah berupa URL lengkap (google avatar images)
+        // avatar google sudah berupa URL lengkap
         if (
             str_starts_with($this->profile_image, 'http://') ||
             str_starts_with($this->profile_image, 'https://')
@@ -181,12 +164,12 @@ class User extends Authenticatable
         return $this->hasMany(PergiBarengRequest::class);
     }
 
-    // Ulasan yang DIBUAT oleh user (sebagai pemberi nilai)
+    // ulasan yang dibuat user
     public function user_ratings(){
         return $this->hasMany(UserRating::class);
     }
 
-    // Ulasan yang DITERIMA user (sebagai pihak yang dinilai)
+    // ulasan yang diterima user
     public function received_ratings(){
         return $this->hasMany(UserRating::class, 'rated_user_id');
     }
@@ -199,7 +182,6 @@ class User extends Authenticatable
         return $this->user_ratings()->avg('rating_amount');
     }
 
-    // Rata-rata & jumlah ulasan yang DITERIMA user (untuk ditampilkan)
     public function receivedRatingAvg($type = null){
         $query = $this->received_ratings();
         if ($type) {

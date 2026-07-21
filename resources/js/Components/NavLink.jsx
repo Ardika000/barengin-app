@@ -9,7 +9,7 @@ export function isNavActive(url, href) {
     return path === href || path.startsWith(href + "/");
 }
 
-// Pisahkan href jadi { path, tab } — untuk item dropdown yang path-nya sama tapi
+// Pisahkan href jadi { path, tab } - untuk item dropdown yang path-nya sama tapi
 // dibedakan lewat ?tab= (mis. /profile-history vs /profile-history?tab=settings).
 export function splitHref(href) {
     const [path, query] = String(href || "").split("?");

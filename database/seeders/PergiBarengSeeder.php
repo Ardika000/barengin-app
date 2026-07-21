@@ -31,7 +31,7 @@ class PergiBarengSeeder extends Seeder
         ];
 
         // Get beberapa user untuk jadi initiator (urut id agar deterministik:
-        // users[0] = admin → jadi initiator pergi bareng index 0 yang sudah
+        // users[0] = admin -> jadi initiator pergi bareng index 0 yang sudah
         // selesai, sehingga admin menerima rating type pergi_bareng).
         $users = User::where('id', '>=', 1)->orderBy('id')->take(5)->get();
 
@@ -157,9 +157,9 @@ class PergiBarengSeeder extends Seeder
             $trip['img_name'] = $images[$index % count($images)];
 
             // Waktu janji tersebar agar tiap status muncul:
-            //  - index 0-2 : sudah lewat  → Selesai (bisa diulas)
-            //  - index 3-4 : hari ini     → Berlangsung
-            //  - index 5+  : akan datang  → Akan Mulai
+            //  - index 0-2 : sudah lewat  -> Selesai (bisa diulas)
+            //  - index 3-4 : hari ini     -> Berlangsung
+            //  - index 5+  : akan datang  -> Akan Mulai
             if ($index < 3) {
                 $trip['time_appointment'] = Carbon::now()->subDays(rand(3, 30))->setTime(rand(6, 16), 0);
             } elseif ($index < 5) {
@@ -170,7 +170,7 @@ class PergiBarengSeeder extends Seeder
 
             $pb = PergiBareng::create($trip);
 
-            // Peserta (selain penyelenggara) — agar muncul di riwayat & bisa diulas saat selesai
+            // Peserta (selain penyelenggara) - agar muncul di riwayat & bisa diulas saat selesai
             $candidates = array_values(array_filter($allUserIds, fn ($id) => $id !== $pb->initiator_id));
             $participantIds = [];
             if (! empty($candidates)) {

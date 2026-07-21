@@ -12,33 +12,17 @@ use App\Models\UserNotification;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Mengeluarkan seorang peserta dari pergi bareng / trip.
- *
- * Dipakai dari dua pintu masuk yang berbagi aturan sama:
- *  - Halaman manajemen (daftar peserta) milik penyelenggara/pemandu.
- *  - Tombol "Keluarkan" pada anggota grup chat.
- *
- * Mengeluarkan peserta selalu mencakup melepasnya dari grup chat entitas itu,
- * membebaskan kuota, memberi notifikasi, dan mencatat aktivitas — di satu tempat
- * agar kedua pintu masuk tak pernah menyimpang.
- */
+// Mengeluarkan peserta dari pergi bareng / trip. Dipakai halaman manajemen dan
+// tombol "Keluarkan" di grup chat, disatukan di sini biar tak menyimpang.
 class ParticipantRemoval
 {
-    /**
-     * Keluarkan peserta dari sebuah pergi bareng. Peserta gabung tanpa bayar,
-     * jadi cukup hapus baris pesertanya (membebaskan kursi) & lepas dari grup.
-     *
-     * @return bool true bila memang ada peserta yang dikeluarkan.
-     */
     public function fromPergiBareng(PergiBareng $trip, int $userId): bool
     {
         $removed = PergiBarengParticipant::where('pergi_bareng_id', $trip->id)
             ->where('user_id', $userId)
             ->delete();
 
-        // Selalu lepas dari grup, walau baris peserta sudah tidak ada — supaya
-        // pintu "Keluarkan dari grup" tetap membersihkan keanggotaan chat.
+        // Tetap dilepas walau baris pesertanya sudah tidak ada.
         $this->detachFromGroup(
             Conversation::where('pergi_bareng_id', $trip->id)->where('is_group', true)->first(),
             $userId,
@@ -60,17 +44,7 @@ class ParticipantRemoval
         return true;
     }
 
-    /**
-     * Keluarkan peserta dari sebuah trip. Peserta trip sudah membayar, jadi
-     * dana dikembalikan ke dompetnya, pesanannya ditandai 'refunded' (membebaskan
-     * kursi), lalu dilepas dari grup.
-     *
-     * Hanya pesanan berbayar pada RUN AKTIF yang diproses. Kredit dompet
-     * idempotent per pesanan, jadi menekan "Keluarkan" dua kali tidak
-     * mengembalikan dana dua kali.
-     *
-     * @return bool true bila memang ada pesanan berbayar yang dikembalikan.
-     */
+    // Peserta trip sudah bayar, jadi dananya dikembalikan ke dompet dulu.
     public function fromTrip(Trip $trip, int $userId): bool
     {
         $runStart = $trip->current_run_started_at;
@@ -81,8 +55,6 @@ class ParticipantRemoval
             ->when($runStart, fn ($q) => $q->where('created_at', '>=', $runStart))
             ->get();
 
-        // Tetap lepas dari grup meski tak ada pesanan berbayar (mis. pemandu
-        // membersihkan keanggotaan chat yang tersisa).
         $conversation = Conversation::where('trip_id', $trip->id)->where('is_group', true)->first();
 
         if ($orders->isEmpty()) {
@@ -94,8 +66,7 @@ class ParticipantRemoval
             $wallet = Wallet::forUser($userId);
 
             foreach ($orders as $order) {
-                // Kembalikan dana lebih dulu (idempotent per pesanan), lalu tandai
-                // pesanannya agar tidak terhitung sebagai kursi terisi lagi.
+                // credit() idempotent per pesanan, klik dua kali tak refund dobel.
                 $wallet->credit(
                     (float) $order->total,
                     'Pengembalian dana trip: ' . $trip->name,

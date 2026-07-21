@@ -32,7 +32,7 @@ export default function Checkout({
     const [snapToken, setSnapToken] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState("midtrans");
 
-    // Load Midtrans Snap script — identik dengan checkout trip (terbukti bekerja)
+    // Load Midtrans Snap script - identik dengan checkout trip (terbukti bekerja)
     useEffect(() => {
         const existing = document.querySelector(
             'script[src*="midtrans.com/snap/snap.js"]',
@@ -141,7 +141,7 @@ export default function Checkout({
             })),
         };
 
-        // Bayar dari saldo: tidak lewat Snap sama sekali — server memotong saldo
+        // Bayar dari saldo: tidak lewat Snap sama sekali - server memotong saldo
         // lalu langsung melunasi pesanan.
         if (paymentMethod === "wallet") {
             setIsProcessing(true);
@@ -204,7 +204,7 @@ export default function Checkout({
         <div className="min-h-screen bg-gray-50 pb-20 pt-6">
             <Head title="Pembayaran Jastip - Barengin" />
             <Container>
-                {/* Header — konsisten dgn checkout trip */}
+                {/* Header - konsisten dgn checkout trip */}
                 <div className="mb-8">
                     {/* Selalu kembali ke etalase semua jastip. Sebelumnya memakai
                         window.history.back() yang bisa memantul kembali ke checkout
@@ -302,7 +302,7 @@ export default function Checkout({
                                                     >
                                                         <FaTrashAlt className="text-sm" />
                                                     </button>
-                                                    {/* Counter — desain sama dgn checkout trip */}
+                                                    {/* Counter - desain sama dgn checkout trip */}
                                                     <div className="flex items-center gap-4">
                                                         <button
                                                             type="button"
@@ -438,7 +438,7 @@ export default function Checkout({
                                 </span>
                             </div>
 
-                            {/* Metode pembayaran — dikunci setelah token Snap dibuat
+                            {/* Metode pembayaran - dikunci setelah token Snap dibuat
                                 agar pilihan tidak berubah di tengah transaksi */}
                             <div className="mb-6">
                                 <PaymentMethodSelector

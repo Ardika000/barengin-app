@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Schema;
 // Penanda "kartu pantau perjalanan sudah dibagikan ke grup".
 //
 // Sebelumnya fakta ini disimpulkan dengan memindai seluruh pesan bereferensi di
-// percakapan lalu menyaringnya di PHP. Itu berat — pemeriksaannya ikut berjalan
+// percakapan lalu menyaringnya di PHP. Itu berat - pemeriksaannya ikut berjalan
 // pada tiap tick polling chat (~5 detik, dikali jumlah anggota) justru pada grup
-// yang paling ramai — dan tidak aman terhadap balapan: dua poll bersamaan
+// yang paling ramai - dan tidak aman terhadap balapan: dua poll bersamaan
 // sama-sama tidak menemukan kartu, lalu keduanya mengirim.
 //
 // Satu kolom di baris perjalanan membuat pemeriksaannya O(1) lewat primary key,
@@ -44,7 +44,7 @@ return new class extends Migration
                         continue;
                     }
 
-                    // Kartu paling awal yang menang — chunk diurutkan id menaik.
+                    // Kartu paling awal yang menang - chunk diurutkan id menaik.
                     DB::table('pergi_barengs')
                         ->where('id', $tripId)
                         ->whereNull('track_shared_at')

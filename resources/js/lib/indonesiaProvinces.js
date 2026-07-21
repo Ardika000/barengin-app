@@ -1,4 +1,4 @@
-// Daftar provinsi Indonesia (nama kanonik — dipakai untuk filter lokasi ambil jastip).
+// Daftar provinsi Indonesia (nama kanonik - dipakai untuk filter lokasi ambil jastip).
 // Nama diselaraskan dengan hasil reverse-geocode (principalSubdivision) agar
 // rekomendasi "Gunakan Lokasi Saya" bisa cocok otomatis.
 export const INDONESIA_PROVINCES = [

@@ -52,7 +52,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                 <p className="text-neutral-500 text-sm">{translate("admin.pergi.index_subtitle")}</p>
             </div>
 
-            {/* Sedang berlangsung — penyelenggara bisa menyelesaikan lebih cepat */}
+            {/* Sedang berlangsung - penyelenggara bisa menyelesaikan lebih cepat */}
             <OngoingSection
                 items={ongoing.map((o) => ({
                     id: o.id,
@@ -135,7 +135,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                     {/* Lebar kolom dalam persen, bukan piksel: dengan table-fixed +
                         w-full tabel selalu pas selebar dasbor di layar lebar, tanpa
                         memaksa gulir mendatar. min-w hanya jadi batas bawah supaya
-                        di ponsel kolomnya tetap terbaca dan tabel yang menggulir —
+                        di ponsel kolomnya tetap terbaca dan tabel yang menggulir -
                         bukan tulisannya yang patah tiap kata. */}
                     <table className="w-full min-w-[940px] table-fixed text-left border-collapse">
                         <thead>
@@ -198,7 +198,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                         </span>
                                                     )}
                                                 </Link>
-                                                {/* Pantau perjalanan — hanya saat berlangsung */}
+                                                {/* Pantau perjalanan - hanya saat berlangsung */}
                                                 {t.status === "ongoing" && (
                                                     <button
                                                         onClick={() => trackTrip(t.id)}
@@ -241,7 +241,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                     </Link>
                                                 )}
                                                 {/* Hapus tersedia untuk semua status KECUALI
-                                                    yang sedang berlangsung — perjalanan yang
+                                                    yang sedang berlangsung - perjalanan yang
                                                     berjalan tidak boleh dihapus. */}
                                                 {t.status !== "ongoing" && (
                                                     <button

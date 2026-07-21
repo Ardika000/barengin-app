@@ -18,28 +18,19 @@ class JastipController extends Controller
     private const SERVICE_FEE = 5000; // biaya layanan flat per pesanan
     private const CART_KEY = 'jastip_cart';
 
-    // ── Daftar produk (etalase pembeli) ──────────────────────────────────
-    //
-    // Sistem pencarian:
-    //  - search : substring nama/brand produk. Jika 0 hasil, sarankan nama
-    //             terdekat (toleransi typo, levenshtein + similar_text).
-    //  - from_q : lokasi pembelian ("Dari") — substring di purchase_province/city/address.
-    //  - to_q   : lokasi ambil ("Ke") — substring di pickup_province/city/address.
-    //  - province/city, kategori & rentang harga sebagai filter sidebar.
     public function index(Request $request)
     {
         $search     = trim((string) $request->query('search', ''));
         $fromQ      = trim((string) $request->query('from_q', ''));
         $toQ        = trim((string) $request->query('to_q', ''));
         $categories = array_values(array_filter((array) $request->query('categories', [])));
-        $province   = trim((string) $request->query('province', ''));   // lokasi ambil: provinsi (exact)
+        $province   = trim((string) $request->query('province', ''));   // provinsi lokasi ambil, exact
         $priceMin   = $request->query('price_min');
         $priceMax   = $request->query('price_max');
-        $schedule   = trim((string) $request->query('schedule', ''));   // '', 'ongoing', atau 'upcoming'
+        $schedule   = trim((string) $request->query('schedule', ''));   // '', 'ongoing', 'upcoming'
 
-        // Lokasi pengambilan hanya dilayani di Indonesia (lokasi pembelian bebas).
-        // Hanya menolak bila lokasi TERBUKTI asing — teks yang gagal di-geocode
-        // tetap diproses agar pencarian tak ikut mati saat Nominatim bermasalah.
+        // Cuma tolak yang TERBUKTI asing; teks yang gagal di-geocode tetap lolos
+        // supaya pencarian tak ikut mati saat Nominatim bermasalah.
         $foreignPickup = $toQ !== '' && (new RegionResolver())->isForeign($toQ);
 
         $indexQuery = $this->buildIndexQuery($search, $fromQ, $toQ, $categories, $province, $priceMin, $priceMax, $schedule);
@@ -51,13 +42,12 @@ class JastipController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        // Toleransi typo: bila kata kunci tidak menemukan apa pun, sarankan nama terdekat
         $suggestion = null;
         if ($search !== '' && $paginated->total() === 0) {
             $suggestion = $this->closestProductName($search);
         }
 
-        // Rating penjual per pemilik produk di halaman ini (hindari N+1)
+        // Dikumpulkan sekali untuk hindari N+1.
         $ownerIds = $paginated->getCollection()->pluck('user_id')->unique()->all();
         $ratings  = $this->ownerRatings($ownerIds);
         $owners   = DB::table('users')->whereIn('id', $ownerIds)->get(['id', 'full_name', 'profile_image'])->keyBy('id');
@@ -70,8 +60,6 @@ class JastipController extends Controller
         return Inertia::render('Jastip/Index', [
             'products'   => $paginated,
             'suggestion' => $suggestion,
-            // Ditampilkan sebagai peringatan di etalase saat user mengetik lokasi
-            // pengambilan di luar negeri.
             'foreignPickup' => $foreignPickup,
             'filters'    => [
                 'search'     => $search,
@@ -84,7 +72,6 @@ class JastipController extends Controller
                 'schedule'   => $schedule,
             ],
             'categories' => JastipCategory::orderBy('name')->get(['id', 'name', 'slug']),
-            // Provinsi lokasi ambil yang benar-benar punya produk (untuk filter sidebar)
             'provinces'  => JastipItem::query()
                 ->where('status', JastipItem::STATUS_PUBLISHED)
                 ->whereNotNull('pickup_province')
@@ -96,36 +83,27 @@ class JastipController extends Controller
         ]);
     }
 
-    /** Query dasar etalase dengan seluruh filter pencarian. */
     private function buildIndexQuery(string $search, string $fromQ, string $toQ, array $categories, string $province, $priceMin, $priceMax, string $schedule = '')
     {
         $query = JastipItem::query()
             ->where('jastip_items.status', JastipItem::STATUS_PUBLISHED)
-            // #1/#8: sembunyikan jastip yang sudah lewat (hanya sedang berlangsung / akan dibuka)
             ->activeWindow()
             ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
             ->with(['jastip_item_images', 'category'])
             ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'))
             ->latest('jastip_items.created_at');
 
-        // Sembunyikan produk yang stoknya sudah habis dari etalase. max_slot = total
-        // stok seluruh varian (lihat AdminJastipController::persistItem), jadi
-        // terjual >= max_slot berarti benar-benar habis — sama dengan definisi
-        // sold_out di formatCard(). max_slot <= 0 (stok tak diset) dibiarkan tampil
-        // agar perilaku lama tidak berubah.
+        // max_slot = total stok seluruh varian; <= 0 berarti stok tak diset, biarkan tampil.
         $query->whereRaw('(jastip_items.max_slot <= 0 OR COALESCE(sold.sold, 0) < jastip_items.max_slot)');
 
-        // #9: filter jadwal — 'ongoing' (sedang berlangsung) atau 'upcoming' (akan dibuka)
         if (in_array($schedule, ['ongoing', 'upcoming'], true)) {
             $query->schedule($schedule);
         }
 
         if ($search !== '') {
-            // Pencarian nama produk toleran salah-ketik → langsung tampilkan
-            // hasil yang mirip (bukan sekadar saran "mungkin maksud Anda").
             FuzzySearch::apply($query, $search, ['jastip_items.name'], 'jastip_items.id');
         }
-        // "Dari" — tempat barang dibeli. Boleh di luar negeri (mis. Kuala Lumpur).
+        // "Dari" boleh luar negeri, "Ke" wajib Indonesia.
         if ($fromQ !== '') {
             LocationFilter::structured(
                 $query,
@@ -135,8 +113,6 @@ class JastipController extends Controller
                 "CONCAT_WS(' ', COALESCE(purchase_province,''), COALESCE(purchase_city,''), COALESCE(purchase_address,''))",
             );
         }
-        // "Ke" — tempat pembeli mengambil barang (jastiper kembali). Wajib di
-        // Indonesia; teks luar negeri ditolak agar tidak memberi hasil menyesatkan.
         if ($toQ !== '') {
             LocationFilter::structured(
                 $query,
@@ -162,14 +138,12 @@ class JastipController extends Controller
         return $query;
     }
 
-    /** Nama produk terdekat dengan kata kunci (untuk saran "mungkin maksud Anda"). */
     private function closestProductName(string $search): ?string
     {
         $needle = mb_strtolower($search);
 
-        // Hanya sarankan produk yang benar-benar tampil di etalase: published,
-        // jendela aktif, dan stoknya belum habis — samakan dengan buildIndexQuery()
-        // agar tidak merekomendasikan barang yang sudah tidak bisa dibeli.
+        // Filternya harus sama dengan buildIndexQuery(), jangan sarankan barang
+        // yang tak bisa dibeli.
         $names = JastipItem::query()
             ->where('jastip_items.status', JastipItem::STATUS_PUBLISHED)
             ->activeWindow()
@@ -182,7 +156,6 @@ class JastipController extends Controller
         foreach ($names as $name) {
             $hay = mb_strtolower($name);
 
-            // Skor terbaik antara nama penuh dan tiap kata di dalamnya
             $candidates = array_merge([$hay], preg_split('/\s+/', $hay) ?: []);
             foreach ($candidates as $cand) {
                 if ($cand === '') {
@@ -190,7 +163,6 @@ class JastipController extends Controller
                 }
                 similar_text($needle, $cand, $pct);
                 $lev = levenshtein($needle, $cand);
-                // Cocok bila mirip >= 60% atau salah ketik kecil (jarak <= 1/3 panjang)
                 $ok = $pct >= 60 || $lev <= max(1, (int) floor(mb_strlen($needle) / 3));
                 if ($ok && $pct > $bestScore) {
                     $bestScore = $pct;
@@ -202,7 +174,6 @@ class JastipController extends Controller
         return $best;
     }
 
-    /** ID item jastip yang di-like user saat ini. */
     private function likedJastipIds(Request $request): array
     {
         if (! $request->user()) {
@@ -217,7 +188,6 @@ class JastipController extends Controller
             ->all();
     }
 
-    // ── Detail produk ────────────────────────────────────────────────────
     public function show(Request $request, $id)
     {
         $item = JastipItem::query()
@@ -235,7 +205,6 @@ class JastipController extends Controller
         $rating   = $this->accountRating((int) $item->user_id, 'jastiper');
         $likedIds = $this->likedJastipIds($request);
 
-        // Terjual per varian (untuk sisa stok tiap varian)
         $soldByVariant = DB::table('jastip_order_items')
             ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
             ->where('jastip_orders.order_status', 'paid')
@@ -243,7 +212,6 @@ class JastipController extends Controller
             ->groupBy('jastip_item_variant_id')
             ->pluck(DB::raw('SUM(quantity)'), 'jastip_item_variant_id');
 
-        // Varian datar (satu tingkat) — masing-masing punya stok, min beli, & gambar sendiri
         $variants = $item->jastip_item_variants->map(function ($v) use ($soldByVariant) {
             $sold = (int) ($soldByVariant[$v->id] ?? 0);
             return [
@@ -260,12 +228,10 @@ class JastipController extends Controller
         $totalRemaining = $variants->sum('remaining');
         $soldOut = $totalRemaining <= 0;
 
-        // Galeri: gambar produk (base) + gambar varian yang ada (tanpa duplikat)
         $baseImages    = $item->jastip_item_images->map(fn ($img) => $this->resolveImage($img->image_name))->values();
         $variantImages = $variants->pluck('image')->filter()->values();
         $gallery       = $baseImages->merge($variantImages)->unique()->values();
 
-        // Produk lain dari jastiper yang sama
         $others = JastipItem::query()
             ->where('jastip_items.user_id', $item->user_id)
             ->where('jastip_items.id', '!=', $item->id)
@@ -301,14 +267,11 @@ class JastipController extends Controller
                 'weight_gram' => $item->weight_gram ? (float) $item->weight_gram : null,
                 'start_date'      => optional($item->start_date)->translatedFormat('d F Y'),
                 'end_date'        => optional($item->end_date)->translatedFormat('d F Y'),
-                // #4: 'upcoming' (akan dibuka) menonaktifkan pemesanan → tombol jadi "tambah favorit"
                 'schedule_status' => $item->scheduleStatus(), // upcoming | ongoing | closed
-                // Jendela pengambilan barang oleh pembeli
                 'pickup_start_date' => optional($item->pickup_start_date)->translatedFormat('d F Y'),
                 'pickup_end_date'   => optional($item->pickup_end_date)->translatedFormat('d F Y'),
                 'images'      => $gallery,
                 'variants'    => $variants,
-                // Lokasi pembelian (dibeli di) & lokasi ambil (tiba di / titik temu)
                 'origin'          => $item->purchase_city ?: $item->purchase_province,
                 'origin_region'   => $item->purchase_province,
                 'destination'     => $item->pickup_city ?: $item->pickup_province,
@@ -327,7 +290,56 @@ class JastipController extends Controller
         ]);
     }
 
-    // ── Keranjang (session) ──────────────────────────────────────────────
+    // Peta menuju titik ambil. Hanya untuk jastiper & pembeli yang sudah bayar,
+    // dan hanya selama masa pengambilan masih berjalan.
+    public function track(Request $request, $id)
+    {
+        $item = JastipItem::findOrFail($id);
+
+        $userId = (int) $request->user()->id;
+        $isOwner = (int) $item->user_id === $userId;
+        $isBuyer = DB::table('jastip_order_items')
+            ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
+            ->join('transactions', 'jastip_orders.transaction_id', '=', 'transactions.id')
+            ->where('jastip_order_items.jastip_item_id', $item->id)
+            ->where('jastip_orders.order_status', 'paid')
+            ->where('transactions.user_id', $userId)
+            ->exists();
+
+        // Titik ambil membocorkan lokasi janjian, jadi non-anggota dipulangkan ke detail.
+        if (! $isOwner && ! $isBuyer) {
+            return redirect()
+                ->route('jastip.show', $item->id)
+                ->with('flash', [
+                    'type' => 'info',
+                    'message' => 'Pantau pengambilan hanya untuk jastiper dan pembeli jastip ini.',
+                ]);
+        }
+
+        // Dijaga di server karena kartu lama di grup chat masih bisa diklik.
+        if ($item->jastiperStatus() !== 'pickup_time') {
+            return redirect()
+                ->route('jastip.show', $item->id)
+                ->with('flash', [
+                    'type' => 'info',
+                    'message' => 'Pantau pengambilan hanya tersedia selama masa pengambilan barang.',
+                ]);
+        }
+
+        $join = fn (?string ...$parts) => implode(', ', array_filter(array_map('trim', array_filter($parts))));
+
+        return Inertia::render('Jastip/Track', [
+            'item' => [
+                'id' => (int) $item->id,
+                'name' => $item->name,
+                'purchase_loc' => $join($item->purchase_address, $item->purchase_city, $item->purchase_province),
+                'pickup_loc' => $join($item->pickup_address, $item->pickup_city, $item->pickup_province),
+                'pickup_end_date' => $item->pickup_end_date?->toDateString(),
+                'is_owner' => $isOwner,
+            ],
+        ]);
+    }
+
     public function addToCart(Request $request)
     {
         $data = $request->validate([
@@ -340,7 +352,6 @@ class JastipController extends Controller
         if (! $item) {
             return back()->with('flash', ['type' => 'error', 'message' => 'Produk tidak ditemukan.']);
         }
-        // #4: hanya jastip yang sedang berlangsung yang bisa dipesan
         if ($item->scheduleStatus() !== 'ongoing') {
             return back()->with('flash', [
                 'type' => 'info',
@@ -349,7 +360,6 @@ class JastipController extends Controller
                     : 'Masa pemesanan jastip ini sudah berakhir.',
             ]);
         }
-        // Pastikan varian milik produk ini
         $variantValid = DB::table('jastip_item_variants')
             ->where('id', $data['variant_id'])
             ->where('jastip_item_id', $item->id)
@@ -373,14 +383,12 @@ class JastipController extends Controller
 
         $request->session()->put(self::CART_KEY, $cart);
 
-        // Tetap di halaman produk — indikator keranjang melayang yang mengarahkan ke checkout
         return back()->with('flash', [
             'type'    => 'success',
             'message' => __('Barang ditambahkan ke keranjang.'),
         ]);
     }
 
-    /** Sinkronkan isi keranjang dari halaman checkout (ubah qty / hapus baris). */
     public function updateCart(Request $request)
     {
         $data = $request->validate([
@@ -400,12 +408,10 @@ class JastipController extends Controller
         }
         $request->session()->put(self::CART_KEY, $cart);
 
-        // Hitung per baris produk (bukan total quantity) — sinkron dengan indikator
-        // keranjang di navbar (HandleInertiaRequests::jastip_cart_count).
+        // Per baris, bukan total qty - samakan dengan HandleInertiaRequests::jastip_cart_count.
         return response()->json(['count' => count($cart)]);
     }
 
-    // ── Halaman checkout ─────────────────────────────────────────────────
     public function checkout(Request $request)
     {
         $lines = $this->resolveCartLines($request->session()->get(self::CART_KEY, []));
@@ -426,15 +432,12 @@ class JastipController extends Controller
                 'shipping'    => 0,
                 'total'       => $subtotal + self::SERVICE_FEE,
             ],
-            // Client key HARUS pasangan MIDTRANS_SERVER_KEY (merchant M334317500).
-            // Token Snap dibuat dengan server key; popup snap.js hanya bisa
-            // merender token dari merchant yang sama.
+            // Wajib pasangan MIDTRANS_SERVER_KEY; snap.js tolak token beda merchant.
             'midtrans_client_key' => config('midtrans.client_key'),
             'wallet_balance' => (float) \App\Models\Wallet::forUser((int) $request->user()->id)->balance,
         ]);
     }
 
-    // ── Proses pembayaran (Midtrans Snap) ────────────────────────────────
     public function processPayment(Request $request)
     {
         $user = $request->user();
@@ -450,16 +453,14 @@ class JastipController extends Controller
             'payment_method'       => ['nullable', 'in:wallet,midtrans'],
         ]);
 
-        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
         $payWithWallet = ($data['payment_method'] ?? null) === 'wallet';
 
-        // Susun ulang harga dari DB (jangan percaya harga dari client)
+        // Harga disusun ulang dari DB, jangan percaya kiriman client.
         $lines = $this->resolveCartLines($data['items']);
         if (empty($lines)) {
             return response()->json(['error' => 'Keranjang tidak valid.'], 422);
         }
 
-        // Validasi sisa stok tiap produk
         foreach ($lines as $line) {
             if ($line['remaining'] !== null && $line['quantity'] > $line['remaining']) {
                 return response()->json([
@@ -468,17 +469,14 @@ class JastipController extends Controller
             }
         }
 
-        // Jumlahkan dari harga per-baris yang SUDAH dibulatkan agar gross_amount cocok
-        // persis dengan sum(item_details) yang dikirim ke Midtrans (hindari selisih
-        // pembulatan yang memicu error 400). (#12)
+        // Dijumlah dari harga yang SUDAH dibulatkan, kalau tidak gross_amount beda
+        // dengan sum(item_details) dan Midtrans balas 400.
         $totalAmount = array_sum(array_map(
             fn ($l) => ((int) round($l['price'])) * (int) $l['quantity'],
             $lines,
         )) + self::SERVICE_FEE;
 
-        // Saldo dicek lebih dulu agar tidak meninggalkan pesanan menggantung saat
-        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di
-        // Wallet::debit() yang mengunci baris dompet.
+        // Cek awal biar tak ada pesanan menggantung; pengecekan mengikat ada di Wallet::debit().
         if ($payWithWallet) {
             $wallet = \App\Models\Wallet::forUser((int) $user->id);
             if (! $wallet->hasSufficientBalance($totalAmount)) {
@@ -539,9 +537,7 @@ class JastipController extends Controller
             return response()->json(['error' => 'Gagal menyimpan transaksi.'], 500);
         }
 
-        // Keranjang bisa berisi banyak item: kirim nama item pertama + sisa
-        // jumlahnya sebagai PARAMETER, biar kalimat "X + 2 lainnya" dirakit di
-        // frontend sesuai bahasa aktif.
+        // Dikirim sebagai parameter, kalimatnya dirakit frontend sesuai bahasa aktif.
         $first = reset($lines);
 
         \App\Models\UserNotification::send(
@@ -557,9 +553,7 @@ class JastipController extends Controller
             'order.created:trx:' . $transactionId,
         );
 
-        // Bayar dari saldo: tidak ada popup Snap — pesanan langsung dilunasi
-        // lewat jalur pelunasan yang sama dengan Midtrans (termasuk notifikasi
-        // ke jastiper bahwa produknya terbayar).
+        // Tanpa popup Snap, tapi lewat jalur pelunasan yang sama dengan Midtrans.
         if ($payWithWallet) {
             try {
                 (new \App\Services\WalletPayment())->settle(
@@ -587,15 +581,13 @@ class JastipController extends Controller
             ]);
         }
 
-        // Konfigurasi Midtrans
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');
         \Midtrans\Config::$isProduction = config('midtrans.is_production', false);
         \Midtrans\Config::$isSanitized  = true;
         \Midtrans\Config::$is3ds        = true;
 
-        // array_values penting: $lines dikunci string "item-variant", tanpa ini
-        // item_details ter-encode sebagai objek JSON (bukan array) sehingga Midtrans
-        // menolak dengan "item_details ... is required / not a number". (#12)
+        // array_values wajib: $lines berkunci string, tanpa ini item_details
+        // ter-encode jadi objek JSON dan Midtrans menolaknya.
         $itemDetails = array_map(fn ($l) => [
             'id'       => 'JITEM-' . $l['item_id'] . '-' . $l['variant_id'],
             'price'    => (int) round($l['price']),
@@ -630,7 +622,6 @@ class JastipController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Kosongkan keranjang setelah transaksi dibuat
             $request->session()->forget(self::CART_KEY);
 
             return response()->json([
@@ -638,13 +629,10 @@ class JastipController extends Controller
                 'transaction_id' => $transactionId,
             ]);
         } catch (\Throwable $e) {
-            // Rollback bila Midtrans gagal
             DB::table('jastip_orders')->where('transaction_id', $transactionId)->delete();
             DB::table('transactions')->where('id', $transactionId)->delete();
 
             \Log::error('[BARENGIN] Gagal Snap Token jastip: ' . $e->getMessage());
-            // #12: tampilkan pesan asli Midtrans saat debug agar mudah didiagnosa
-            // (mis. mismatch server/client key, atau gross_amount tidak cocok).
             return response()->json([
                 'error'  => 'Gagal menghubungi Midtrans.',
                 'detail' => config('app.debug') ? $e->getMessage() : null,
@@ -652,10 +640,9 @@ class JastipController extends Controller
         }
     }
 
-    // ── Halaman sukses ───────────────────────────────────────────────────
     public function success(Request $request, string $transaction)
     {
-        // Sinkronkan status pembayaran (localhost tanpa webhook publik)
+        // localhost tak punya webhook publik.
         if ($request->user()) {
             MidtransController::syncPendingForUser($request->user()->id);
         }
@@ -713,9 +700,6 @@ class JastipController extends Controller
         ]);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
-
-    /** Ubah daftar baris keranjang (item_id, variant_id, quantity) menjadi baris lengkap dengan harga. */
     private function resolveCartLines(array $cart): array
     {
         $lines = [];
@@ -752,7 +736,7 @@ class JastipController extends Controller
                 ->first();
 
             if (! $row || ! $row->variant_id) {
-                continue; // produk/varian tidak valid -> lewati
+                continue;
             }
 
             $price     = (float) $row->base_price + (float) $row->jastip_fee + (float) $row->additional_price;
@@ -776,7 +760,6 @@ class JastipController extends Controller
         return $lines;
     }
 
-    /** Terjual per varian (jumlah quantity dari order berbayar, dikelompokkan per variant id). */
     private function soldByVariantSubquery()
     {
         return DB::table('jastip_order_items')
@@ -795,7 +778,6 @@ class JastipController extends Controller
             ->select('jastip_item_id', DB::raw('SUM(quantity) as sold'));
     }
 
-    /** Rata-rata rating (type jastiper) per pemilik produk. */
     private function ownerRatings(array $ownerIds): array
     {
         if (empty($ownerIds)) {
@@ -812,14 +794,13 @@ class JastipController extends Controller
             ->all();
     }
 
-    /** Bentuk data untuk komponen JastipCard (dipakai etalase & produk terkait). */
+    // Bentuknya mengikuti props JastipCard.
     private function formatCard(JastipItem $item, array $ratings, $owners, array $likedIds = []): array
     {
         $sold      = (int) ($item->sold_count ?? 0);
         $isSoldOut = $item->max_slot > 0 && $sold >= $item->max_slot;
         $owner     = $owners[$item->user_id] ?? null;
 
-        // Tag status jadwal jastip (mulai/berakhir)
         $now = Carbon::now();
         if ($item->start_date && $now->lt(Carbon::parse($item->start_date))) {
             $tag = ['type' => 'upcoming', 'date' => Carbon::parse($item->start_date)->translatedFormat('d M Y')];
@@ -837,7 +818,7 @@ class JastipController extends Controller
             'sold'        => $sold,
             'max_slot'    => (int) $item->max_slot,
             'sold_out'    => $isSoldOut,
-            // from = tempat pembelian (dibeli di) · to = tempat ambil (tiba di)
+            // from = tempat beli, to = tempat ambil.
             'from'        => $item->purchase_city ?: $item->purchase_province,
             'to'          => $item->pickup_city ?: $item->pickup_province,
             'tag'         => $tag,

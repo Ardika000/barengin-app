@@ -1,7 +1,7 @@
 import { FaFire } from "react-icons/fa";
 import { useTranslation } from "@/lib/useTranslation";
 
-// Badge streak "Nyala" — dipakai di navbar. Menyala (oranye) saat streak aktif,
+// Badge streak "Nyala" - dipakai di navbar. Menyala (oranye) saat streak aktif,
 // abu-abu saat belum ada streak.
 export default function StreakBadge({ count = 0, className = "" }) {
     const { t } = useTranslation();

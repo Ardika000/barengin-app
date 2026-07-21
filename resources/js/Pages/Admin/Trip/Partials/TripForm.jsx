@@ -10,7 +10,6 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-neutral-700 mb-1.5";
 const cardTitle = "text-lg font-semibold text-primary-700 mb-4";
 
-// Penanda kolom wajib
 const Req = () => <span className="text-red-500"> *</span>;
 
 const emptyActivity = () => ({
@@ -25,24 +24,19 @@ const emptyActivity = () => ({
 
 export default function TripForm({ data, setData, errors, processing, onSubmit, submitLabel, facilities = [], imageRequired = true, lockedFields = [] }) {
     const { t } = useTranslation();
-    // Tanggal mulai minimal besok (harus setelah hari ini)
     const minStartDate = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
-    // Kolom yang dikunci (mis. saat "buka ulang" trip: nama & lokasi tak boleh diubah).
     const isLocked = (field) => lockedFields.includes(field);
 
     const [facilityOptions, setFacilityOptions] = useState(facilities);
     const [showFacilityModal, setShowFacilityModal] = useState(false);
     const [newFacility, setNewFacility] = useState("");
-    // Tampilkan 5 fasilitas dulu agar daftar tidak memanjang ke bawah; sisanya
-    // dibuka lewat tombol "lihat semua".
     const [showAllFacilities, setShowAllFacilities] = useState(false);
     const FACILITY_PREVIEW = 5;
     const [imagePreview, setImagePreview] = useState(data.image_preview || null);
 
     const err = (key) => errors?.[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
 
-    // ── Facilities ──
     const toggleFacility = (name) => {
         const has = data.facilities.includes(name);
         setData("facilities", has ? data.facilities.filter((f) => f !== name) : [...data.facilities, name]);
@@ -54,12 +48,9 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
         if (!data.facilities.includes(name)) setData("facilities", [...data.facilities, name]);
         setNewFacility("");
         setShowFacilityModal(false);
-        // Buka daftar penuh agar fasilitas yang baru ditambah (di posisi > 5)
-        // langsung terlihat tercentang, tidak tersembunyi di balik "lihat semua".
         setShowAllFacilities(true);
     };
 
-    // ── Trip image ──
     const handleTripImage = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -67,7 +58,6 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
         setImagePreview(URL.createObjectURL(file));
     };
 
-    // ── Activities ──
     const updateActivity = (i, field, value) => {
         const next = data.activities.map((a, idx) => (idx === i ? { ...a, [field]: value } : a));
         setData("activities", next);
@@ -86,9 +76,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
     return (
         <form onSubmit={onSubmit}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Kolom kiri */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Informasi Umum */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.general_info")}</h3>
 
@@ -149,7 +137,6 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         </div>
                     </div>
 
-                    {/* Rincian Harga */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.price_section")}</h3>
                         <label className={labelClass}>{t("admin.trip.form.price_per_person")}<Req /></label>
@@ -159,12 +146,27 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         <p className="text-xs text-neutral-400 mt-2">{t("admin.trip.form.price_note")}</p>
                     </div>
 
-                    {/* Detail Aktivitas */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.activities_section")}</h3>
 
                         <div className="space-y-5">
-                            {data.activities.map((act, i) => (
+                            {data.activities.map((act, i) => {
+                                // Aktivitas harus berurutan: aktivitas ke-i tidak boleh
+                                // mulai sebelum aktivitas sebelumnya selesai. Batas
+                                // tanggal/jam dihitung dari aktivitas i-1.
+                                const prev = i > 0 ? data.activities[i - 1] : null;
+                                const dateMin = prev?.date || data.start_date || minStartDate;
+                                const dateMax = data.end_date || undefined;
+                                // Jam mulai hanya dibatasi bila aktivitas ini pada
+                                // tanggal yang sama dengan aktivitas sebelumnya -
+                                // kalau beda hari, jamnya bebas.
+                                const startTimeMin =
+                                    prev && prev.date && act.date && prev.date === act.date
+                                        ? prev.end_time || undefined
+                                        : undefined;
+                                const endTimeMin = act.start_time || undefined;
+
+                                return (
                                 <div key={i} className="rounded-2xl border border-neutral-200 p-5 relative">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-2">
@@ -189,18 +191,23 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                         <div>
                                             <label className={labelClass}>{t("admin.trip.form.date")}<Req /></label>
-                                            <Input type="date" size="sm" min={data.start_date || minStartDate} max={data.end_date || undefined}
+                                            <Input type="date" size="sm" min={dateMin} max={dateMax}
                                                 value={act.date} onChange={(e) => updateActivity(i, "date", e.target.value)} />
                                             {err(`activities.${i}.date`)}
                                         </div>
                                         <div>
                                             <label className={labelClass}>{t("admin.trip.form.start_time")}<Req /></label>
-                                            <Input type="time" size="sm" value={act.start_time} onChange={(e) => updateActivity(i, "start_time", e.target.value)} />
+                                            <Input type="time" size="sm" min={startTimeMin} value={act.start_time} onChange={(e) => updateActivity(i, "start_time", e.target.value)} />
+                                            {startTimeMin && (
+                                                <p className="text-xs text-neutral-400 mt-1">
+                                                    {t("admin.trip.form.activity_after_prev").replace(":time", startTimeMin)}
+                                                </p>
+                                            )}
                                             {err(`activities.${i}.start_time`)}
                                         </div>
                                         <div>
                                             <label className={labelClass}>{t("admin.trip.form.end_time")}<Req /></label>
-                                            <Input type="time" size="sm" value={act.end_time} onChange={(e) => updateActivity(i, "end_time", e.target.value)} />
+                                            <Input type="time" size="sm" min={endTimeMin} value={act.end_time} onChange={(e) => updateActivity(i, "end_time", e.target.value)} />
                                             {err(`activities.${i}.end_time`)}
                                         </div>
                                     </div>
@@ -212,7 +219,6 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                             className={inputClass + " resize-none"} />
                                     </div>
 
-                                    {/* Gambar aktivitas */}
                                     <label className={labelClass}>{t("admin.trip.form.activity_photo")}</label>
                                     <div className="flex flex-wrap gap-2">
                                         {(act.existing_images || []).map((url, idx) => (
@@ -236,7 +242,8 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                         </label>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         <button type="button" onClick={addActivity}
@@ -246,9 +253,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                     </div>
                 </div>
 
-                {/* Kolom kanan */}
                 <div className="space-y-6">
-                    {/* Fasilitas */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.facilities")}<Req /></h3>
                         <div className="space-y-2.5">
@@ -275,7 +280,6 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         </button>
                     </div>
 
-                    {/* Gambar Utama Trip */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.main_image")}{imageRequired && <Req />}</h3>
                         <label className="block cursor-pointer">
@@ -293,7 +297,6 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                 </div>
             </div>
 
-            {/* Aksi */}
             <div className="mt-6">
                 <Button disabled={processing} className="font-semibold">
                     {processing ? t("admin.trip.form.saving") : submitLabel}
@@ -301,7 +304,6 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                 <p className="text-xs text-amber-600 font-medium mt-2">{t("admin.trip.form.draft_note")}</p>
             </div>
 
-            {/* Modal tambah fasilitas */}
             {showFacilityModal && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">

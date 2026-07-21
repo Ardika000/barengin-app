@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Perbarui `last_seen_at` pengguna yang login pada setiap request (di-throttle),
- * agar indikator "online" mencerminkan kehadiran nyata di seluruh aplikasi —
+ * agar indikator "online" mencerminkan kehadiran nyata di seluruh aplikasi -
  * tidak bergantung pada WebSocket/Pusher (penting untuk shared hosting).
  */
 class TrackLastSeen

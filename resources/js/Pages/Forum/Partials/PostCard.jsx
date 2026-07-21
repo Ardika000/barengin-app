@@ -22,7 +22,7 @@ function PostMediaScroll({ images = [] }) {
         />
     );
 
-    // Satu gambar → tampilkan sesuai rasio aslinya (tidak dipotong), lebar
+    // Satu gambar -> tampilkan sesuai rasio aslinya (tidak dipotong), lebar
     // menyesuaikan (bukan 100%) dengan batas tinggi & lebar maksimum.
     if (images.length === 1) {
         return (

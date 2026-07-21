@@ -7,39 +7,21 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that's loaded on the first page visit.
-     *
-     * @see https://inertiajs.com/server-side-setup#root-template
-     *
-     * @var string
-     */
+    /** @var string */
     protected $rootView = 'app';
 
-    /**
-     * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => fn () => $request->user(),
             ],
-            // Lokalisasi: bahasa aktif, kamus terjemahan, & daftar bahasa yang tersedia
             'locale' => fn () => app()->getLocale(),
             'translations' => function () {
                 $path = base_path('lang/' . app()->getLocale() . '.json');
@@ -58,14 +40,7 @@ class HandleInertiaRequests extends Middleware
                     return [];
                 }
             },
-            // Jumlah percakapan yang punya pesan belum dibaca — untuk lencana merah
-            // pada tombol Chat di navbar. Dihitung sebagai satu query agregat
-            // (bukan per-percakapan) karena ikut di setiap response Inertia.
-            //
-            // Menghitung PERCAKAPAN, bukan pesan: navbar menyegarkan angka ini
-            // lewat /chat/poll yang juga menghitung percakapan. Kalau keduanya
-            // beda satuan, lencana melompat (mis. 7 → 3) begitu poll pertama
-            // masuk beberapa detik setelah halaman dimuat.
+            // Hitung percakapan, bukan pesan - /chat/poll pakai satuan yang sama.
             'chat_unread_count' => function () use ($request) {
                 $user = $request->user();
 
@@ -84,9 +59,6 @@ class HandleInertiaRequests extends Middleware
                     ->distinct()
                     ->count('cp.conversation_id');
             },
-            // Jumlah notifikasi belum dibaca — untuk lencana pada lonceng navbar.
-            // Sepola dengan chat_unread_count di atas: satu query agregat, ikut
-            // di setiap response Inertia.
             'notif_unread_count' => function () use ($request) {
                 $user = $request->user();
 
@@ -99,14 +71,11 @@ class HandleInertiaRequests extends Middleware
                     ->whereNull('read_at')
                     ->count();
             },
-            // Jumlah PRODUK (baris) di keranjang jastip (session) — untuk indikator
-            // keranjang. Dihitung per baris produk, bukan total quantity: satu produk
-            // dengan 17 qty tetap dihitung 1.
+            // Per baris produk, bukan total qty.
             'jastip_cart_count' => function () use ($request) {
                 $cart = $request->session()->get('jastip_cart', []);
                 return count($cart);
             },
-            // Normalisasi flash dari berbagai pola controller -> {type, message}
             'flash' => function () use ($request) {
                 $s = $request->session();
 

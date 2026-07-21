@@ -8,10 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class MidtransController extends Controller
 {
-    /**
-     * Webhook notifikasi dari Midtrans (server-to-server).
-     * Set URL ini di dashboard Midtrans: {APP_URL}/midtrans/notification
-     */
+    // Webhook Midtrans; URL-nya didaftarkan di dashboard: {APP_URL}/midtrans/notification
     public function notification()
     {
         self::configure();
@@ -32,9 +29,6 @@ class MidtransController extends Controller
         return response()->json(['message' => 'ok']);
     }
 
-    /**
-     * Sinkronkan semua transaksi pending/unpaid milik seorang user.
-     */
     public static function syncPendingForUser(int $userId): void
     {
         $ids = DB::table('transactions as t')
@@ -46,21 +40,14 @@ class MidtransController extends Controller
                     ->orWhereIn('t.id', DB::table('jastip_orders')
                         ->whereIn('order_status', ['pending', 'unpaid'])
                         ->select('transaction_id'))
-                    // Request titipan yang sudah ditawar & sedang menunggu pembayaran
                     ->orWhereIn('t.id', DB::table('jastip_requests')
                         ->where('status', 'quoted')
                         ->whereNotNull('transaction_id')
                         ->select('transaction_id'))
-                    // Bagian split bill yang menunggu pembayaran. Penting di
-                    // localhost yang tidak punya webhook publik: status baru
-                    // tersinkron saat halaman Profile History dibuka.
                     ->orWhereIn('t.id', DB::table('split_bill_shares')
                         ->where('status', 'pending')
                         ->whereNotNull('transaction_id')
                         ->select('transaction_id'))
-                    // Isi saldo yang menunggu pembayaran — tanpa ini saldo baru
-                    // bertambah ketika webhook datang, yang tidak pernah terjadi
-                    // di localhost.
                     ->orWhereIn('t.id', DB::table('wallet_topups')
                         ->where('status', 'pending')
                         ->select('transaction_id'));
@@ -72,11 +59,7 @@ class MidtransController extends Controller
         }
     }
 
-    /**
-     * Cek status transaksi langsung ke Midtrans lalu sinkronkan ke DB.
-     * Dipakai saat membuka halaman Profile History (cocok untuk localhost
-     * tanpa webhook publik).
-     */
+    // Pengganti webhook untuk localhost: dipanggil saat halaman Riwayat dibuka.
     public static function syncTransaction(string $transactionId): void
     {
         try {
@@ -89,15 +72,11 @@ class MidtransController extends Controller
                 $status['fraud_status'] ?? null,
             );
         } catch (\Throwable $e) {
-            // Transaksi belum ada di Midtrans / network error -> abaikan saja
+            // Transaksi belum ada di Midtrans / network error, abaikan.
             Log::info('[MIDTRANS] Gagal sync transaksi ' . $transactionId . ': ' . $e->getMessage());
         }
     }
 
-    /**
-     * Petakan status Midtrans -> order_status (paid | pending | unpaid)
-     * dan update trip_orders / jastip_orders terkait.
-     */
     public static function applyStatus(?string $orderId, ?string $txStatus, ?string $fraudStatus = null): void
     {
         if (! $orderId || ! $txStatus) {
@@ -120,16 +99,13 @@ class MidtransController extends Controller
             ->where('transaction_id', $orderId)
             ->update(['order_status' => $orderStatus, 'updated_at' => now()]);
 
-        // Pesanan yang sudah di-refund (jastip dihapus jastiper) tidak boleh
-        // "hidup lagi" karena webhook/sync yang datang terlambat.
+        // Order refund jangan "hidup lagi" gara-gara webhook telat.
         DB::table('jastip_orders')
             ->where('transaction_id', $orderId)
             ->where('order_status', '!=', 'refunded')
             ->update(['order_status' => $orderStatus, 'updated_at' => now()]);
 
-        // Request titipan: hanya request yang masih 'quoted' yang bisa berubah —
-        // paid → tandai dibayar; gagal/kedaluwarsa → lepaskan transaksi agar
-        // pemohon bisa mencoba membayar lagi dengan transaksi baru.
+        // Transaksi dilepas saat gagal biar pemohon bisa bayar ulang.
         if ($orderStatus === 'paid') {
             DB::table('jastip_requests')
                 ->where('transaction_id', $orderId)
@@ -142,8 +118,6 @@ class MidtransController extends Controller
                 ->update(['transaction_id' => null, 'updated_at' => now()]);
         }
 
-        // Bagian split bill: lunas → catat & isi dompet penyelenggara; gagal →
-        // lepaskan transaksinya agar anggota bisa membayar ulang.
         if ($orderStatus === 'paid') {
             self::settleSplitBillShare($orderId);
         } elseif ($orderStatus === 'unpaid') {
@@ -153,8 +127,6 @@ class MidtransController extends Controller
                 ->update(['transaction_id' => null, 'status' => 'unpaid', 'updated_at' => now()]);
         }
 
-        // Isi saldo: lunas → tambah saldo dompet; gagal → tandai agar tidak terus
-        // ikut tersinkron setiap halaman dibuka.
         if ($orderStatus === 'paid') {
             self::settleWalletTopup($orderId);
         } elseif ($orderStatus === 'unpaid') {
@@ -164,7 +136,6 @@ class MidtransController extends Controller
                 ->update(['status' => 'unpaid', 'updated_at' => now()]);
         }
 
-        // Saat lunas: buat peserta trip & masukkan pembeli ke grup chat
         if ($orderStatus === 'paid') {
             self::fulfillPaidTripOrders($orderId);
             self::notifyPaid($orderId);
@@ -172,13 +143,7 @@ class MidtransController extends Controller
         }
     }
 
-    /**
-     * Tandai isi saldo lunas lalu tambahkan nominalnya ke dompet.
-     *
-     * Idempotent berlapis: baris yang sudah 'paid' dilewati, dan Wallet::credit()
-     * menolak kredit kedua dari sumber (wallet_topup, id) yang sama — webhook
-     * Midtrans memang datang berkali-kali untuk transaksi yang sama.
-     */
+    // Idempotent: webhook Midtrans datang berkali-kali untuk transaksi yang sama.
     private static function settleWalletTopup(string $transactionId): void
     {
         $topup = \App\Models\WalletTopup::with('wallet')
@@ -199,13 +164,7 @@ class MidtransController extends Controller
         );
     }
 
-    /**
-     * Kabari jastiper bahwa produknya terbayar — aba-abanya untuk mulai belanja.
-     *
-     * Satu pesanan bisa memuat produk dari beberapa jastiper, jadi dikelompokkan
-     * per penjual dan kunci dedupe-nya per (transaksi x penjual): setiap jastiper
-     * dapat tepat satu notifikasi walau applyStatus() dipanggil berulang.
-     */
+    // Dedupe per (transaksi x penjual) karena applyStatus() dipanggil berulang.
     private static function notifySellersOfPaidJastip(string $transactionId): void
     {
         $rows = DB::table('jastip_orders as jo')
@@ -233,17 +192,7 @@ class MidtransController extends Controller
         }
     }
 
-    /**
-     * Kabari pembeli bahwa transaksinya lunas.
-     *
-     * Transaksi adalah jangkar yang sama untuk semua jenis pesanan (trip, jastip,
-     * split bill), jadi satu notifikasi per transaksi sudah mewakili semuanya.
-     *
-     * Kunci dedupe WAJIB: applyStatus() dipanggil ulang oleh webhook Midtrans
-     * (yang memang mengirim berkali-kali) dan oleh syncPendingForUser() setiap
-     * halaman Profile History dibuka. Tanpa kunci ini pembeli akan dibanjiri
-     * notifikasi "lunas" yang sama.
-     */
+    // Dedupe key wajib: applyStatus() dipanggil ulang tiap webhook & tiap sync.
     private static function notifyPaid(string $transactionId): void
     {
         $trx = DB::table('transactions')->where('id', $transactionId)->first();
@@ -261,15 +210,8 @@ class MidtransController extends Controller
         );
     }
 
-    /**
-     * Tandai bagian split bill lunas lalu tambahkan nominalnya ke dompet
-     * penyelenggara. Uangnya sendiri masuk ke akun Midtrans platform; dompet
-     * mencatat berapa yang menjadi hak penyelenggara.
-     *
-     * Idempotent: notifikasi Midtrans bisa datang berkali-kali untuk transaksi
-     * yang sama, jadi share yang sudah lunas dilewati dan Wallet::credit()
-     * menolak kredit ganda dari sumber yang sama.
-     */
+    // Uang riilnya ada di akun Midtrans platform, dompet cuma mencatat hak
+    // penyelenggara. Idempotent karena webhook bisa datang berkali-kali.
     private static function settleSplitBillShare(string $transactionId): void
     {
         $share = \App\Models\SplitBillShare::with('split_bill')
@@ -298,15 +240,11 @@ class MidtransController extends Controller
             (int) $share->id,
         );
 
-        // Ke kartu tagihan di grup, tempat rekap "siapa sudah bayar" berada —
-        // itulah yang ingin dilihat penyelenggara saat ada bagian yang lunas.
-        // Riwayat Profil tetap jadi cadangan bila grupnya sudah tidak ada.
+        // Arahkan ke kartu tagihan di grup; Riwayat Profil cuma cadangan.
         $conversationId = \App\Models\Conversation::where('pergi_bareng_id', $bill->pergi_bareng_id)
             ->where('is_group', true)
             ->value('id');
 
-        // Penyelenggara dikabari bahwa bagian ini masuk ke dompetnya. Aman dari
-        // duplikat lewat dedupe_key + penjaga status PAID di atas.
         \App\Models\UserNotification::send(
             (int) $bill->creator_id,
             'split_bill.settled',
@@ -322,10 +260,7 @@ class MidtransController extends Controller
         $bill->refreshStatus();
     }
 
-    /**
-     * Setelah trip order lunas: buat baris trip_participants (mengurangi kuota)
-     * dan masukkan pembeli ke grup chat. Idempotent lewat kolom fulfilled_at.
-     */
+    // Idempotent lewat kolom fulfilled_at.
     private static function fulfillPaidTripOrders(string $transactionId): void
     {
         $orders = DB::table('trip_orders')
@@ -352,7 +287,6 @@ class MidtransController extends Controller
                 }
             }
 
-            // Fallback bila data peserta kosong: buat sejumlah quantity
             if (empty($rows)) {
                 for ($i = 0; $i < (int) $order->quantity; $i++) {
                     $rows[] = [
@@ -371,13 +305,8 @@ class MidtransController extends Controller
                 DB::table('trip_participants')->insert($rows);
             }
 
-            // Kredit dompet PEMANDU: pendapatan trip = total dibayar dikurangi
-            // biaya layanan + asuransi (Rp5.000 + Rp5.000 = Rp10.000 per kursi,
-            // lihat TripsController::processPayment) yang menjadi milik platform.
-            // Uangnya sendiri berada di akun Midtrans platform; dompet mencatat hak
-            // pemandu — sama seperti pola split bill. Idempotent: blok fulfill ini
-            // hanya jalan untuk order dengan fulfilled_at NULL, dan Wallet::credit()
-            // menolak kredit ganda dari sumber (trip_order, id) yang sama.
+            // Potongan 10.000/kursi = layanan + asuransi milik platform, lihat
+            // TripsController::processPayment.
             $trip = DB::table('trips')->where('id', $order->trip_id)->first();
             if ($trip) {
                 $platformFee = 10000 * (int) $order->quantity;
@@ -400,9 +329,6 @@ class MidtransController extends Controller
         }
     }
 
-    /**
-     * Buat (jika belum ada) grup chat trip & masukkan pembeli + pemandu.
-     */
     private static function addBuyerToTripGroup(int $tripId, int $userId): void
     {
         $trip = DB::table('trips')->where('id', $tripId)->first();
@@ -421,14 +347,12 @@ class MidtransController extends Controller
         foreach ($members->diff($existing) as $uid) {
             $conversation->participants()->attach($uid, ['last_read_at' => now()]);
 
-            // Pemandu tidak perlu dikabari soal grup trip-nya sendiri.
+            // Pemandu tak perlu dikabari soal grup trip-nya sendiri.
             if ((int) $uid !== (int) $trip->guider_id) {
                 \App\Models\UserNotification::send(
                     (int) $uid,
                     'group.joined',
                     ['name' => $trip->name, 'kind' => 'trip'],
-                    // Langsung ke percakapannya — lihat catatan yang sama pada
-                    // grup pergi bareng.
                     '/chat/' . $conversation->id,
                     'group.joined:conv:' . $conversation->id . ':user:' . $uid,
                 );

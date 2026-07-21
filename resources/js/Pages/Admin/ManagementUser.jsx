@@ -10,7 +10,6 @@ import { useServerTable } from "@/lib/useServerTable";
 import { FiSearch, FiTrash2, FiEdit2, FiUsers } from "react-icons/fi";
 import { FaCircleCheck } from "react-icons/fa6";
 
-// Helper: Inisial Nama
 const getInitials = (name) => {
     if (!name) return "U";
     const words = name.split(" ");
@@ -20,7 +19,6 @@ const getInitials = (name) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-// Helper: Background Acak
 const getRandomBg = (id) => {
     const colors = [
         "bg-blue-100 text-blue-600",
@@ -34,9 +32,6 @@ const getRandomBg = (id) => {
     return colors[safeId % colors.length];
 };
 
-// Avatar pengguna: tampilkan foto profil asli bila ada, jika tidak (atau gagal
-// dimuat) fallback ke inisial berwarna. `avatar` berasal dari accessor
-// public_profile_image, yang mengembalikan default-profile.png bila belum di-set.
 const UserAvatar = ({ avatar, initials, bg, sizeClass = "w-9 h-9 text-xs" }) => {
     const [failed, setFailed] = useState(false);
     const isDefault = !avatar || avatar.includes("default-profile");
@@ -66,16 +61,12 @@ export default function ManagementUser({ users = {}, filters = {} }) {
         role: filters.role ?? "",
     });
 
-    // ==========================================
-    // STATE UNTUK MODAL POPUP DELETE
-    // ==========================================
     const [deleteModal, setDeleteModal] = useState({
         isOpen: false,
         userId: null,
         userName: "",
     });
 
-    // Format baris dari data paginasi server (pencarian/filter dilakukan di server)
     const paginatedUsers = (users.data ?? []).map((user) => {
         const userRoles = [];
         if (user.is_admin) userRoles.push("admin");
@@ -94,11 +85,6 @@ export default function ManagementUser({ users = {}, filters = {} }) {
         };
     });
 
-    // ==========================================
-    // LOGIKA HAPUS (MEMBUKA MODAL LALU EKSEKUSI)
-    // ==========================================
-    
-    // 1. Fungsi saat tombol tong sampah diklik (buka popup)
     const openDeleteModal = (userId, userName) => {
         setDeleteModal({
             isOpen: true,
@@ -107,18 +93,15 @@ export default function ManagementUser({ users = {}, filters = {} }) {
         });
     };
 
-    // 2. Fungsi saat tombol "Ya, Hapus" di dalam popup diklik
     const confirmDelete = () => {
         router.delete(`/admin/management-user/${deleteModal.userId}`, {
             preserveScroll: true,
             onSuccess: () => {
-                // Tutup popup setelah berhasil dihapus
                 setDeleteModal({ isOpen: false, userId: null, userName: "" });
             },
         });
     };
 
-    // 3. Fungsi saat tombol "Batal" atau luar kotak diklik
     const closeDeleteModal = () => {
         setDeleteModal({ isOpen: false, userId: null, userName: "" });
     };
@@ -197,7 +180,6 @@ export default function ManagementUser({ users = {}, filters = {} }) {
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {/* TAMPILAN DESKTOP */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
@@ -242,7 +224,6 @@ export default function ManagementUser({ users = {}, filters = {} }) {
                                         </td>
                                         <td className="py-3 px-5 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                {/* TOMBOL DELETE (Panggil Popup) */}
                                                 <button
                                                     onClick={() => openDeleteModal(user.id, user.name)}
                                                     className="p-2 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
@@ -251,7 +232,6 @@ export default function ManagementUser({ users = {}, filters = {} }) {
                                                     <FiTrash2 size={16} />
                                                 </button>
 
-                                                {/* TOMBOL EDIT */}
                                                 <Link
                                                     href={`/admin/management-user/${user.id}/edit-role`}
                                                     className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors inline-flex items-center justify-center"
@@ -274,7 +254,6 @@ export default function ManagementUser({ users = {}, filters = {} }) {
                     </table>
                 </div>
 
-                {/* TAMPILAN MOBILE */}
                 <div className="md:hidden flex flex-col divide-y divide-neutral-100">
                     {paginatedUsers.length > 0 ? (
                         paginatedUsers.map((user) => (

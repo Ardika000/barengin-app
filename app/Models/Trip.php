@@ -15,7 +15,6 @@ class Trip extends Model
     public const STATUS_ONGOING = 'ongoing';
     public const STATUS_DONE    = 'done';
 
-    /** Label bahasa Indonesia untuk tiap status */
     public const STATUS_LABELS = [
         self::STATUS_DRAFT   => 'Draf',
         self::STATUS_CREATED => 'Terjadwal',
@@ -66,13 +65,12 @@ class Trip extends Model
         return $this->hasOne(Conversation::class);
     }
 
-    /** Rating trip dari peserta. FK di tabel user_trip_ratings bernama `trips_id`. */
+    // FK-nya bernama `trips_id`, bukan `trip_id`.
     public function ratings()
     {
         return $this->hasMany(UserTripRating::class, 'trips_id');
     }
 
-    /** Arsip run sebelumnya (dibuat saat re-trip). */
     public function histories()
     {
         return $this->hasMany(TripHistory::class)->orderByDesc('completed_at');
@@ -83,7 +81,6 @@ class Trip extends Model
         return self::STATUS_LABELS[$this->status] ?? $this->status;
     }
 
-    /** Status yang seharusnya berdasarkan tanggal trip (untuk trip yang sudah dipublish). */
     public static function statusFromDates($start, $end): string
     {
         $today = Carbon::now()->startOfDay();
@@ -99,14 +96,8 @@ class Trip extends Model
         return self::STATUS_ONGOING;
     }
 
-    /**
-     * Perbarui status semua trip yang sudah dipublish (bukan draft)
-     * mengikuti tanggalnya. Dipakai oleh cron & saat membuka dashboard.
-     *
-     * Trip yang diselesaikan manual oleh pemandu (`finished_at`) dilewati:
-     * tanpa ini, trip yang selesai lebih cepat akan dikembalikan ke 'ongoing'
-     * karena end_date-nya belum lewat.
-     */
+    // Trip yang diselesaikan manual (finished_at) dilewati, kalau tidak akan
+    // ditarik balik ke 'ongoing' karena end_date-nya belum lewat.
     public static function refreshStatuses(): int
     {
         $changed = 0;

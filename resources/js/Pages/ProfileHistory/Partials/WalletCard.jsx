@@ -7,7 +7,7 @@ import { useTranslation } from "@/lib/useTranslation";
 const rupiah = (n) =>
     "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
 
-/** Nominal cepat & batas minimal — selaras dengan WalletController. */
+/** Nominal cepat & batas minimal - selaras dengan WalletController. */
 const QUICK_AMOUNTS = [50000, 100000, 250000, 500000];
 const MIN_TOPUP = 10000;
 
@@ -92,7 +92,7 @@ export default function WalletCard({ wallet, onTopUp }) {
 
                     {open ? (
                         // Tinggi dibatasi lalu digulir: mutasi bisa banyak, dan sidebar
-                        // ini sticky — tanpa batas, daftar panjang akan mendorong isi
+                        // ini sticky - tanpa batas, daftar panjang akan mendorong isi
                         // sidebar melewati tinggi layar.
                         <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-2 pl-2">
                             {entries.map((e) => (

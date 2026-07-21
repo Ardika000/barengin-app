@@ -193,7 +193,7 @@ function TransactionActions({ status, snapToken, onPay, onViewDetail, onDownload
         );
     }
 
-    // Dana dikembalikan (jastip dihapus) — hanya bisa melihat detail
+    // Dana dikembalikan (jastip dihapus) - hanya bisa melihat detail
     if (status === "refunded") {
         return (
             <Button

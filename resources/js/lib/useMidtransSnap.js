@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // Client key sandbox yang sama dengan yang dipakai TripBareng/Checkout.
 // snap.js mengunci client key dari pemuatan PERTAMA di sebuah tab, jadi nilai
-// fallback di sini harus persis sama dengan halaman checkout — kalau berbeda,
+// fallback di sini harus persis sama dengan halaman checkout - kalau berbeda,
 // popup pembayaran yang dibuka setelahnya akan memakai key yang salah.
 const FALLBACK_CLIENT_KEY = "Mid-client-mGla22pQRRj2Oeks";
 const SNAP_SRC = "https://app.sandbox.midtrans.com/snap/snap.js";

@@ -26,14 +26,12 @@ export default function Show({ product, related = [] }) {
     const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
     const isOwner = authUser && Number(authUser.id) === Number(product.owner?.id);
-    // #4: 'upcoming' belum bisa dipesan (hanya bisa disimpan ke favorit); 'closed' sudah lewat.
     const isUpcoming = product.schedule_status === "upcoming";
     const isClosed = product.schedule_status === "closed";
 
     const variants = product.variants || [];
     const showVariants = product.has_variants && variants.length > 0;
 
-    // #7: pilih varian pertama secara default
     const [selectedVariantId, setSelectedVariantId] = useState(variants[0]?.id ?? null);
     const selectedVariant = variants.find((v) => v.id === selectedVariantId) || variants[0] || null;
 
@@ -47,7 +45,6 @@ export default function Show({ product, related = [] }) {
     const minBuy = selectedVariant?.min_buy || product.min_buy || 1;
     const unitPrice = product.base_price + product.jastip_fee + (selectedVariant?.price || 0);
 
-    // #5 & #6: klik varian -> highlight gambarnya (bila ada) + ganti stok + reset counter
     const selectVariant = (v) => {
         setSelectedVariantId(v.id);
         setQuantity(v.min_buy || 1);
@@ -73,7 +70,6 @@ export default function Show({ product, related = [] }) {
     const handleOpenChat = () => {
         if (!product.owner?.id) { toast.error(t("jastip.show.owner_unavailable")); return; }
 
-        // Sertakan kartu referensi Jastip agar jastiper paham produk mana yang ditanyakan.
         router.post("/chat/personal", {
             user_id: product.owner.id,
             ref_type: "jastip",
@@ -81,7 +77,6 @@ export default function Show({ product, related = [] }) {
         });
     };
 
-    // #15: buka grup chat jastip (jastiper <-> semua pembeli produk ini)
     const handleOpenGroupChat = () => {
         router.post(`/chat/jastip/${product.id}/group`);
     };
@@ -95,9 +90,6 @@ export default function Show({ product, related = [] }) {
             { onFinish: () => setAdding(false) });
     };
 
-    // Kembali ke etalase pada kondisi sebelumnya (halaman & filter dipertahankan
-    // lewat riwayat browser). Bila produk dibuka langsung tanpa riwayat di dalam
-    // app, fallback ke /jastip agar tidak keluar situs.
     const handleBack = () => {
         if (typeof window !== "undefined" && window.history.length > 1) {
             window.history.back();
@@ -125,9 +117,7 @@ export default function Show({ product, related = [] }) {
                 </button>
 
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
-                    {/* LEFT: gallery + info */}
                     <div>
-                        {/* #4: gambar besar tinggi tetap + thumbnail scroll vertikal di kanan */}
                         <div className="flex gap-4">
                             <div className="relative h-[360px] flex-1 overflow-hidden rounded-2xl bg-neutral-100 md:h-[460px]">
                                 <button
@@ -164,7 +154,6 @@ export default function Show({ product, related = [] }) {
                             )}
                         </div>
 
-                        {/* Ketentuan (tanpa Kondisi/condition — #13) */}
                         <div className="mt-8">
                             <h3 className="mb-2 font-bold text-neutral-800">{t("jastip.show.terms")}</h3>
                             <ul className="space-y-1 text-sm text-neutral-600">
@@ -183,7 +172,6 @@ export default function Show({ product, related = [] }) {
                             </ul>
                         </div>
 
-                        {/* Deskripsi */}
                         <div className="mt-6">
                             <h3 className="mb-2 font-bold text-neutral-800">{t("jastip.show.description")}</h3>
                             {product.end_date && <p className="mb-2 text-sm text-neutral-600">{t("jastip.show.expiry")}: {product.end_date}</p>}
@@ -196,7 +184,6 @@ export default function Show({ product, related = [] }) {
                         </div>
                     </div>
 
-                    {/* RIGHT: order panel */}
                     <div className="lg:sticky lg:top-24 lg:h-fit">
                         <div className="rounded-2xl border border-neutral-200 p-6 shadow-sm">
                             <div className="mb-4 border-b border-neutral-100 pb-4">
@@ -204,7 +191,6 @@ export default function Show({ product, related = [] }) {
                                 {product.category && <p className="mt-1 text-sm text-neutral-500">{product.category}</p>}
                             </div>
 
-                            {/* Quantity */}
                             <div className="mb-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-semibold text-neutral-700">{t("jastip.show.quantity")}</p>
@@ -223,7 +209,6 @@ export default function Show({ product, related = [] }) {
                                 </div>
                             </div>
 
-                            {/* #3: label VARIAN + chip varian, hanya bila produk punya varian */}
                             {showVariants && (
                                 <div className="mb-4">
                                     <p className="mb-2 text-sm font-semibold text-neutral-700">{t("jastip.show.variant_label")}</p>
@@ -248,13 +233,11 @@ export default function Show({ product, related = [] }) {
                                 </div>
                             )}
 
-                            {/* Price */}
                             <div className="mb-4 flex items-center justify-between border-t border-neutral-100 pt-4">
                                 <span className="text-sm font-bold text-neutral-700">{t("jastip.show.price")}</span>
                                 <span className="text-lg font-bold text-primary-700">{rupiah(unitPrice * quantity)}</span>
                             </div>
 
-                            {/* Informasi Jasa Titip — owner bisa diklik ke profil forum (#10) */}
                             <div className="mb-4 rounded-xl bg-neutral-50 p-4">
                                 <p className="mb-3 text-sm font-bold text-neutral-700">{t("jastip.show.jastip_info")}</p>
                                 <div className="flex items-center gap-3">
@@ -329,7 +312,6 @@ export default function Show({ product, related = [] }) {
                             </div>
 
                             {isOwner ? (
-                                /* #5 & #15: pemilik tak melihat tombol pesan — diganti chat grup pembeli */
                                 <div className="space-y-2">
                                     <Button isButtonLink={false} type="primary" variant="outline" size="md" rounded={false}
                                         onClick={handleOpenGroupChat}
@@ -339,7 +321,6 @@ export default function Show({ product, related = [] }) {
                                     <p className="text-center text-xs text-neutral-400">{t("jastip.show.group_chat_hint")}</p>
                                 </div>
                             ) : isUpcoming ? (
-                                /* #4: jastip 'akan dibuka' belum bisa dipesan → tombol tambah favorit */
                                 <div className="space-y-2">
                                     <Button isButtonLink={false} type="primary" variant={isLiked ? "solid" : "outline"} size="md" rounded={false}
                                         onClick={handleToggleLike}
@@ -364,7 +345,6 @@ export default function Show({ product, related = [] }) {
                     </div>
                 </div>
 
-                {/* Produk terkait */}
                 {related.length > 0 && (
                     <div className="mt-16 border-t border-neutral-100 pt-10">
                         <h3 className="mb-6 text-xl font-bold text-neutral-800">

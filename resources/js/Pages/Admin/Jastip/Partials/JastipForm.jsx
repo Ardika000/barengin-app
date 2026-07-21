@@ -11,13 +11,10 @@ import { regenciesOf } from "@/lib/indonesiaRegencies";
 import { COUNTRIES, countryCodeOf } from "@/lib/countries";
 import { FiPlus, FiX, FiTrash2, FiImage, FiMapPin, FiShoppingBag } from "react-icons/fi";
 
-// Batas ukuran gambar 5MB (sesuai validasi backend).
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-// #13: penanda kolom wajib
 const Req = () => <span className="text-red-500"> *</span>;
 
-// Opsi lokasi pembelian: provinsi Indonesia (untuk beli domestik) + negara (luar negeri).
 const PURCHASE_ORIGIN_OPTIONS = [...INDONESIA_PROVINCES, ...COUNTRIES];
 
 const inputClass =
@@ -26,7 +23,6 @@ const labelClass = "mb-1.5 block text-sm font-medium text-neutral-700";
 const cardTitle = "mb-4 text-lg font-semibold text-primary-700";
 const card = "rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm";
 
-// Varian datar: satu tingkat, masing-masing punya stok/harga/min/gambar sendiri.
 export const emptyVariant = () => ({
     value: "", price: "", stock: "", min_buy: "1",
     image: null, image_url: null, image_name: null,
@@ -49,7 +45,6 @@ export default function JastipForm({
     const { t } = useTranslation();
     const [previews, setPreviews] = useState([]);
 
-    // #10: pada form baru, deteksi lokasi jastiper & isi otomatis "Lokasi Ambil" (kota).
     useEffect(() => {
         if (!autoLocate) return;
         if (data.pickup_city || data.pickup_province) return;
@@ -64,7 +59,7 @@ export default function JastipForm({
                     const city = geo.city || geo.locality || "";
                     if (city) setData((d) => (d.pickup_city ? d : { ...d, pickup_city: city }));
                 } catch {
-                    /* abaikan kegagalan geolokasi */
+                    /* abaikan */
                 }
             },
             () => {},
@@ -76,14 +71,10 @@ export default function JastipForm({
     const err = (key) => errors?.[key] && <p className="mt-1 text-xs text-red-500">{errors[key]}</p>;
     const totalPrice = Number(data.base_price || 0) + Number(data.jastip_fee || 0);
 
-    // ── Cascade lokasi: kota harus milik provinsi terpilih ──
     const pickupCities = regenciesOf(data.pickup_province);
-    // Lokasi pembelian: bila memilih provinsi Indonesia, kota diambil dari dataset;
-    // bila memilih negara luar, kota jadi input bebas (tak ada dataset kota luar negeri).
     const purchaseIsProvince = INDONESIA_PROVINCES.includes(data.purchase_province);
     const purchaseCities = purchaseIsProvince ? regenciesOf(data.purchase_province) : [];
 
-    // Ganti provinsi ambil → kosongkan kota jika tak lagi cocok dengan provinsinya.
     const setPickupProvince = (prov) =>
         setData((d) => {
             const cities = regenciesOf(prov);
@@ -91,7 +82,6 @@ export default function JastipForm({
             return { ...d, pickup_province: prov, pickup_city: keepCity ? d.pickup_city : "" };
         });
 
-    // Ganti negara/provinsi pembelian → kosongkan kota jika tak lagi cocok.
     const setPurchaseOrigin = (val) =>
         setData((d) => {
             const cities = INDONESIA_PROVINCES.includes(val) ? regenciesOf(val) : [];
@@ -99,7 +89,6 @@ export default function JastipForm({
             return { ...d, purchase_province: val, purchase_city: keepCity ? d.purchase_city : "" };
         });
 
-    // ── Varian ──
     const updateVariant = (i, field, value) =>
         setData("variants", data.variants.map((v, idx) => (idx === i ? { ...v, [field]: value } : v)));
     const addVariant = () => setData("variants", [...data.variants, emptyVariant()]);
@@ -117,7 +106,6 @@ export default function JastipForm({
         setData("variants", data.variants.map((v, idx) =>
             idx === i ? { ...v, image: null, image_url: null, image_name: null } : v));
 
-    // Aktifkan/nonaktifkan varian (#9)
     const toggleHasVariants = (checked) => {
         setData((d) => {
             if (checked) {
@@ -126,7 +114,6 @@ export default function JastipForm({
                     : [{ ...emptyVariant(), value: "Original", stock: d.max_slot || "", min_buy: d.min_buy || "1" }];
                 return { ...d, has_variants: true, variants: seeded };
             }
-            // Kembali ke mode tanpa varian: ambil stok/min dari varian pertama
             const first = d.variants?.[0];
             return {
                 ...d,
@@ -137,11 +124,9 @@ export default function JastipForm({
         });
     };
 
-    // ── Gambar produk ──
     const addImages = (fileList) => {
         const files = Array.from(fileList || []);
         if (!files.length) return;
-        // #: tolak gambar > 5MB dan beri notifikasi error.
         const ok = files.filter((f) => f.size <= MAX_IMAGE_BYTES);
         if (ok.length < files.length) {
             toast.error(t("jastip.form.image_too_large"));
@@ -157,7 +142,6 @@ export default function JastipForm({
 
     return (
         <div className="mx-auto max-w-4xl space-y-6">
-            {/* Informasi Umum */}
             <div className={card}>
                 <h3 className={cardTitle}>{t("jastip.form.general")}</h3>
                 <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -184,7 +168,6 @@ export default function JastipForm({
                 </div>
             </div>
 
-            {/* Lokasi Jastip */}
             <div className={card}>
                 <h3 className={cardTitle}>{t("jastip.form.location")}</h3>
                 <p className="-mt-2 mb-5 text-xs text-neutral-400">{t("jastip.form.location_note")}</p>
@@ -259,7 +242,6 @@ export default function JastipForm({
                             <div>
                                 <label className={labelClass}>{t("jastip.form.city")}</label>
                                 {purchaseIsProvince ? (
-                                    // Provinsi Indonesia → daftar kota/kabupaten dari dataset.
                                     <SearchSelect
                                         value={data.purchase_city || ""}
                                         onChange={(v) => setData("purchase_city", v)}
@@ -268,7 +250,6 @@ export default function JastipForm({
                                         placeholder={t("jastip.form.city_select_ph")}
                                     />
                                 ) : data.purchase_province ? (
-                                    // Negara luar → cari kota via Nominatim, dibatasi hanya negara itu.
                                     <PlaceAutocomplete
                                         value={data.purchase_city || ""}
                                         onChange={(v) => setData("purchase_city", v)}
@@ -312,7 +293,6 @@ export default function JastipForm({
                 </div>
             </div>
 
-            {/* Harga */}
             <div className={card}>
                 <h3 className={cardTitle}>{t("jastip.form.price")}</h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -334,11 +314,9 @@ export default function JastipForm({
                 <p className="mt-2 text-xs text-neutral-400">{t("jastip.form.price_note")}</p>
             </div>
 
-            {/* Inventaris & Estimasi waktu */}
             <div className={card}>
                 <h3 className={cardTitle}>{t("jastip.form.inventory")}</h3>
 
-                {/* Stok & Min. Pembelian — hanya bila TANPA varian */}
                 {!data.has_variants && (
                     <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
@@ -367,7 +345,6 @@ export default function JastipForm({
                     </div>
                 </div>
 
-                {/* #7: jendela pengambilan barang oleh pembeli */}
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label className={labelClass}>{t("jastip.form.pickup_start_date")}<Req /></label>
@@ -382,7 +359,6 @@ export default function JastipForm({
                 </div>
                 <p className="mt-2 text-xs text-neutral-400">{t("jastip.form.pickup_window_note")}</p>
 
-                {/* Toggle varian */}
                 <div className="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4">
                     <Checkbox
                         id="has_variants"
@@ -394,7 +370,6 @@ export default function JastipForm({
                     <p className="mt-1 pl-6 text-xs text-neutral-400">{t("jastip.form.has_variants_hint")}</p>
                 </div>
 
-                {/* Terima request titipan di luar katalog untuk item ini */}
                 <div className="mt-4 rounded-xl border border-dashed border-primary-200 bg-primary-50/50 p-4">
                     <Checkbox
                         id="allow_requests"
@@ -407,7 +382,6 @@ export default function JastipForm({
                 </div>
             </div>
 
-            {/* Tambah Varian — hanya bila punya varian, DI BAWAH Inventaris (#9) */}
             {data.has_variants && (
                 <div className={card}>
                     <div className="mb-4 flex items-center justify-between">
@@ -424,7 +398,6 @@ export default function JastipForm({
                         {data.variants.map((v, vi) => (
                             <div key={vi} className="rounded-2xl border border-neutral-200 p-4">
                                 <div className="flex gap-4">
-                                    {/* Gambar varian (opsional) */}
                                     <div className="shrink-0">
                                         <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-neutral-300 text-neutral-400 transition hover:border-primary-700">
                                             <input type="file" accept="image/*" className="hidden" onChange={(e) => { setVariantImage(vi, e.target.files?.[0]); e.target.value = ""; }} />
@@ -444,7 +417,6 @@ export default function JastipForm({
                                         )}
                                     </div>
 
-                                    {/* Field varian */}
                                     <div className="flex-1 space-y-3">
                                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                             <div>
@@ -482,7 +454,6 @@ export default function JastipForm({
                 </div>
             )}
 
-            {/* Gambar Produk */}
             <div className={card}>
                 <h3 className={cardTitle}>{t("jastip.form.images")}{imageRequired && <Req />}</h3>
                 <p className="-mt-2 mb-4 text-xs text-neutral-400">{t("jastip.form.image_size_note")}</p>
@@ -514,7 +485,6 @@ export default function JastipForm({
                 {err("images")}
             </div>
 
-            {/* Aksi — #14: hanya simpan draft. Publish dilakukan dari kartu di halaman manajemen. */}
             <div className="flex flex-col gap-2 pb-2">
                 <div className="flex items-center justify-end">
                     <Button

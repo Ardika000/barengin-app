@@ -22,7 +22,7 @@ export default function AdminLayout({ children, title = "Dasbor - Home", subtitl
                 setIsMobileOpen={setIsMobileOpen}
             />
 
-            {/* Bungkus Konten Utama dan Navbar — block (bukan flex item) + margin sesuai lebar sidebar */}
+            {/* Bungkus Konten Utama dan Navbar - block (bukan flex item) + margin sesuai lebar sidebar */}
             <div
                 className={`min-w-0 flex flex-col min-h-screen transition-all duration-300 ease-in-out
                     ${isCollapsed ? "lg:ml-20" : "lg:ml-72"}

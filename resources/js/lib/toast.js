@@ -1,5 +1,5 @@
-// Toast store sederhana (module-level) yang bisa dipakai dari mana saja —
-// tanpa context/hook — jadi konsisten di SEMUA halaman.
+// Toast store sederhana (module-level) yang bisa dipakai dari mana saja -
+// tanpa context/hook - jadi konsisten di SEMUA halaman.
 let toasts = [];
 const listeners = new Set();
 let counter = 0;

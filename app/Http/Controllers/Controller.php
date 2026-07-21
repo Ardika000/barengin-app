@@ -41,7 +41,7 @@ abstract class Controller
             $breakdown[$star]++;
         }
 
-        // Daftar ulasan tertulis (yang punya komentar) — terbaru lebih dulu.
+        // Daftar ulasan tertulis (yang punya komentar) - terbaru lebih dulu.
         $reviews = $rows
             ->filter(fn ($r) => trim((string) $r->comment) !== '')
             ->map(fn ($r) => [

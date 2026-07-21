@@ -59,7 +59,7 @@ function ForumIndexPage({ posts, tags, filters }) {
         const currentPage = Number(posts?.current_page ?? 1);
 
         // Respons halaman 1 = feed segar (load awal, pencarian, atau setelah
-        // membuat post) → ganti total supaya postingan baru langsung tampil di
+        // membuat post) -> ganti total supaya postingan baru langsung tampil di
         // atas tanpa perlu refresh manual.
         if (currentPage <= 1) {
             setItems(posts?.data ?? []);
@@ -302,7 +302,7 @@ export default function ForumIndex(props) {
 
 ForumIndex.layout = (page) => (
     // Setelah membuat post, server mengarahkan ke /forum sehingga feed halaman 1
-    // dimuat ulang otomatis (postingan baru tampil di atas) — tak perlu afterCreate.
+    // dimuat ulang otomatis (postingan baru tampil di atas) - tak perlu afterCreate.
     <ForumLayout tags={page.props.tags ?? []}>{page}</ForumLayout>
 );
 

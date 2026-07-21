@@ -1,5 +1,5 @@
 import React from "react";
-import { FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiRefreshCw, FiInbox } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiRefreshCw, FiInbox, FiNavigation } from "react-icons/fi";
 import { BsChatDots } from "react-icons/bs";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -21,7 +21,7 @@ const LIFECYCLE_STYLE = {
 const FALLBACK_IMG = "/assets/default-image.png";
 
 // Kartu produk jastip. `manage` menampilkan aksi (edit/publish/hapus) saat hover.
-export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail, onReopen, onToggleRequests }) {
+export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail, onReopen, onToggleRequests, onTrack }) {
     const { t } = useTranslation();
 
     const pct = item.max_slot > 0 ? Math.min(100, (item.sold / item.max_slot) * 100) : 0;
@@ -32,6 +32,7 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
     const badgeCls = lifecycle ? (LIFECYCLE_STYLE[lifecycle] || LIFECYCLE_STYLE.draft) : (STATUS_STYLE[item.status] || STATUS_STYLE.draft);
     const badgeLabel = lifecycle ? t(`jastip.jastiper_status.${lifecycle}`, lifecycle) : t(`jastip.status.${item.status}`, item.status);
     const isFinished = lifecycle === "finished";
+    const isPickupTime = lifecycle === "pickup_time";
 
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
@@ -50,7 +51,7 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                 {manage && (
                     // Selalu tampil (juga di mobile yang tidak bisa hover) agar aksi mudah dijangkau.
                     <div className="absolute left-2.5 top-2.5 flex gap-1.5">
-                        {/* Lihat detail produk (etalase publik) — draft belum punya halaman publik */}
+                        {/* Lihat detail produk (etalase publik) - draft belum punya halaman publik */}
                         {!item.is_draft && onViewDetail && (
                             <button
                                 type="button"
@@ -93,7 +94,20 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 <BsChatDots size={15} />
                             </button>
                         )}
-                        {/* Buka/tutup penerimaan request titipan — hanya item aktif
+                        {/* Pantau pengambilan - hanya saat masa ambil barang.
+                            Sekali klik: kartu peta dibagikan ke grup jastip lalu
+                            jastiper dibawa ke petanya. */}
+                        {isPickupTime && onTrack && (
+                            <button
+                                type="button"
+                                onClick={onTrack}
+                                title={t("jastip.action_track")}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-primary-700 shadow-sm hover:bg-white"
+                            >
+                                <FiNavigation size={15} />
+                            </button>
+                        )}
+                        {/* Buka/tutup penerimaan request titipan - hanya item aktif
                             (bukan draft, belum selesai). Jastip selesai/draft tak bisa terima request. */}
                         {!item.is_draft && !isFinished && onToggleRequests && (
                             <button

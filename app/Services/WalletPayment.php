@@ -6,40 +6,12 @@ use App\Http\Controllers\MidtransController;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Pembayaran memakai saldo dompet, sebagai alternatif Midtrans Snap.
- *
- * Pesanan tetap dibuat persis seperti alur Midtrans (transactions + *_orders),
- * lalu saldo dipotong dan pesanan langsung dianggap lunas. Pelunasannya sengaja
- * menumpang MidtransController::applyStatus() dengan status 'settlement' supaya
- * seluruh akibat pembayaran — peserta trip, grup chat, notifikasi, kredit dompet
- * penyelenggara — berjalan lewat jalur yang sama persis dengan pembayaran
- * Midtrans, alih-alih diduplikasi di sini dan berisiko menyimpang.
- */
+// Bayar pakai saldo dompet. Pelunasannya sengaja menumpang applyStatus() milik
+// Midtrans supaya efek sampingnya lewat jalur yang sama persis.
 class WalletPayment
 {
-    /**
-     * Potong saldo lalu tandai transaksinya lunas.
-     *
-     * Mengembalikan `true` bila saldo benar-benar terpotong pada pemanggilan ini,
-     * dan `false` bila sumber (`$sourceType`/`$sourceId`) ternyata sudah pernah
-     * didebit — Wallet::debit() idempoten terhadap sumber, jadi uangnya tidak
-     * terpotong dua kali.
-     *
-     * Nilai `false` bukan kegagalan, tetapi patut dicurigai: pesanan ini sudah
-     * dibayar dari saldo, namun pemanggil tetap menyodorkan `$transactionId`
-     * baru. Artinya ada transaksi kembar untuk satu pesanan — biasanya karena
-     * klik ganda yang lolos dari penjagaan status di controller, atau percobaan
-     * ulang setelah proses sebelumnya terputus.
-     *
-     * Pelunasan tetap dijalankan supaya percobaan ulang yang sah tidak
-     * meninggalkan pesanan menggantung padahal uangnya sudah diambil (mis. proses
-     * mati setelah debit berhasil tetapi sebelum applyStatus). Kejadiannya
-     * dicatat sebagai warning agar transaksi kembar tetap terlihat di log alih-
-     * alih lewat diam-diam.
-     *
-     * @throws \App\Exceptions\InsufficientBalanceException bila saldo tak cukup.
-     */
+    // False = sumbernya sudah pernah didebit. Pelunasan tetap jalan supaya pesanan
+    // tak menggantung padahal uangnya sudah diambil.
     public function settle(
         int $userId,
         string $transactionId,

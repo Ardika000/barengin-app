@@ -4,7 +4,7 @@ import { FaLocationDot, FaHeart, FaPlaneDeparture } from "react-icons/fa6";
 import { useTranslation } from "@/lib/useTranslation";
 import StarRating from "@/Components/StarRating";
 
-// Kartu produk jastip — dipakai di Home, etalase Jastip, dan produk terkait.
+// Kartu produk jastip - dipakai di Home, etalase Jastip, dan produk terkait.
 // Mendukung dua bentuk props:
 //  - Home (statis) : price string ("Rp67.000"), tag string + tagColor, tanpa id/href
 //  - Etalase (DB)  : price number, tag {type, date}, id + href + liked (tombol suka aktif)
@@ -101,7 +101,7 @@ export default function JastipCard({ product }) {
                 <h4 className="font-medium text-base mb-1 line-clamp-1">{product.name}</h4>
                 <p className="font-semibold text-lg mb-3">{priceLabel}</p>
 
-                {/* Lokasi — dua baris terpisah agar mudah dibaca; baris kosong disembunyikan */}
+                {/* Lokasi - dua baris terpisah agar mudah dibaca; baris kosong disembunyikan */}
                 {(product.from || product.to) && (
                     <div className="mb-3 space-y-1 text-xs text-neutral-600">
                         {product.from && (

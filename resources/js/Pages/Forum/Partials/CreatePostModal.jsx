@@ -82,7 +82,6 @@ function normalizeTagName(name) {
         .trim();
 }
 
-// Batas selaras dengan validasi backend PostController@store.
 const MAX_IMAGES = 10;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB / gambar
 
@@ -97,8 +96,6 @@ export default function CreatePostModal({
 }) {
     const { t } = useTranslation();
     useLockBodyScroll(open);
-    // Error dipisah per input agar pesannya muncul tepat di bawah kolom yang
-    // bermasalah — konsisten dengan prop `error` pada <Input> di form lain.
     const [contentError, setContentError] = useState("");
     const [imageError, setImageError] = useState("");
     const [view, setView] = useState("editor"); // "editor" | "location"
@@ -123,20 +120,15 @@ export default function CreatePostModal({
     const tagBoxRef = useRef(null);
     const [suggestionStyle, setSuggestionStyle] = useState({});
 
-    // Error server (validasi backend) disalurkan ke kolom yang bersangkutan.
     const serverContentError = errors?.content_html ?? "";
     const serverImageError = useMemo(() => {
         const imgKey = Object.keys(errors ?? {}).find((k) => k.startsWith("images"));
         return imgKey ? errors[imgKey] : "";
     }, [errors]);
 
-    // Validasi klien lebih dulu, lalu error server untuk kolom yang sama.
     const displayContentError = contentError || serverContentError;
     const displayImageError = imageError || serverImageError;
 
-    // Validasi saat kirim. Ukuran & jumlah gambar sudah dijaga di handleFiles,
-    // jadi di sini cukup memastikan konten teks terisi — teks WAJIB, gambar
-    // hanya pelengkap (selaras dengan `content_html => required` di PostController).
     const validateBeforeSubmit = () => {
         const text = getPlainTextFromHtml(contentHtml);
         if (text.length === 0) {
@@ -243,14 +235,11 @@ export default function CreatePostModal({
 
     const handlePickImages = () => fileInputRef.current?.click();
 
-    /**
-     * Gambar yang melanggar batas TIDAK ikut masuk ke form — ditolak di sini,
-     * bukan dibiarkan lalu gagal saat submit. Yang lolos tetap dilampirkan.
-     */
     const handleFiles = (files) => {
         const picked = Array.from(files ?? []);
         if (!picked.length) return;
 
+        // Gambar kelewat besar ditolak di sini, bukan dibiarkan gagal saat submit.
         const tooBig = picked.filter((f) => f.size > MAX_IMAGE_BYTES);
         const accepted = picked.filter((f) => f.size <= MAX_IMAGE_BYTES);
 
@@ -320,7 +309,6 @@ export default function CreatePostModal({
         );
     };
 
-    // Reset seluruh isi editor (dipakai saat modal benar-benar ditutup).
     const resetState = () => {
         images.forEach((x) => {
             try {
@@ -347,12 +335,8 @@ export default function CreatePostModal({
         if (editorRef.current) editorRef.current.innerHTML = "";
     };
 
-    // Tutup manual (tombol X / klik backdrop): serahkan ke parent, biarkan
-    // effect di bawah yang mereset isi saat `open` menjadi false. Isi TIDAK
-    // direset saat submit gagal (modal tetap terbuka) sehingga input aman.
     const requestClose = () => onClose?.();
 
-    // Reset isi hanya ketika modal benar-benar tertutup (sukses / dibatalkan).
     useEffect(() => {
         if (!open) resetState();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -370,7 +354,6 @@ export default function CreatePostModal({
                 }}
             >
                 <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
-                    {/* header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 shrink-0">
                         <div className="font-semibold">
                             {view === "editor" ? t("forum.create.title") : t("forum.create.location_title")}
@@ -622,7 +605,6 @@ export default function CreatePostModal({
                                             ) : null}
                                         </div>
 
-                                        {/* Toolbar */}
                                         <div className="mt-4 flex items-center gap-2 text-neutral-700">
                                             <IconButton
                                                 label={t("forum.create.upload_image")}
@@ -709,7 +691,6 @@ export default function CreatePostModal({
                         )}
                     </div>
 
-                    {/* footer */}
                     {view === "editor" ? (
                         <div className="border-t border-neutral-200 shrink-0">
                             <div className="px-6 py-4 flex items-center justify-between">
@@ -731,9 +712,8 @@ export default function CreatePostModal({
                                         const content_text =
                                             getPlainTextFromHtml(contentHtml);
 
-                                        // Kirim ke parent. Modal TIDAK ditutup di sini —
-                                        // parent menutup saat sukses; saat gagal modal tetap
-                                        // terbuka dan error server ditampilkan.
+                                        // Modal tak ditutup di sini: parent yang tutup saat sukses,
+                                        // saat gagal biar tetap terbuka dengan error server.
                                         onSubmit?.({
                                             content_html: contentHtml,
                                             content_text,

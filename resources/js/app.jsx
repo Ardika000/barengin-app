@@ -20,7 +20,7 @@ createInertiaApp({
 })
 
 // `<html lang>` dirender sekali oleh Blade. Mengganti bahasa lewat Inertia tidak
-// memuat ulang Blade, jadi atributnya jadi basi — mis. seluruh UI sudah English
+// memuat ulang Blade, jadi atributnya jadi basi - mis. seluruh UI sudah English
 // tapi lang tetap "id", yang menyesatkan pembaca layar & terjemahan browser.
 // Selaraskan dari shared prop `locale` pada setiap kunjungan.
 router.on('success', (event) => {

@@ -15,7 +15,7 @@ import {
     FaBoxOpen,
 } from "react-icons/fa6";
 
-// "Request Titipan" — daftar destinasi jastiper yang menerima permintaan
+// "Request Titipan" - daftar destinasi jastiper yang menerima permintaan
 // barang di luar katalog. Pembeli memilih destinasi lalu mengajukan request.
 export default function Browse({ trips = {} }) {
     const { t } = useTranslation();
@@ -76,7 +76,7 @@ export default function Browse({ trips = {} }) {
                         <>
                             {t("jastip.request.form_desc_prefix")}{" "}
                             <span className="font-semibold text-neutral-700">{requestModal.trip.jastiper.name}</span>
-                            {" — "}{requestModal.trip.destination_city}. {t("jastip.request.form_desc")}
+                            {" - "}{requestModal.trip.destination_city}. {t("jastip.request.form_desc")}
                         </>
                     )
                 }

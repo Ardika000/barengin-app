@@ -30,7 +30,6 @@ class Wallet extends Model
         return $this->hasMany(WalletTopup::class);
     }
 
-    /** Dompet milik user, dibuat saat pertama kali dibutuhkan. */
     public static function forUser(int $userId): self
     {
         return self::firstOrCreate(['user_id' => $userId], ['balance' => 0]);
@@ -41,12 +40,7 @@ class Wallet extends Model
         return (float) $this->balance >= $amount;
     }
 
-    /**
-     * Tambah saldo sekaligus mencatat mutasinya. Idempotent terhadap
-     * (source_type, source_id): webhook Midtrans bisa datang berkali-kali untuk
-     * pembayaran yang sama, dan saldo tidak boleh bertambah dua kali.
-     * Mengembalikan true bila saldo benar-benar bertambah.
-     */
+    // Idempotent per (source_type, source_id): webhook Midtrans bisa datang berulang.
     public function credit(float $amount, string $description, ?string $sourceType = null, ?int $sourceId = null): bool
     {
         return DB::transaction(function () use ($amount, $description, $sourceType, $sourceId) {
@@ -80,16 +74,7 @@ class Wallet extends Model
         });
     }
 
-    /**
-     * Kurangi saldo untuk sebuah pembelian, sekaligus mencatat mutasinya.
-     *
-     * Idempotent terhadap (source_type, source_id) seperti credit(), sehingga
-     * percobaan bayar ulang atas pesanan yang sama tidak memotong saldo dua kali
-     * (mengembalikan false). Saldo dibaca ulang di dalam kunci baris agar dua
-     * permintaan yang datang bersamaan tidak bisa membelanjakan saldo yang sama.
-     *
-     * @throws InsufficientBalanceException bila saldo tidak mencukupi.
-     */
+    // Idempotent per sumber, sama seperti credit().
     public function debit(float $amount, string $description, ?string $sourceType = null, ?int $sourceId = null): bool
     {
         return DB::transaction(function () use ($amount, $description, $sourceType, $sourceId) {
@@ -105,8 +90,7 @@ class Wallet extends Model
                 }
             }
 
-            // Kunci baris dompet: saldo yang dipakai untuk memutuskan harus saldo
-            // yang sama dengan yang dikurangi, bukan hasil baca sebelum menunggu.
+            // Dikunci biar dua request bersamaan tak membelanjakan saldo yang sama.
             $fresh = self::whereKey($this->id)->lockForUpdate()->first();
 
             if (! $fresh || (float) $fresh->balance < $amount) {
@@ -135,16 +119,7 @@ class Wallet extends Model
         });
     }
 
-    /**
-     * Kabari pemilik dompet bahwa saldonya berubah.
-     *
-     * Dipanggil dari credit()/debit() — bukan dari masing-masing pemanggil —
-     * supaya setiap perubahan saldo dari sumber mana pun pasti terkabarkan, dan
-     * tepat sekali: keduanya sudah menjaga agar mutasi dari sumber yang sama
-     * tidak dibuat dua kali, sehingga baris ini hanya tercapai saat saldo benar-
-     * benar berubah. Kunci dedupe tetap dipasang sebagai jaring pengaman untuk
-     * webhook Midtrans yang datang bersamaan.
-     */
+    // Dipanggil dari credit()/debit(), bukan dari pemanggilnya, biar tak ada yang lolos.
     private function notifyBalanceChange(
         string $type,
         float $amount,

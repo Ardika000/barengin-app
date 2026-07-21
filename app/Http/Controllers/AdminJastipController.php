@@ -17,7 +17,6 @@ use Inertia\Inertia;
 
 class AdminJastipController extends Controller
 {
-    // ── Manajemen Jastip (list produk + aktivitas penjualan) ─────────────
     public function index(Request $request)
     {
         $userId = Auth::id();
@@ -33,13 +32,12 @@ class AdminJastipController extends Controller
             ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
             ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'));
 
-        // Filter status jastiper (draft/published/buy_time/finished) di SQL
         if ($status !== 'all') {
             $itemsQuery->jastiperStatus($status);
         }
 
         if ($search !== '') {
-            // Nama produk dicari fuzzy (toleran typo); kategori tetap substring.
+            // Nama fuzzy, kategori tetap substring biasa.
             $nameIds = FuzzySearch::ids($itemsQuery, $search, ['jastip_items.name'], 'jastip_items.id');
             $itemsQuery->where(function ($w) use ($nameIds, $search) {
                 $w->whereIn('jastip_items.id', $nameIds)
@@ -57,7 +55,6 @@ class AdminJastipController extends Controller
             ->withQueryString()
             ->through(fn ($item) => $this->formatCard($item));
 
-        // Aktivitas penjualan — order item milik produk jastiper ini (#10: dapat dicari)
         $ordersQuery = DB::table('jastip_order_items')
             ->join('jastip_items', 'jastip_order_items.jastip_item_id', '=', 'jastip_items.id')
             ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
@@ -101,7 +98,7 @@ class AdminJastipController extends Controller
                 'buyer'    => $o->buyer_name,
                 'username' => $o->buyer_username,
                 'avatar'   => $this->resolveAvatarUrl($o->buyer_image),
-                'item'     => $o->item_name . ($o->variant ? ' — ' . $o->variant : ''),
+                'item'     => $o->item_name . ($o->variant ? ' - ' . $o->variant : ''),
                 'qty'      => (int) $o->quantity,
                 'shipping' => (bool) $o->use_shipping,
                 'status'   => $o->order_status,
@@ -139,7 +136,6 @@ class AdminJastipController extends Controller
 
         ActivityLog::record('Membuat jastip: ' . $item->name);
 
-        // Buat grup chat jastip langsung saat dibuat (jastiper jadi anggota pertama).
         (new \App\Services\Chat\GroupConversationService())->ensureJastipGroup($item->id, $item->user_id);
 
         return redirect()->route('admin.jastip.index')->with('flash', [
@@ -154,7 +150,6 @@ class AdminJastipController extends Controller
             ->with(['jastip_item_variants', 'jastip_item_images'])
             ->findOrFail($id);
 
-        // #14: produk yang sudah dipublish tidak dapat diedit lagi
         if (! $item->isDraft()) {
             return redirect()->route('admin.jastip.index')->with('flash', [
                 'type' => 'info',
@@ -162,17 +157,16 @@ class AdminJastipController extends Controller
             ]);
         }
 
-        // Varian datar (satu tingkat) — masing-masing punya stok & gambar sendiri
         $variants = $item->jastip_item_variants->map(fn ($v) => [
             'value'      => $v->var_value,
             'price'      => (float) $v->additional_price,
             'stock'      => (int) $v->stock,
             'min_buy'    => (int) $v->min_buy,
-            'image_name' => $v->image_name,                 // path tersimpan (untuk dipertahankan)
+            'image_name' => $v->image_name,
             'image_url'  => $v->image_name ? $this->resolveImageUrl($v->image_name) : null,
         ])->values();
 
-        // Untuk mode tanpa varian, ambil stok/min dari varian "Original"
+        // Mode tanpa varian: stok/min diambil dari varian "Original".
         $original = $item->jastip_item_variants->first();
 
         return Inertia::render('Admin/Jastip/Edit', [
@@ -211,7 +205,6 @@ class AdminJastipController extends Controller
     {
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
 
-        // #14: produk yang sudah dipublish terkunci, tidak dapat diperbarui
         if (! $item->isDraft()) {
             return redirect()->route('admin.jastip.index')->with('flash', [
                 'type' => 'info',
@@ -235,9 +228,7 @@ class AdminJastipController extends Controller
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
         $name = $item->name;
 
-        // Hanya draft yang bisa dihapus — sejalan dengan Trip Bareng. Karena draft
-        // belum pernah tampil di etalase, ia tidak mungkin punya pesanan, sehingga
-        // penghapusan tidak perlu menyentuh dana pembeli sama sekali.
+        // Draft tak pernah tampil di etalase, jadi mustahil punya pesanan/dana pembeli.
         if (! $item->canBeDeleted()) {
             return back()->with('flash', [
                 'type' => 'error',
@@ -245,8 +236,7 @@ class AdminJastipController extends Controller
             ]);
         }
 
-        // Soft delete: baris tetap ada agar referensi lama tidak putus.
-        // File gambar sengaja tidak dihapus.
+        // Soft delete biar referensi lama tidak putus; file gambar sengaja disisakan.
         $item->delete();
 
         ActivityLog::record('Menghapus draft jastip: ' . $name);
@@ -264,11 +254,26 @@ class AdminJastipController extends Controller
         return back()->with('flash', ['type' => 'success', 'message' => 'Jastip berhasil dipublish.']);
     }
 
-    /**
-     * Buka/tutup penerimaan request titipan untuk satu jastip. Sengaja tidak
-     * terikat aturan #14 (item published terkunci edit) — flag ini boleh
-     * diubah kapan pun agar jastiper bisa membuka/menutup titipan saat aktif.
-     */
+    // Bagikan kartu "ambil barang" ke grup jastip lalu buka petanya.
+    public function shareTrack($id)
+    {
+        $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
+
+        if ($item->jastiperStatus() !== 'pickup_time') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Pantau pengambilan hanya tersedia saat masa pengambilan barang.',
+            ]);
+        }
+
+        \App\Services\Chat\JastipTrackShare::share($item);
+
+        ActivityLog::record('Membagikan pantau pengambilan jastip: ' . $item->name);
+
+        return redirect()->route('jastip.track', $item->id);
+    }
+
+    // Sengaja tidak ikut kunci "published tak bisa diedit"; flag ini boleh diubah kapan pun.
     public function toggleRequests($id)
     {
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
@@ -282,9 +287,7 @@ class AdminJastipController extends Controller
         ]);
     }
 
-    // #11: Buka ulang jastip yang sudah selesai → duplikat jadi draft baru
-    // (semua data ikut, gambar & varian disalin) dengan tanggal dikosongkan,
-    // lalu arahkan ke form edit agar jastiper mengatur jadwal baru.
+    // Duplikat jastip selesai jadi draft baru tanpa tanggal, lalu arahkan ke form edit.
     public function reopen($id)
     {
         $source = JastipItem::where('user_id', Auth::id())
@@ -316,7 +319,6 @@ class AdminJastipController extends Controller
                 'max_slot'           => $source->max_slot,
                 'min_buy'            => $source->min_buy,
                 'weight_gram'        => $source->weight_gram,
-                // Tanggal dikosongkan — wajib diisi ulang
                 'start_date'         => null,
                 'end_date'           => null,
                 'pickup_start_date'  => null,
@@ -353,9 +355,7 @@ class AdminJastipController extends Controller
         ]);
     }
 
-    // Salin file gambar di storage publik agar draft hasil reopen punya salinan
-    // sendiri (tidak berbagi path dengan produk asal). Referensi eksternal (URL/
-    // absolut) dibiarkan apa adanya.
+    // Draft hasil reopen harus punya file sendiri, jangan berbagi path dengan produk asal.
     private function duplicateStoredImage(?string $path): ?string
     {
         if (! $path) {
@@ -374,7 +374,6 @@ class AdminJastipController extends Controller
         return $newPath;
     }
 
-    // ── Analitik Jastip ──────────────────────────────────────────────────
     public function analytics()
     {
         $userId = Auth::id();
@@ -431,8 +430,6 @@ class AdminJastipController extends Controller
         ]);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
-
     private function categoriesPayload()
     {
         return JastipCategory::orderBy('name')->get(['id', 'name', 'slug']);
@@ -474,15 +471,13 @@ class AdminJastipController extends Controller
 
     private function validateItem(Request $request, bool $isCreate = false): array
     {
-        // Saat membuat produk baru, minimal satu gambar wajib; saat edit, gambar
-        // lama tetap dipertahankan sehingga tidak wajib unggah ulang.
+        // Saat edit gambar lama dipertahankan, jadi tidak wajib unggah ulang.
         $imagesRule = $isCreate ? ['required', 'array', 'min:1'] : ['nullable', 'array'];
 
         return $request->validate([
             'name'               => ['required', 'string', 'max:255'],
             'jastip_category_id' => ['required', 'integer', 'exists:jastip_categories,id'],
             'description'        => ['nullable', 'string'],
-            // Lokasi — provinsi & alamat ambil + negara/provinsi pembelian wajib; kota opsional
             'pickup_province'    => ['required', 'string', 'max:100'],
             'pickup_city'        => ['nullable', 'string', 'max:100'],
             'pickup_address'     => ['required', 'string', 'max:500'],
@@ -493,10 +488,8 @@ class AdminJastipController extends Controller
             'jastip_fee'         => ['nullable', 'numeric', 'min:0'],
             'has_variants'       => ['required', 'boolean'],
             'allow_requests'     => ['sometimes', 'boolean'],
-            // Tanpa varian: stok & min pembelian di tingkat produk
             'max_slot'           => ['required_if:has_variants,0,false', 'nullable', 'integer', 'min:1'],
             'min_buy'            => ['required_if:has_variants,0,false', 'nullable', 'integer', 'min:1'],
-            // Dengan varian: daftar varian datar, masing-masing punya stok
             'variants'                 => ['required_if:has_variants,1,true', 'array'],
             'variants.*.value'         => ['required_with:variants', 'string', 'max:100'],
             'variants.*.stock'         => ['required_with:variants', 'integer', 'min:0'],
@@ -506,7 +499,6 @@ class AdminJastipController extends Controller
             'variants.*.image_name'    => ['nullable', 'string'],
             'start_date'  => ['required', 'date'],
             'end_date'    => ['required', 'date', 'after_or_equal:start_date'],
-            // Jendela pengambilan barang (#7) — setelah masa pemesanan ditutup
             'pickup_start_date' => ['required', 'date', 'after_or_equal:end_date'],
             'pickup_end_date'   => ['required', 'date', 'after_or_equal:pickup_start_date'],
             'publish'     => ['sometimes', 'boolean'],
@@ -533,11 +525,10 @@ class AdminJastipController extends Controller
         $hasVariants = filter_var($data['has_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         DB::transaction(function () use ($item, $request, $data, $hasVariants) {
-            // Susun daftar varian yang akan disimpan
             if ($hasVariants) {
                 $variantInputs = array_values($data['variants'] ?? []);
             } else {
-                // Tanpa varian: buat satu varian "Original" dari stok & min di inventaris
+                // Mode tanpa varian tetap disimpan sebagai satu varian "Original".
                 $variantInputs = [[
                     'value'      => 'Original',
                     'price'      => 0,
@@ -574,7 +565,7 @@ class AdminJastipController extends Controller
             ]);
             $item->save();
 
-            // Ganti seluruh varian. Simpan path gambar lama untuk pembersihan orphan.
+            // Varian diganti total; path lama disimpan buat bersihkan orphan.
             $oldImages = $item->jastip_item_variants()->pluck('image_name')->filter()->all();
             $item->jastip_item_variants()->delete();
 
@@ -583,7 +574,7 @@ class AdminJastipController extends Controller
                 if (trim((string) ($v['value'] ?? '')) === '') {
                     continue;
                 }
-                $imgPath = $v['image_name'] ?? null; // gambar varian yang sudah ada
+                $imgPath = $v['image_name'] ?? null;
                 $file = $request->file("variants.$idx.image");
                 if ($file) {
                     $imgPath = $file->store('jastip-images', 'public');
@@ -603,12 +594,10 @@ class AdminJastipController extends Controller
                 ]);
             }
 
-            // Hapus gambar varian lama yang tidak dipakai lagi
             foreach (array_diff($oldImages, $keptImages) as $orphan) {
                 $this->deleteStoredImage($orphan);
             }
 
-            // Gambar produk (base)
             foreach ((array) $request->input('removed_images', []) as $imgId) {
                 $img = $item->jastip_item_images()->find($imgId);
                 if ($img) {

@@ -4,8 +4,8 @@ import { FiX, FiMapPin } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
 // Kartu konteks Trip / Pergi Bareng / Jastip. Dua mode:
-// - onDismiss diberikan → kartu tersemat di komposer (bisa ditutup, tidak nge-link).
-// - tanpa onDismiss → kartu di dalam gelembung pesan (bisa diklik ke detail).
+// - onDismiss diberikan -> kartu tersemat di komposer (bisa ditutup, tidak nge-link).
+// - tanpa onDismiss -> kartu di dalam gelembung pesan (bisa diklik ke detail).
 const TYPE_LABEL_KEYS = {
     trip: "chat.ref.trip",
     pergi_bareng: "chat.ref.pergi_bareng",

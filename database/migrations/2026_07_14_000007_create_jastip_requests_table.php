@@ -10,7 +10,7 @@ return new class extends Migration
     {
         // Permintaan titipan dari pembeli ke jastiper, terikat ke satu
         // destinasi/trip jastiper (tabel jastips). Alur status:
-        // pending → quoted (jastiper memberi harga) → paid | rejected | cancelled
+        // pending -> quoted (jastiper memberi harga) -> paid | rejected | cancelled
         Schema::create('jastip_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('jastip_id')->constrained('jastips')->cascadeOnDelete();

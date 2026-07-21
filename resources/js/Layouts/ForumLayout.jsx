@@ -55,7 +55,7 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
 
         router.post("/forum/posts", fd, {
             forceFormData: true,
-            // Server mengarahkan ke /forum (beranda) → jangan pertahankan scroll
+            // Server mengarahkan ke /forum (beranda) -> jangan pertahankan scroll
             // supaya pengguna melihat postingan barunya di paling atas.
             preserveScroll: false,
             // Saat validasi gagal (ada errors), pertahankan state agar isi modal

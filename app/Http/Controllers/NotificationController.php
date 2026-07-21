@@ -10,13 +10,11 @@ use Inertia\Inertia;
 
 class NotificationController extends Controller
 {
-    /** Halaman daftar notifikasi. */
     public function index(Request $request)
     {
         $user = Auth::user();
 
-        // Tanpa cron: segarkan notifikasi lifecycle (mulai/selesai/waktu ambil)
-        // milik pengguna ini saat membuka halaman notifikasi. Di-throttle di dalam.
+        // Pengganti cron, di-throttle di dalam.
         LifecycleNotifier::freshenForUser((int) $user->id);
 
         $filter = $request->query('filter') === 'unread' ? 'unread' : 'all';
@@ -36,15 +34,9 @@ class NotificationController extends Controller
         ]);
     }
 
-    /**
-     * Polling ringan untuk lencana navbar — dipakai pada hosting tanpa
-     * WebSocket, sepola dengan /chat/poll.
-     */
     public function poll()
     {
-        // Tanpa cron: navbar mem-poll endpoint ini secara berkala, jadi ini juga
-        // menjadi "mesin" penyegar notifikasi lifecycle (di-throttle per pengguna),
-        // sehingga lencana bel tetap bertambah walau tak ada cron berjalan.
+        // Pengganti cron juga, navbar mem-poll ini berkala.
         LifecycleNotifier::freshenForUser((int) Auth::id());
 
         return response()->json([
@@ -52,11 +44,9 @@ class NotificationController extends Controller
         ]);
     }
 
-    /** Tandai satu notifikasi terbaca. */
     public function markRead($id)
     {
-        // Dibatasi ke milik sendiri: tanpa ini id tebakan bisa menandai
-        // notifikasi orang lain.
+        // Dibatasi ke milik sendiri, id tebakan jangan sampai kena punya orang.
         UserNotification::where('user_id', Auth::id())
             ->whereKey($id)
             ->whereNull('read_at')
@@ -65,7 +55,6 @@ class NotificationController extends Controller
         return back();
     }
 
-    /** Tandai semua terbaca. */
     public function markAllRead()
     {
         UserNotification::where('user_id', Auth::id())
@@ -75,7 +64,6 @@ class NotificationController extends Controller
         return back();
     }
 
-    /** Simpan preferensi notifikasi per pengguna (dari tab Pengaturan). */
     public function updatePreferences(Request $request)
     {
         $categories = array_keys(UserNotification::CATEGORIES);
@@ -87,8 +75,7 @@ class NotificationController extends Controller
 
         $data = $request->validate($rules);
 
-        // Hanya kategori yang dikenal yang disimpan — kunci asing dari klien
-        // tidak boleh menyusup ke kolom JSON.
+        // Cuma kategori dikenal, biar kunci asing dari klien tidak masuk kolom JSON.
         $prefs = [];
         foreach ($categories as $category) {
             $prefs[$category] = (bool) $data['prefs'][$category];
@@ -110,10 +97,7 @@ class NotificationController extends Controller
             ->count();
     }
 
-    /**
-     * Bentuk payload untuk UI. `type` + `data` sengaja dikirim mentah: kalimatnya
-     * dirakit di frontend lewat t() supaya ikut bahasa yang sedang aktif.
-     */
+    // type + data dikirim mentah, kalimatnya dirakit di frontend lewat t().
     private function map(UserNotification $n): array
     {
         return [
@@ -124,8 +108,6 @@ class NotificationController extends Controller
             'url' => $n->url,
             'is_read' => $n->read_at !== null,
             'created_at' => $n->created_at?->toISOString(),
-            // diffForHumans() mengikuti locale aktif yang dipasang SetLocale,
-            // jadi "20 menit yang lalu" / "20 minutes ago" ikut bahasa pengguna.
             'time_label' => $n->created_at?->diffForHumans(),
         ];
     }

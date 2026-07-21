@@ -30,11 +30,9 @@ class PergiBarengController extends Controller
                 ->exists()
             : false;
 
-        // Jumlah kursi yang sudah disetujui (akumulasi kuantitas tiap partisipan)
         $joined = (int) $trip->pergi_bareng_participants->sum('quantity');
         $remaining = max(0, $trip->people_amount - $joined);
 
-        // Status user yang sedang login terhadap trip ini
         $isParticipant = $authId
             ? $trip->pergi_bareng_participants->contains('user_id', $authId)
             : false;
@@ -42,8 +40,7 @@ class PergiBarengController extends Controller
             ? $trip->pergi_bareng_requests->contains('user_id', $authId)
             : false;
 
-        // Siapa saja (di antara peserta) yang sudah diikuti user ini — satu query
-        // agar tombol Ikuti/Mengikuti tiap baris tidak memicu N+1.
+        // Satu query, biar tombol Ikuti tiap baris tidak jadi N+1.
         $participantIds = $trip->pergi_bareng_participants->pluck('user_id')->filter()->unique();
         $followedIds = $authId && $participantIds->isNotEmpty()
             ? DB::table('follows')
@@ -85,7 +82,6 @@ class PergiBarengController extends Controller
                 'is_following' => $isFollowing,
                 'is_self' => $authId === $trip->initiator?->id,
             ],
-            // Tiap partisipan diperluas sebanyak kuantitas kursi yang dipesan
             'participants' => $trip->pergi_bareng_participants->flatMap(function ($p) use ($authId, $followedIds) {
                 $entry = [
                     'user_id' => $p->user_id,
@@ -93,7 +89,6 @@ class PergiBarengController extends Controller
                     'username' => $p->user?->username,
                     'avatar' => $p->user?->public_profile_image ?? '/assets/default-profile.png',
                     'verified' => (bool) $p->user_id,
-                    // Untuk tombol Ikuti/Mengikuti per baris.
                     'is_self' => $authId !== null && (int) $p->user_id === (int) $authId,
                     'is_following' => $followedIds->has($p->user_id),
                 ];
@@ -115,7 +110,6 @@ class PergiBarengController extends Controller
     
     public function index(Request $request)
     {
-        // 1. Tangkap parameter 'sort' & pencarian dari React
         $sortBy  = $request->query('sort', 'schedule');
         $dari    = trim((string) $request->query('dari', ''));
         $ke      = trim((string) $request->query('ke', ''));
@@ -123,13 +117,10 @@ class PergiBarengController extends Controller
         $waktu     = $request->query('waktu');
         $kendaraan = trim((string) $request->query('kendaraan', ''));
 
-        // 2. Siapkan query dasar beserta relasinya
         $query = PergiBareng::with(['initiator.received_ratings', 'pergi_bareng_participants'])
             ->where('time_appointment', '>=', now()); // sembunyikan yang sudah lewat
 
-        // Pergi bareng hanya melayani perjalanan di dalam Indonesia. Lokasi yang
-        // TERBUKTI asing dikosongkan hasilnya (teks yang gagal di-geocode tetap
-        // diproses agar pencarian tak ikut mati saat Nominatim bermasalah).
+        // Yang gagal di-geocode tetap diproses biar pencarian tak ikut mati.
         $resolver = new RegionResolver();
         $foreignLocation = ($dari !== '' && $resolver->isForeign($dari))
             || ($ke !== '' && $resolver->isForeign($ke));
@@ -137,8 +128,7 @@ class PergiBarengController extends Controller
         if ($foreignLocation) {
             $query->whereRaw('1 = 0');
         } else {
-            // Pencarian longgar: bila tak ada yang tepat di titik itu, tampilkan
-            // yang masih satu kabupaten/kota (lihat App\Support\LocationFilter).
+            // Longgar: kalau tak ada yang persis, ambil yang sekabupaten/kota.
             if ($dari !== '') {
                 LocationFilter::freeText($query, $dari, ['departure_loc']);
             }
@@ -156,12 +146,9 @@ class PergiBarengController extends Controller
             $query->where('transportation', $kendaraan);
         }
 
-        // --- LOGIKA SORTING DATABASE ---
         if ($sortBy === 'schedule') {
-            // Jadwal terdekat: Urutkan dari waktu terdekat dengan sekarang
             $query->orderBy('time_appointment', 'asc');
         } else {
-            // Jika tidak ada sort atau sort tidak valid, kembalikan ke urutan default (terbaru)
             $query->latest();
         }
 
@@ -175,7 +162,6 @@ class PergiBarengController extends Controller
                 ->flip()
             : collect();
 
-        // 3. Format data agar sesuai dengan props yang diminta oleh PergiBarengCard.jsx di React
         $formattedTrips = $trips->map(function ($trip) use ($likedIds) {
             $parsedDate = $trip->time_appointment;
             
@@ -213,7 +199,6 @@ class PergiBarengController extends Controller
             ];
         });
 
-        // --- LOGIKA SORTING COLLECTION ---
         if ($sortBy === 'seats') {
             $formattedTrips = $formattedTrips->sortByDesc('remainingSeats')->values();
         } elseif ($sortBy === 'rating') {
@@ -222,8 +207,6 @@ class PergiBarengController extends Controller
             })->values();
         }
 
-        // 4. Paginasi manual: 8 pergi bareng per halaman
-        //    (filter & sorting dilakukan di koleksi, jadi paginasi setelahnya)
         $perPage = 8;
         $page = LengthAwarePaginator::resolveCurrentPage('page');
         $paginatedTrips = new LengthAwarePaginator(
@@ -234,10 +217,8 @@ class PergiBarengController extends Controller
             ['path' => $request->url(), 'query' => $request->query()],
         );
 
-        // 5. Kirim data ke halaman Index.jsx
         return Inertia::render('PergiBareng/Index', [
             'trips' => $paginatedTrips,
-            // Peringatan di daftar saat user mengetik lokasi di luar Indonesia.
             'foreignLocation' => $foreignLocation,
             'filters' => [
                 'dari'      => $dari,
@@ -252,7 +233,6 @@ class PergiBarengController extends Controller
 
     public function show($id)
     {
-        // Load semua relasi yang dibutuhkan termasuk user_ratings dari initiator
         $trip = PergiBareng::with([
             'initiator.user_ratings',
             'pergi_bareng_participants.user',
@@ -281,10 +261,8 @@ class PergiBarengController extends Controller
 
         $userId = Auth::id();
 
-        // Hanya user yang login yang boleh mengajukan
         abort_unless($userId, 403, 'Silakan login terlebih dahulu untuk bergabung.');
 
-        // Penyelenggara tidak bisa bergabung ke trip-nya sendiri
         if ((int) $trip->initiator_id === (int) $userId) {
             return back()->with('flash', [
                 'type' => 'error',
@@ -292,13 +270,11 @@ class PergiBarengController extends Controller
             ]);
         }
 
-        // Satu permintaan tertunda dalam satu waktu — arahkan ke status permintaan.
         if ($trip->pergi_bareng_requests->contains('user_id', $userId)) {
             return redirect()->route('pergi-bareng.request-sent', $trip->id);
         }
 
-        // Peserta yang sudah tergabung BOLEH mengajukan kursi tambahan selama
-        // perjalanan belum berlangsung. Begitu berlangsung/selesai, tidak lagi.
+        // Peserta lama boleh minta kursi tambahan selama belum berangkat.
         if ($trip->pergi_bareng_participants->contains('user_id', $userId)
             && $trip->status() !== 'will_start') {
             return redirect()->route('pergi-bareng.show', $trip->id)
@@ -328,8 +304,6 @@ class PergiBarengController extends Controller
             'order.created:pb_req:' . $req->id,
         );
 
-        // Sisi penyelenggara: tanpa ini dia tidak tahu ada permintaan yang
-        // menunggu persetujuan kecuali membuka halaman permintaan sendiri.
         \App\Models\UserNotification::send(
             (int) $trip->initiator_id,
             'pergi_bareng.requested',
@@ -356,7 +330,6 @@ class PergiBarengController extends Controller
         $myRequest = $trip->pergi_bareng_requests
             ->firstWhere('user_id', Auth::id());
 
-        // Tidak ada permintaan tertunda -> kembali ke detail
         if (! $myRequest) {
             return redirect()->route('pergi-bareng.show', $trip->id);
         }
@@ -369,11 +342,6 @@ class PergiBarengController extends Controller
         ]);
     }
 
-    /**
-     * Peta "pantau perjalanan" live. Hanya anggota grup (penyelenggara atau
-     * peserta yang sudah disetujui) yang boleh melihat lokasi live satu sama
-     * lain — sama seperti akses grup chat pergi bareng.
-     */
     public function track($id)
     {
         $trip = PergiBareng::with('pergi_bareng_participants')->findOrFail($id);
@@ -382,11 +350,7 @@ class PergiBarengController extends Controller
         $isMember = (int) $trip->initiator_id === $userId
             || $trip->pergi_bareng_participants->contains('user_id', $userId);
 
-        // Bukan anggota → dipulangkan ke halaman detail, bukan layar 403. Peta
-        // live memperlihatkan posisi rombongan, jadi ini penjagaan privasi, bukan
-        // sekadar kerapian: tautan yang diteruskan ke luar grup tidak boleh
-        // membocorkan keberadaan orang. Halaman detail terbuka untuk umum,
-        // sehingga aman jadi tempat mendarat.
+        // Peta membocorkan posisi rombongan, jadi non-anggota dipulangkan ke detail.
         if (! $isMember) {
             return redirect()
                 ->route('pergi-bareng.show', $trip->id)
@@ -396,11 +360,7 @@ class PergiBarengController extends Controller
                 ]);
         }
 
-        // Peta live tidak ada gunanya setelah perjalanan selesai — rutenya dihitung
-        // dari posisi GPS penonton ke tujuan, jadi halaman ini akan menuntun orang
-        // ke tempat yang sudah tidak relevan. Kartu lama di grup chat tetap bisa
-        // diklik, karena itu penjagaannya di sisi server, bukan sekadar
-        // menyembunyikan tombolnya.
+        // Dijaga di server karena kartu lama di grup chat masih bisa diklik.
         if ($trip->status() === 'finish') {
             return redirect()
                 ->route('pergi-bareng.show', $trip->id)
@@ -422,12 +382,6 @@ class PergiBarengController extends Controller
         ]);
     }
 
-    /**
-     * Ubah path gambar pergi bareng dari DB menjadi URL untuk <img>.
-     * - kosong  -> gambar default generik
-     * - http/absolut (/assets/..) -> dipakai apa adanya
-     * - relatif -> diarahkan ke storage link
-     */
     private function resolvePergiImage(?string $path): string
     {
         return $this->resolveStoredImage($path);

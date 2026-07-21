@@ -22,7 +22,7 @@ import {
     notificationIconKey,
 } from "@/lib/notificationText";
 
-// Ikon per kategori — dipisah dari komponen agar tidak dibuat ulang tiap render.
+// Ikon per kategori - dipisah dari komponen agar tidak dibuat ulang tiap render.
 const ICONS = {
     pergi_bareng: FaCarSide,
     group: FaUsers,

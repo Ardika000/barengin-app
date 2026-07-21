@@ -14,8 +14,7 @@ use Illuminate\Support\Carbon;
 
 class ChatController extends Controller
 {
-    // Ambang "online": user dianggap online bila last_seen_at dalam rentang ini.
-    // Sedikit lebih besar dari irama heartbeat/poll agar toleran jitter jaringan.
+    // Sengaja lebih longgar dari irama heartbeat/poll biar toleran jitter jaringan.
     private const ONLINE_WINDOW_SECONDS = 90;
 
     public function index()
@@ -49,8 +48,7 @@ class ChatController extends Controller
 
         $conversation->load([
             'participants:id,full_name,profile_image',
-            // `status`/`finished_at` ikut diambil karena lencana status grup
-            // dihitung darinya — tanpa keduanya status() selalu membaca null.
+            // `status`/`finished_at` wajib ikut, kalau tidak status() selalu null.
             'trip:id,name,guider_id,image,start_date,end_date,status,finished_at',
             'pergi_bareng:id,name,img_name,initiator_id,time_appointment,finished_at',
             'jastip_item:id,name,user_id',
@@ -76,40 +74,26 @@ class ChatController extends Controller
             ->get()
             ->map(fn ($m) => $this->mapMessage($m));
 
-        // Tanpa webhook publik (localhost), status pembayaran Midtrans tidak
-        // pernah masuk sendiri. Sinkronkan bagian split bill yang masih menunggu
-        // di percakapan ini setiap kali chat dibuka/dimuat ulang, sehingga status
-        // "lunas" dan kredit dompet penyelenggara langsung terlihat.
-        $this->syncPendingSplitBills($messages);
+        $this->syncPendingSplitBills($messages); // localhost tak punya webhook publik
 
         $headerAvatar = $conversation->is_group
             ? ($this->groupAvatar($conversation) ?? asset('assets/default-profile.png'))
             : ($peer?->public_profile_image ?? asset('assets/default-profile.png'));
 
-        // Kartu referensi tersemat (opsional) dari query — hanya untuk chat personal.
         $pendingReference = $conversation->is_group
             ? null
             : $this->buildReference(request()->query('ref_type'), request()->query('ref_id'));
 
-        // "Sekali saja": bila kartu referensi (trip / pergi bareng) ini sudah pernah
-        // dikirim di percakapan ini, jangan tampilkan lagi di komposer. Tanpa ini,
-        // karena storeMessage me-`back()` ke URL yang masih membawa ref_id/ref_type,
-        // kartu akan menempel ulang pada setiap pesan berikutnya.
+        // storeMessage back() ke URL yang masih bawa ref_id, tanpa ini kartunya nempel terus.
         if ($pendingReference && $this->referenceAlreadySent($conversation, $pendingReference)) {
             $pendingReference = null;
         }
 
         return Inertia::render('Chat/Show', [
             'conversations' => $conversations,
-            // Status terkini tiap tagihan yang kartunya muncul di percakapan ini.
-            // Kartu pada pesan hanya menyimpan ringkasan (judul), sedangkan
-            // lunas/belum berubah seiring waktu — jadi dikirim terpisah.
+            // Kartu di pesan isinya beku, status terkini dikirim terpisah.
             'splitBills' => $this->splitBillStates($messages, $user),
-            // Sama alasannya dengan splitBills: kartu "pantau perjalanan" hanya
-            // menyimpan judul & tujuan saat dikirim, sedangkan selesai/belum
-            // berubah seiring waktu.
             'trackStates' => $this->trackStates($messages),
-            // Untuk popup pembayaran Midtrans pada kartu tagihan.
             'midtrans_client_key' => config('midtrans.client_key'),
             'conversation' => [
                 'id' => $conversation->id,
@@ -119,16 +103,9 @@ class ChatController extends Controller
                 'peer_last_read_at' => $peerLastReadAt,
                 'owner_id' => $ownerId ? (int) $ownerId : null,
                 'is_owner' => $ownerId !== null && (int) $ownerId === (int) $user->id,
-                // Baris pembeda untuk grup (tanggal/jam), agar grup dengan nama
-                // sama — mis. beberapa "Pergi Bareng" ke rute yang sama — bisa
-                // dibedakan.
                 'group_meta' => $conversation->is_group ? $this->groupMeta($conversation) : null,
-                // Penanda & tautan induk grup (trip / pergi bareng / jastip).
                 'group_type' => $conversation->is_group ? $this->groupType($conversation) : null,
                 'group_url' => $conversation->is_group ? $this->groupUrl($conversation) : null,
-                // Status perjalanan induk (menunggu/berlangsung/selesai). Ikut
-                // dikirim ulang oleh pollMessages agar lencananya berubah sendiri
-                // saat perjalanan memasuki jam berangkat atau ditutup.
                 'group_status' => $conversation->is_group ? $this->groupStatus($conversation) : null,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
@@ -158,16 +135,13 @@ class ChatController extends Controller
 
         $data = $request->validate([
             'message_text' => ['nullable', 'string', 'max:5000'],
-            // Pesan yang dibalas harus berada di percakapan yang sama.
             'reply_to_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('messages', 'id')->where('conversation_id', $conversation->id),
             ],
-            // Kartu referensi opsional (Trip / Pergi Bareng / Jastip) untuk pesan pertama.
             'reference_type' => ['nullable', 'in:trip,pergi_bareng,jastip'],
             'reference_id' => ['nullable', 'integer'],
-            // Banyak lampiran (gambar/PDF), masing-masing maksimal 5MB.
             'attachments' => ['nullable', 'array', 'max:10'],
             'attachments.*' => [
                 'file',
@@ -202,7 +176,7 @@ class ChatController extends Controller
         $text = $data['message_text'] ?? '';
         $files = $request->file('attachments', []);
 
-        // Bangun snapshot referensi (server-authoritative, tidak mempercayai klien).
+        // Dibangun ulang di server, jangan percaya kiriman klien.
         $reference = $this->buildReference(
             $data['reference_type'] ?? null,
             $data['reference_id'] ?? null,
@@ -236,12 +210,7 @@ class ChatController extends Controller
         return back();
     }
 
-    /**
-     * Fallback polling untuk pesan baru (dipakai bila WebSocket/Pusher tidak
-     * tersedia, mis. di shared hosting). Mengembalikan pesan dari LAWAN BICARA
-     * dengan id > `after` (mirror `->toOthers()` agar tak menduplikasi pesan
-     * optimistik pengirim), plus status baca & online lawan.
-     */
+    // Fallback kalau WebSocket mati. Cuma pesan lawan, mirror `->toOthers()` biar tak dobel.
     public function pollMessages(Request $request, Conversation $conversation)
     {
         /** @var \App\Models\User $user */
@@ -253,11 +222,9 @@ class ChatController extends Controller
             'Kamu bukan partisipan pada percakapan ini'
         );
 
-        // Poll sekaligus jadi heartbeat kehadiran (agar lawan melihat kita online).
         $this->touchLastSeen($user);
 
-        // Dilakukan sebelum pesan diambil supaya kartunya ikut terkirim pada tick
-        // yang sama begitu perjalanan memasuki jam keberangkatan.
+        // Harus sebelum pesan diambil, biar kartunya ikut di tick yang sama.
         $this->shareTrackCardIfOngoing($conversation);
 
         $afterId = (int) $request->query('after', 0);
@@ -270,7 +237,6 @@ class ChatController extends Controller
             ->get()
             ->map(fn ($m) => $this->mapMessage($m));
 
-        // Presence & read-receipt lawan (khusus chat personal).
         $peer = $conversation->is_group
             ? null
             : $conversation->participants()->where('users.id', '!=', $user->id)->first();
@@ -279,11 +245,6 @@ class ChatController extends Controller
             ? Carbon::parse($peer->pivot->last_read_at)->toISOString()
             : null;
 
-        // Status tagihan patungan ikut disegarkan tiap poll (bukan hanya saat
-        // halaman dimuat ulang), sehingga tombol "Bayar" hilang dan rekap
-        // penyelenggara berubah dalam hitungan detik setelah pembayaran — tanpa
-        // perlu refresh manual. Pesan berkartu referensi jumlahnya sedikit, jadi
-        // memuatnya tiap poll murah.
         $referenceMessages = $this->referenceMessages($conversation);
         $this->syncPendingSplitBills($referenceMessages);
 
@@ -294,83 +255,73 @@ class ChatController extends Controller
             'peer_last_seen_at' => $peer?->last_seen_at
                 ? Carbon::parse($peer->last_seen_at)->toISOString()
                 : null,
-            // Selalu dikirim (map per id tagihan). Kartu di gelembung mengambil
-            // status terkini dari sini, jadi meski kartunya pesan lama, ia tetap
-            // ikut berubah saat lunas.
             'splitBills' => $this->splitBillStates($referenceMessages, $user),
-            // Kartu pantau perjalanan ikut berubah jadi "sudah selesai" tanpa
-            // perlu refresh, sama seperti kartu tagihan.
             'trackStates' => $this->trackStates($referenceMessages),
-            // Lencana status di header ikut hidup: perjalanan yang memasuki jam
-            // berangkat atau ditutup penyelenggara berubah sendiri di layar
-            // anggota yang sedang membuka grup.
             'group_status' => $conversation->is_group
                 ? $this->groupStatus($conversation->loadMissing(['trip', 'pergi_bareng']))
                 : null,
         ]);
     }
 
-    /**
-     * Status terkini tiap perjalanan yang kartu "pantau perjalanan"-nya muncul di
-     * percakapan, dipetakan per id perjalanan.
-     *
-     * Kartu di gelembung dikirim sekali dan isinya beku, jadi tanpa ini ia akan
-     * terus menawarkan peta live bahkan setelah perjalanan ditutup.
-     */
+    // Tanpa ini kartu lama terus menawarkan peta live walau perjalanan/pengambilan
+    // sudah ditutup. Kunci state-nya per jenis kartu karena id-nya bisa bentrok.
     private function trackStates($messages): array
     {
-        $ids = collect($messages)
-            ->map(fn ($m) => ($m['reference']['type'] ?? null) === 'pergi_track'
+        $idsOf = fn (string $type) => collect($messages)
+            ->map(fn ($m) => ($m['reference']['type'] ?? null) === $type
                 ? (int) ($m['reference']['id'] ?? 0)
                 : null)
             ->filter()
             ->unique()
             ->values();
 
-        if ($ids->isEmpty()) {
-            return [];
+        $states = [];
+
+        $pergiIds = $idsOf('pergi_track');
+        if ($pergiIds->isNotEmpty()) {
+            foreach (\App\Models\PergiBareng::whereIn('id', $pergiIds)->get() as $trip) {
+                $states['pergi_track'][$trip->id] = ['status' => $trip->status()];
+            }
         }
 
-        return \App\Models\PergiBareng::whereIn('id', $ids)
-            ->get()
-            ->mapWithKeys(fn ($trip) => [$trip->id => [
-                'status' => $trip->status(),
-            ]])
-            ->all();
+        $jastipIds = $idsOf('jastip_track');
+        if ($jastipIds->isNotEmpty()) {
+            foreach (\App\Models\JastipItem::whereIn('id', $jastipIds)->get() as $item) {
+                // Kartunya menutup diri begitu masa pengambilan lewat; sisi klien
+                // cuma mengenal hidup/selesai, jadi dipetakan ke dua nilai itu.
+                $states['jastip_track'][$item->id] = [
+                    'status' => $item->jastiperStatus() === 'pickup_time' ? 'ongoing' : 'finish',
+                ];
+            }
+        }
+
+        return $states;
     }
 
-    /**
-     * Taruh kartu "pantau perjalanan" di grup pergi bareng begitu perjalanannya
-     * berlangsung.
-     *
-     * Sebelumnya kartu ini hanya muncul lewat command terjadwal atau saat grup
-     * dibuka dari tombol chat — jadi di hosting yang cron-nya tidak jalan,
-     * penyelenggara harus menekan "Pantau Perjalanan" di dasbor supaya anggota
-     * menerimanya. Dengan ikut dipanggil dari tampilan chat dan polling, kartunya
-     * terkirim sendiri paling lambat satu tick setelah jam keberangkatan lewat,
-     * tanpa aksi penyelenggara.
-     *
-     * PergiBarengTrackShare::share() idempoten dan sudah memeriksa status, jadi
-     * pemanggilan berulang tiap poll tidak membanjiri grup.
-     */
+    // Dipanggil dari show & polling supaya tetap jalan di hosting tanpa cron. share() idempoten.
     private function shareTrackCardIfOngoing(Conversation $conversation): void
     {
-        if (! $conversation->is_group || ! $conversation->pergi_bareng_id) {
+        if (! $conversation->is_group) {
             return;
         }
 
-        $trip = \App\Models\PergiBareng::find($conversation->pergi_bareng_id);
+        if ($conversation->pergi_bareng_id) {
+            $trip = \App\Models\PergiBareng::find($conversation->pergi_bareng_id);
 
-        if ($trip) {
-            \App\Services\Chat\PergiBarengTrackShare::share($trip);
+            if ($trip) {
+                \App\Services\Chat\PergiBarengTrackShare::share($trip);
+            }
+        }
+
+        if ($conversation->jastip_item_id) {
+            $item = \App\Models\JastipItem::find($conversation->jastip_item_id);
+
+            if ($item) {
+                \App\Services\Chat\JastipTrackShare::share($item);
+            }
         }
     }
 
-    /**
-     * Pesan pada percakapan yang membawa kartu referensi (split bill / trip /
-     * pergi bareng), dalam bentuk yang sama dengan mapMessage. Dipakai polling
-     * untuk menghitung status tagihan tanpa memuat seluruh riwayat pesan.
-     */
     private function referenceMessages(Conversation $conversation)
     {
         return $conversation->messages()
@@ -380,10 +331,6 @@ class ChatController extends Controller
             ->map(fn ($m) => $this->mapMessage($m));
     }
 
-    /**
-     * Fallback polling untuk daftar percakapan (sidebar): memunculkan chat baru,
-     * pesan terakhir, dan jumlah belum dibaca tanpa perlu refresh manual.
-     */
     public function pollConversations()
     {
         /** @var \App\Models\User $user */
@@ -451,11 +398,6 @@ class ChatController extends Controller
         ];
     }
 
-    /**
-     * Bangun snapshot kartu referensi Trip / Pergi Bareng dari (type, id).
-     * Dipakai untuk kartu tersemat di komposer (show) dan untuk disimpan pada
-     * pesan (storeMessage) sehingga tampil sebagai kartu di gelembung chat.
-     */
     private function buildReference(?string $type, $id): ?array
     {
         if (! $type || ! $id) {
@@ -524,11 +466,7 @@ class ChatController extends Controller
         return null;
     }
 
-    /**
-     * Apakah kartu referensi (trip / pergi bareng) yang sama sudah pernah dikirim
-     * pada percakapan ini? Dibandingkan berdasarkan type + id snapshot. DB-agnostic
-     * (tidak bergantung pada query path JSON) dan hanya memuat pesan yang berreferensi.
-     */
+    // Dicek di PHP, bukan query path JSON, biar tak terikat dialek DB.
     private function referenceAlreadySent(Conversation $conversation, array $reference): bool
     {
         $type = $reference['type'] ?? null;
@@ -549,7 +487,7 @@ class ChatController extends Controller
             });
     }
 
-    /** Daftar lampiran pesan; jatuh balik ke kolom lama untuk pesan lama. */
+    // Fallback ke kolom tunggal untuk pesan lama.
     public static function mapAttachments(Message $m): array
     {
         $list = [];
@@ -586,7 +524,6 @@ class ChatController extends Controller
         return asset('storage/'.$path);
     }
 
-    /** Ringkasan pesan yang dibalas (untuk kutipan di gelembung). */
     public static function mapReply(?Message $reply): ?array
     {
         if (! $reply) {
@@ -638,7 +575,6 @@ class ChatController extends Controller
 
                 $subtitle = $lastMessage?->message_text;
                 if (! $subtitle && $lastMessage) {
-                    // Dukung pesan lampiran-banyak (JSON) & pesan lama (kolom tunggal).
                     $type = self::mapAttachments($lastMessage)[0]['type'] ?? null;
                     if ($type) {
                         if (str_starts_with($type, 'image/')) {
@@ -668,13 +604,7 @@ class ChatController extends Controller
             ->values();
     }
 
-    /**
-     * Baris pembeda ("meta") untuk grup: menampilkan waktu agar dua grup dengan
-     * nama sama tetap bisa dibedakan.
-     *  - Trip        : rentang tanggal ("d M Y – d M Y").
-     *  - Pergi Bareng: tanggal & jam keberangkatan ("d M Y, H:i").
-     *  - Jastip      : tidak ada (nama produk sudah unik).
-     */
+    // Pembeda buat grup yang namanya kembar. Jastip null, namanya sudah unik.
     private function groupMeta(Conversation $conversation): ?string
     {
         if ($conversation->trip && $conversation->trip->start_date) {
@@ -694,16 +624,7 @@ class ChatController extends Controller
         return null;
     }
 
-    /**
-     * Sinkronkan ke Midtrans setiap bagian split bill yang masih 'pending' pada
-     * tagihan-tagihan yang kartunya muncul di percakapan ini.
-     *
-     * Dibutuhkan di localhost yang tidak punya webhook publik: begitu ada yang
-     * membuka/memuat ulang chat, status pembayaran ikut disegarkan — bukan hanya
-     * milik penonton, melainkan seluruh bagian yang menggantung — sehingga tombol
-     * "Bayar" hilang dan dompet penyelenggara dikredit tanpa harus menunggu si
-     * pembayar membuka halaman Riwayat.
-     */
+    // Perlu di localhost yang tanpa webhook publik.
     private function syncPendingSplitBills($messages): void
     {
         $ids = collect($messages)
@@ -729,11 +650,7 @@ class ChatController extends Controller
         }
     }
 
-    /**
-     * Keadaan terkini tagihan split bill yang dirujuk pesan-pesan pada
-     * percakapan, dipetakan per id tagihan. Sudut pandangnya mengikuti $user:
-     * penyelenggara melihat rekap semua anggota, anggota hanya melihat bagiannya.
-     */
+    // Penyelenggara dapat rekap semua anggota, anggota biasa hanya bagiannya.
     private function splitBillStates($messages, $user): array
     {
         $ids = collect($messages)
@@ -748,8 +665,6 @@ class ChatController extends Controller
             return [];
         }
 
-        // Saldo dibaca sekali di luar loop — dipakai kartu untuk menawarkan
-        // pembayaran lewat dompet, dan sama untuk semua tagihan di percakapan.
         $balance = (float) \App\Models\Wallet::forUser((int) $user->id)->balance;
 
         return \App\Models\SplitBill::with(['shares.user:id,full_name,profile_image'])
@@ -768,16 +683,12 @@ class ChatController extends Controller
                     'is_creator' => $isCreator,
                     'paid_count' => $bill->shares->where('status', \App\Models\SplitBillShare::STATUS_PAID)->count(),
                     'share_count' => $bill->shares->count(),
-                    // Saldo penonton kartu — menentukan apakah tombol bayar
-                    // lewat dompet ditawarkan.
                     'wallet_balance' => $balance,
-                    // Bagian milik penonton kartu — dasar tombol "Bayar".
                     'my_share' => $mine ? [
                         'id' => $mine->id,
                         'amount' => (float) $mine->amount,
                         'status' => $mine->status,
                     ] : null,
-                    // Rekap anggota hanya untuk penyelenggara.
                     'shares' => $isCreator
                         ? $bill->shares->map(fn ($s) => [
                             'id' => $s->id,
@@ -792,22 +703,7 @@ class ChatController extends Controller
             ->all();
     }
 
-    /**
-     * Jenis grup — dipakai frontend untuk menandai percakapan ini milik trip /
-     * pergi bareng / jastip, bukan grup biasa. null untuk grup tanpa induk.
-     */
-    /**
-     * Status perjalanan induk grup, untuk lencana kecil di header chat:
-     * `waiting` (belum berangkat) / `ongoing` (sedang berlangsung) / `finished`.
-     *
-     * Hanya grup trip & pergi bareng yang punya status — grup jastip memakai
-     * siklus hidupnya sendiri (masa pesan/ambil) yang tidak sepadan dengan tiga
-     * tahap ini, jadi dibiarkan null agar tidak memaksakan kosakata yang keliru.
-     *
-     * Sengaja memakai sumber yang sama dengan halaman masing-masing
-     * (`PergiBareng::status()` dan kolom `trips.status`) supaya lencana di chat
-     * tidak pernah berbeda dengan status di dasbor/detailnya.
-     */
+    // Sumbernya sengaja sama dengan halaman detail biar lencananya tak pernah beda.
     private function groupStatus(Conversation $conversation): ?string
     {
         if ($conversation->pergi_bareng) {
@@ -846,10 +742,6 @@ class ChatController extends Controller
         return null;
     }
 
-    /**
-     * Tautan ke halaman induk grup, agar anggota bisa melompat dari chat ke
-     * trip / pergi bareng / produk jastip terkait.
-     */
     private function groupUrl(Conversation $conversation): ?string
     {
         if ($conversation->trip) {
@@ -865,10 +757,6 @@ class ChatController extends Controller
         return null;
     }
 
-    /**
-     * Judul grup: trip & pergi bareng pakai namanya; grup jastip diberi format
-     * "Jastip: {nama produk} Group" agar selaras dengan gambar produknya.
-     */
     private function groupTitle(Conversation $conversation): string
     {
         if ($conversation->trip) {
@@ -886,11 +774,7 @@ class ChatController extends Controller
         return 'Group';
     }
 
-    /**
-     * Avatar grup: untuk grup trip pakai gambar utama trip, grup pergi bareng
-     * pakai gambarnya, dan grup jastip pakai gambar pertama produknya.
-     * Mengembalikan null untuk grup lain sehingga pemanggil memakai fallback-nya.
-     */
+    // null kalau grup tak punya induk, pemanggil yang pasang fallback.
     private function groupAvatar(Conversation $conversation): ?string
     {
         if ($conversation->trip) {
@@ -920,7 +804,6 @@ class ChatController extends Controller
         return null;
     }
 
-    /** Ubah path gambar produk jastip menjadi URL <img>; null bila tak ada. */
     private function resolveJastipImage(?string $path): ?string
     {
         if (! $path) {
@@ -934,10 +817,7 @@ class ChatController extends Controller
         return asset('storage/' . $path);
     }
 
-    /**
-     * Ubah path gambar trip dari DB menjadi URL yang bisa dipakai <img>.
-     * Konsisten dengan TripsController::resolveTripImage.
-     */
+    // Harus konsisten dengan TripsController::resolveTripImage.
     private function resolveTripImage(?string $path): string
     {
         $fallback = asset('assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg');

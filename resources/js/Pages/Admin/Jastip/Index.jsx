@@ -35,7 +35,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
     const orderRows = orders?.data ?? [];
     const isLastItemsPage = (items.current_page ?? 1) >= (items.last_page ?? 1);
 
-    // Pencarian/sort/pagination produk + pencarian/pagination pesanan — semuanya
+    // Pencarian/sort/pagination produk + pencarian/pagination pesanan - semuanya
     // server-side dengan URL params, mengelola kedua tabel dalam satu tempat.
     const paramsRef = useRef({
         search: filters.search ?? "",
@@ -216,13 +216,14 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                         onEdit={() => router.visit(`/admin/jastip/${item.id}/edit`)}
                         onPublish={() => setPublishModal({ open: true, id: item.id, name: item.name })}
                         onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}
+                        onTrack={() => router.post(`/admin/jastip/${item.id}/track`)}
                         onReopen={() => setReopenModal({ open: true, id: item.id, name: item.name })}
                         onToggleRequests={() => router.post(`/admin/jastip/${item.id}/toggle-requests`, {}, { preserveScroll: true })}
                         onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name })}
                     />
                 ))}
 
-                {/* Kartu tambah — hanya di halaman terakhir agar tetap di ujung daftar */}
+                {/* Kartu tambah - hanya di halaman terakhir agar tetap di ujung daftar */}
                 {isLastItemsPage && (
                     <Link
                         href="/admin/jastip/create"

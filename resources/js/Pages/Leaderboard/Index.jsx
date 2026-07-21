@@ -146,7 +146,7 @@ export default function Leaderboard({ boards = {}, streakLeader = null }) {
             raf = requestAnimationFrame(compute);
         };
 
-        compute(); // hitung langsung saat tab/pencarian berubah → reset benar
+        compute(); // hitung langsung saat tab/pencarian berubah -> reset benar
         window.addEventListener("scroll", onScroll, { passive: true });
         window.addEventListener("resize", onScroll);
         return () => {

@@ -26,8 +26,6 @@ function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
-// Id numerik pesan tertinggi (abaikan pesan optimistik "tmp-..."). Dipakai
-// sebagai penanda "after" saat polling pesan baru.
 function maxRealId(list) {
     return (list ?? []).reduce((mx, m) => {
         const n = Number(m?.id);
@@ -47,12 +45,8 @@ export default function ChatShow({
     const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
 
-    // Kartu referensi (Trip / Pergi Bareng) yang tersemat di komposer, dikirim
-    // bersama pesan pertama lalu dibersihkan. Hanya di-set ulang saat BERPINDAH
-    // percakapan — bukan tiap kali prop pendingReference berubah. Sebab setelah
-    // pesan pertama terkirim, storeMessage me-`back()` ke halaman yang sama; kalau
-    // kita ikut pendingReference, kartu akan muncul lagi dan menempel di pesan
-    // berikutnya. Membiarkan dep hanya conversation.id juga menghormati aksi "tutup".
+    // Dep sengaja cuma conversation.id: storeMessage me-back() ke halaman yang
+    // sama, kalau ikut pendingReference kartunya muncul lagi di pesan berikutnya.
     const [activeReference, setActiveReference] = useState(pendingReference);
     useEffect(() => {
         setActiveReference(pendingReference);
@@ -74,8 +68,6 @@ export default function ChatShow({
     const headerAvatar = getConversationAvatar(conversation);
     const peer = getConversationPeer(conversation);
 
-    // Grup trip / pergi bareng / jastip: tampilkan penanda jenis di header dan
-    // tautkan ke halaman induknya.
     const groupTypeStyle = GROUP_TYPE_STYLES[conversation?.group_type];
     const groupTypeLink = conversation?.group_url ?? null;
 
@@ -111,8 +103,6 @@ export default function ChatShow({
     const [sidebarConversations, setSidebarConversations] = useState(conversations ?? []);
     useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
 
-    // Melacak id percakapan yang sudah ada di sidebar, dipakai untuk mendeteksi
-    // percakapan BARU yang masuk lewat channel pribadi user.
     const knownConvIdsRef = useRef(new Set());
     useEffect(() => {
         knownConvIdsRef.current = new Set(
@@ -120,7 +110,6 @@ export default function ChatShow({
         );
     }, [sidebarConversations]);
 
-    // Jumlah chat dengan pesan belum dibaca per tab, untuk lencana di Segment.
     const { personalUnread, groupUnread } = useMemo(() => {
         let personal = 0;
         let groups = 0;
@@ -151,20 +140,12 @@ export default function ChatShow({
     const [localMessages, setLocalMessages] = useState(messages ?? []);
     useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
 
-    // Status tagihan patungan disimpan sebagai state agar bisa disegarkan tiap
-    // poll (bukan hanya saat halaman dimuat). Tetap ikut prop saat berpindah
-    // percakapan atau setelah router.reload().
     const [liveSplitBills, setLiveSplitBills] = useState(splitBills ?? {});
     useEffect(() => setLiveSplitBills(splitBills ?? {}), [splitBills]);
 
-    // Status perjalanan untuk kartu "pantau perjalanan" — disegarkan tiap poll
-    // dengan alasan yang sama: kartunya harus menutup diri saat perjalanan usai.
     const [liveTrackStates, setLiveTrackStates] = useState(trackStates ?? {});
     useEffect(() => setLiveTrackStates(trackStates ?? {}), [trackStates]);
 
-    // Status perjalanan induk grup, disegarkan tiap poll juga: perjalanan bisa
-    // memasuki jam berangkat atau ditutup penyelenggara sementara anggota sedang
-    // membuka grupnya, dan lencana yang basi justru menyesatkan.
     const [liveGroupStatus, setLiveGroupStatus] = useState(
         conversation?.group_status ?? null,
     );
@@ -174,13 +155,11 @@ export default function ChatShow({
     );
     const groupStatusStyle = GROUP_STATUS_STYLES[liveGroupStatus];
 
-    // Referensi pesan terkini untuk menghitung id terakhir saat polling.
     const messagesRef = useRef(localMessages);
     useEffect(() => {
         messagesRef.current = localMessages;
     }, [localMessages]);
 
-    // Online lawan menurut polling (fallback saat WebSocket/Pusher tidak jalan).
     const [pollPeerOnline, setPollPeerOnline] = useState(false);
     useEffect(() => setPollPeerOnline(false), [conversation?.id]);
 
@@ -306,9 +285,6 @@ export default function ChatShow({
         };
     }, [conversations?.length, conversation?.id, authUser?.id]);
 
-    // Channel pribadi user: menangkap pesan dari percakapan yang BELUM ada di
-    // sidebar (mis. seseorang baru pertama kali chat kita). Saat itu terjadi,
-    // muat ulang daftar percakapan supaya chat baru langsung muncul tanpa refresh.
     useEffect(() => {
         if (!window.Echo || !authUser?.id) return;
 
@@ -319,7 +295,6 @@ export default function ChatShow({
             const cid = Number(payload.conversation_id);
             if (knownConvIdsRef.current.has(cid)) return;
 
-            // Tandai optimistik agar pesan susulan tidak memicu reload berulang.
             knownConvIdsRef.current.add(cid);
 
             router.reload({
@@ -370,8 +345,6 @@ export default function ChatShow({
         };
     }, []);
 
-    // ── Fallback POLLING (bekerja tanpa WebSocket, penting untuk shared hosting) ──
-    // Pesan baru dari lawan bicara + status baca + online lawan.
     useEffect(() => {
         if (!conversation?.id) return;
         let cancelled = false;
@@ -398,17 +371,13 @@ export default function ChatShow({
                 if (data.peer_last_read_at) setPeerLastReadAt(data.peer_last_read_at);
                 setPollPeerOnline(!!data.peer_online);
 
-                // Status tagihan patungan ikut disegarkan tiap tick, jadi tombol
-                // "Bayar" hilang & rekap penyelenggara berubah tanpa refresh.
                 if (data.splitBills) setLiveSplitBills(data.splitBills);
                 if (data.trackStates) setLiveTrackStates(data.trackStates);
-                // `undefined` = tidak dikirim; `null` = grup tanpa status (jastip),
-                // jadi dibedakan agar lencana tidak tersangkut di nilai lama.
                 if (data.group_status !== undefined) {
                     setLiveGroupStatus(data.group_status);
                 }
             } catch {
-                /* diamkan; coba lagi tick berikutnya */
+                /* diamkan, coba lagi tick berikutnya */
             }
         };
 
@@ -421,7 +390,6 @@ export default function ChatShow({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [conversation?.id]);
 
-    // Sidebar: chat baru, pesan terakhir & unread tanpa perlu refresh.
     useEffect(() => {
         let cancelled = false;
         const tick = async () => {
@@ -454,17 +422,14 @@ export default function ChatShow({
     const [text, setText] = useState("");
     const sendingRef = useRef(false);
 
-    // Balasan pesan & lampiran tertunda (bisa banyak gambar + keterangan).
     const [replyingTo, setReplyingTo] = useState(null);
     const [pendingAttachments, setPendingAttachments] = useState([]);
     const [attachError, setAttachError] = useState("");
 
-    // Modal gambar (lightbox) & sorotan pesan tujuan saat klik kutipan balasan.
     const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
     const [highlightId, setHighlightId] = useState(null);
     const highlightTimer = useRef(null);
 
-    // Reset komposer saat pindah percakapan.
     useEffect(() => {
         setReplyingTo(null);
         setPendingAttachments([]);
@@ -482,7 +447,6 @@ export default function ChatShow({
     const openLightbox = (images, index) =>
         setLightbox({ open: true, images: images ?? [], index: index ?? 0 });
 
-    // Klik kutipan balasan → gulir ke pesan asal & beri sorotan sesaat.
     const scrollToMessage = (id) => {
         const el = document.getElementById(`msg-${id}`);
         if (!el) return;
@@ -544,17 +508,12 @@ export default function ChatShow({
             preserveScroll: true,
             forceFormData: true,
             onSuccess: (page) => {
-                // Rekonsiliasi dengan daftar pesan otoritatif dari server agar
-                // pesan optimistik memperoleh id numerik aslinya. Tanpa ini,
-                // pesan yang baru kita kirim tetap ber-id "tmp-…" sepanjang sesi
-                // sehingga tombol "Balas" (yang butuh id numerik) tak muncul —
-                // itulah sebabnya kita seolah tak bisa membalas pesan sendiri.
+                // Tanpa rekonsiliasi ini pesan sendiri tetap ber-id "tmp-…" dan
+                // tombol Balas (butuh id numerik) tak pernah muncul.
                 const serverMessages = page?.props?.messages;
                 if (Array.isArray(serverMessages)) {
                     setLocalMessages((prev) => {
                         const knownIds = new Set(serverMessages.map((m) => m.id));
-                        // Pertahankan pesan optimistik lain yang belum tercakup
-                        // server, tetapi buang milik kita yang kini sudah nyata.
                         const stillPending = (prev ?? []).filter(
                             (m) =>
                                 m.optimistic &&
@@ -564,7 +523,6 @@ export default function ChatShow({
                         return [...serverMessages, ...stillPending];
                     });
                 } else {
-                    // Fallback: minimal tandai "Terkirim".
                     setLocalMessages((prev) =>
                         (prev ?? []).map((m) =>
                             m.id === tmpId ? { ...m, sent: true } : m,
@@ -589,7 +547,6 @@ export default function ChatShow({
 
         sendMessage(trimmed, files, replyingTo, activeReference);
 
-        // Bersihkan komposer (object URL pratinjau dibebaskan).
         pendingAttachments.forEach((a) => {
             if (a.preview) {
                 try { URL.revokeObjectURL(a.preview); } catch {}
@@ -598,7 +555,6 @@ export default function ChatShow({
         setReplyingTo(null);
         setPendingAttachments([]);
         setAttachError("");
-        // Referensi hanya dilampirkan ke pesan pertama, lalu dilepas.
         setActiveReference(null);
     };
 
@@ -643,9 +599,7 @@ export default function ChatShow({
         <>
             <NavbarAuth />
             <Container className="max-w-[1400px]">
-                {/* 100dvh, bukan 100vh: di browser ponsel 100vh mengabaikan bar
-                    alamat/menu yang muncul-hilang, sehingga komposer terdorong ke
-                    bawah layar dan tertutup UI browser. */}
+                {/* 100dvh: di ponsel 100vh mengabaikan bar alamat, komposer jadi tertutup */}
                 <div className="h-[calc(100dvh-96px)] overflow-hidden border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
                     <aside className="hidden h-full min-h-0 overflow-y-auto border-r border-neutral-200 bg-white px-8 py-8 md:block">
                         <div className="flex items-center justify-between">
@@ -772,11 +726,6 @@ export default function ChatShow({
                                 </button>
                             ) : null}
 
-                            {/* Lencana status perjalanan (menunggu / berlangsung /
-                                selesai). Hanya untuk grup trip & pergi bareng —
-                                grup jastip mengirim null. Diletakkan sebagai
-                                saudara tombol anggota, bukan di dalamnya, agar
-                                tidak ikut terpotong oleh `truncate` judul. */}
                             {conversation?.is_group && groupStatusStyle ? (
                                 <span
                                     className={cn(
@@ -809,10 +758,6 @@ export default function ChatShow({
                                 </span>
                             ) : null}
 
-                            {/* Penanda jenis grup + pintasan ke halaman induknya
-                                (trip / pergi bareng / jastip). Sengaja diletakkan
-                                sebagai saudara tombol anggota, bukan di dalamnya,
-                                agar tidak ada tautan bersarang di dalam tombol. */}
                             {conversation?.is_group && groupTypeStyle ? (
                                 groupTypeLink ? (
                                     <Link
@@ -880,7 +825,6 @@ export default function ChatShow({
                                         m.created_at &&
                                         new Date(peerLastReadAt).getTime() >= new Date(m.created_at).getTime();
 
-                                    // Status pesan sendiri: Mengirim… → Terkirim → Dibaca.
                                     let statusText = "";
                                     if (isMine) {
                                         if (isRead) statusText = t("chat.status_read");
@@ -888,7 +832,6 @@ export default function ChatShow({
                                         else statusText = t("chat.status_sent");
                                     }
 
-                                    // Balas hanya untuk pesan yang sudah tersimpan (punya id numerik).
                                     const canReply = Number.isFinite(Number(m.id));
 
                                     return (
@@ -913,8 +856,11 @@ export default function ChatShow({
                                                     : undefined
                                             }
                                             trackState={
-                                                m.reference?.type === "pergi_track"
-                                                    ? liveTrackStates?.[m.reference.id]
+                                                m.reference?.type === "pergi_track" ||
+                                                m.reference?.type === "jastip_track"
+                                                    ? liveTrackStates?.[m.reference.type]?.[
+                                                          m.reference.id
+                                                      ]
                                                     : undefined
                                             }
                                             midtransClientKey={midtrans_client_key}
@@ -932,7 +878,6 @@ export default function ChatShow({
                         </div>
 
                         <div className="shrink-0 border-t border-neutral-200 px-3 py-3 sm:px-10 sm:py-5">
-                            {/* Kartu referensi tersemat (konteks Trip / Pergi Bareng) */}
                             {activeReference ? (
                                 <div className="mb-3">
                                     <ReferenceCard
@@ -942,7 +887,6 @@ export default function ChatShow({
                                 </div>
                             ) : null}
 
-                            {/* Bar "membalas" — desain baru (garis tipis + ikon, bukan kotak biru) */}
                             {replyingTo ? (
                                 <div className="mb-3 flex items-center gap-3 border-l-2 border-neutral-300 bg-neutral-50 py-1.5 pl-3 pr-2">
                                     <FiCornerUpLeft className="h-4 w-4 shrink-0 text-neutral-400" />
@@ -974,7 +918,6 @@ export default function ChatShow({
                                 </div>
                             ) : null}
 
-                            {/* Pratinjau banyak lampiran (bisa diberi keterangan) */}
                             {pendingAttachments.length > 0 ? (
                                 <div className="mb-3 flex flex-wrap gap-2">
                                     {pendingAttachments.map((a, idx) => (

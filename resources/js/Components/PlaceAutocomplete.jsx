@@ -17,8 +17,8 @@ export default function PlaceAutocomplete({
     rightAddon = null, // tombol opsional di kanan input (mis. "gunakan lokasi saya")
     prioritizeIndonesia = false,
     fullAddress = false, // true: pilih alamat lengkap (display_name), bukan hanya nama tempat
-    countryCodes = "", // kode ISO alpha-2 (mis. "my") — batasi hasil hanya pada negara ini
-    contextSuffix = "", // konteks lokasi (mis. "Denpasar, Bali") — dibiaskan ke kota/provinsi itu
+    countryCodes = "", // kode ISO alpha-2 (mis. "my") - batasi hasil hanya pada negara ini
+    contextSuffix = "", // konteks lokasi (mis. "Denpasar, Bali") - dibiaskan ke kota/provinsi itu
 }) {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);

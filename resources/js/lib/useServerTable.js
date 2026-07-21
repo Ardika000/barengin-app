@@ -6,14 +6,14 @@ import { router } from "@inertiajs/react";
  * dashboard admin. Semua nilai dikirim sebagai query param di URL (bisa di-share
  * & bertahan saat refresh), mengikuti pola halaman Pesan.
  *
- * - `set(key, value, { debounce })`  → ubah filter (teks pakai debounce, select langsung). Reset ke halaman 1.
- * - `goPage(page)`                   → pindah halaman (langsung).
+ * - `set(key, value, { debounce })`  -> ubah filter (teks pakai debounce, select langsung). Reset ke halaman 1.
+ * - `goPage(page)`                   -> pindah halaman (langsung).
  *
  * Nilai kosong ("" / null / "all") tidak dikirim agar URL tetap bersih.
  *
  * @param {string} baseUrl  Path halaman (default: pathname saat ini).
  * @param {object} initial  Nilai filter awal dari props server (mis. { search, sort }).
- * @param {object} opts     { debounceMs = 350, only } — `only` untuk partial reload Inertia.
+ * @param {object} opts     { debounceMs = 350, only } - `only` untuk partial reload Inertia.
  */
 export function useServerTable(baseUrl, initial = {}, { debounceMs = 350, only } = {}) {
     const url = baseUrl || (typeof window !== "undefined" ? window.location.pathname : "/");

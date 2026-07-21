@@ -34,9 +34,7 @@ class GroupConversationService{
         return $conversation;
     }
 
-    // ── Buat grup langsung saat resource dibuat (pemilik jadi anggota pertama) ──
-    // Dipanggil dari store() Trip/PergiBareng/Jastip agar grup sudah ada sejak awal,
-    // bukan menunggu tombol grup diklik.
+    // Dipanggil dari store() Trip/PergiBareng/Jastip agar grupnya ada sejak awal.
 
     public function ensureTripGroup(int $tripId, ?int $ownerId = null): Conversation
     {
@@ -74,11 +72,7 @@ class GroupConversationService{
         return $conversation;
     }
 
-    /**
-     * Re-trip: pakai grup yang SAMA tetapi keluarkan semua peserta lama, sisakan
-     * hanya pemilik (pemandu) — menunggu peserta run baru bergabung. Dipanggil
-     * dari AdminTripController::retrip.
-     */
+    // Re-trip: grupnya dipakai lagi, tapi peserta run lama dikeluarkan semua.
     public function resetTripGroupToOwner(int $tripId, int $ownerId): void
     {
         $conversation = Conversation::where('trip_id', $tripId)
@@ -97,20 +91,11 @@ class GroupConversationService{
             $conversation->participants()->detach($others->all());
         }
 
-        // Pemilik tetap jadi anggota agar grup tak kehilangan pengelolanya.
         $this->attachIfMissing($conversation, $ownerId);
     }
 
-    /**
-     * Selaraskan anggota grup trip dengan peserta berbayar pada run aktif.
-     *
-     * Grup normalnya diisi lewat MidtransController::addBuyerToTripGroup saat
-     * pembayaran lunas. Data hasil seeder (atau pesanan yang lolos sebelum
-     * mekanisme grup ada) bisa tertinggal — method ini memasukkan semua peserta
-     * berbayar yang belum jadi anggota. Idempotent: yang sudah anggota dilewati.
-     *
-     * @return int Jumlah anggota yang baru ditambahkan.
-     */
+    // Tambal grup trip dari peserta berbayar run aktif, buat data seeder atau
+    // pesanan lama yang lolos sebelum addBuyerToTripGroup ada.
     public function syncTripGroupMembers(int $tripId): int
     {
         $trip = \App\Models\Trip::find($tripId);

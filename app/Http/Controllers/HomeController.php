@@ -8,39 +8,18 @@ use App\Models\Trip;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Beranda publik.
- *
- * Sebelumnya seluruh isi method ini hidup sebagai closure di routes/web.php.
- * Dipindah ke sini bukan sekadar demi kerapian: bentuk closure membuat query-nya
- * tak terlihat sebagai kode yang perlu dirawat, dan di sanalah dua N+1 sempat
- * menumpuk tanpa ketahuan (lihat catatan di latestJastip()).
- */
 class HomeController extends Controller
 {
     public function index()
     {
         return inertia('Home/Index', [
-            // Closure = dievaluasi hanya saat prop ini benar-benar dikirim, jadi
-            // partial reload yang tak memintanya (mis. hanya 'latestJastip') tak
-            // menyentuh galeri sama sekali.
+            // Closure biar galeri dilewati saat partial reload.
             'galleryImages' => fn () => $this->galleryImages(),
             'popularTrips'  => $this->popularTrips(),
             'latestJastip'  => $this->latestJastip(),
         ]);
     }
 
-    /**
-     * Resolusi URL gambar (3 kasus, lihat requirement non-fungsional): kosong →
-     * gambar default, URL absolut/path akar → dipakai apa adanya, selain itu →
-     * diberi prefix storage.
-     *
-     * `$prefix` sengaja jadi parameter, bukan dipukul rata: tiap seksi beranda
-     * memakai prefix yang berbeda (`/storage/` literal untuk trip, `asset()`
-     * untuk jastip, subfolder `posts/` untuk galeri). Menyeragamkannya di sini
-     * akan diam-diam mengubah URL yang sudah jalan, jadi perilakunya
-     * dipertahankan apa adanya.
-     */
     private function imageUrl(?string $name, string $fallback, string $prefix): string
     {
         if (! $name) {
@@ -52,16 +31,7 @@ class HomeController extends Controller
             : $prefix . $name;
     }
 
-    /**
-     * Sebagian gambar acak dari postingan forum untuk galeri beranda.
-     *
-     * Diacak ulang HANYA saat halaman dimuat penuh (refresh browser / kunjungan
-     * langsung) — permintaan itu tak membawa header `X-Inertia`. Pada kunjungan
-     * Inertia (partial reload, mis. klik "suka" di kartu jastip) susunan yang
-     * tersimpan di session dipakai ulang, sehingga galeri tak ikut teracak ulang
-     * di tengah interaksi. Session bersifat per-pengguna, jadi tiap orang dapat
-     * susunannya sendiri sampai me-refresh.
-     */
+    // Diacak ulang cuma saat full page load; kunjungan Inertia pakai susunan dari session.
     private function galleryImages(): array
     {
         $key = 'home.gallery_images';
@@ -70,9 +40,6 @@ class HomeController extends Controller
             return session($key);
         }
 
-        // asset() memangkas garis miring di belakang, jadi pemisahnya ditambahkan
-        // sendiri — tanpa itu 'foo.jpg' jadi '.../postsfoo.jpg'. Nilai untuk nama
-        // kosong sengaja dibiarkan tanpa garis miring, persis seperti sebelumnya.
         $prefix = asset('storage/posts') . '/';
 
         $images = PostImage::inRandomOrder()
@@ -87,7 +54,6 @@ class HomeController extends Controller
         return $images;
     }
 
-    /** Trip populer (sudah dipublish), diurutkan rating tertinggi. */
     private function popularTrips(): array
     {
         return Trip::where('status', '!=', 'draft')
@@ -114,15 +80,7 @@ class HomeController extends Controller
             ->all();
     }
 
-    /**
-     * Jastip terbaru (published & masih aktif) — bentuk data = props JastipCard.
-     *
-     * Pemilik dan rating-nya dulu diambil di dalam map(): satu `User::find()` dan
-     * satu `avg()` ke `user_ratings` untuk TIAP item. Jumlahnya memang terbatas 4,
-     * jadi tak pernah terasa — tapi polanya tetap N+1 dan akan ikut membesar
-     * kalau limitnya dinaikkan. Sekarang pemilik di-eager load dan rating dihitung
-     * lewat subquery, sehingga seluruh seksi ini tetap 2 query berapa pun limitnya.
-     */
+    // Owner di-eager load & rating lewat subquery biar tidak N+1.
     private function latestJastip(): array
     {
         $likedJastipIds = auth()->check()
@@ -170,8 +128,6 @@ class HomeController extends Controller
                     'image'  => $this->imageUrl(
                         $item->jastip_item_images->first()?->image_name,
                         '/assets/default-image.png',
-                        // Lihat catatan di galleryImages(): asset() memangkas
-                        // garis miring di belakang.
                         asset('storage') . '/',
                     ),
                     'author' => $owner?->full_name ?? 'Jastiper',

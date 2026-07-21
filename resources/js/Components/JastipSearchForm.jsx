@@ -8,7 +8,7 @@ import { useTranslation } from "@/lib/useTranslation";
 import { FaMapMarkerAlt, FaShoppingBag, FaSearch } from "react-icons/fa";
 import { FaLocationCrosshairs } from "react-icons/fa6";
 
-// Kategori jastip (nama harus cocok dengan tabel jastip_categories → filter etalase).
+// Kategori jastip (nama harus cocok dengan tabel jastip_categories -> filter etalase).
 const CATEGORY_OPTIONS = [
     "Makanan & Minuman",
     "Fashion",

@@ -44,7 +44,7 @@ class AdminDashboardController extends Controller
             ->get()
             ->map(fn ($trip) => $this->formatPergiCard($trip));
 
-        // 3 jastip terpopuler (paling banyak dibeli) — global, hanya yang dipublish
+        // 3 jastip terpopuler (paling banyak dibeli) - global, hanya yang dipublish
         $soldSub = DB::table('jastip_order_items')
             ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
             ->where('jastip_orders.order_status', 'paid')
@@ -61,7 +61,7 @@ class AdminDashboardController extends Controller
             ->get()
             ->map(fn ($item) => $this->formatJastipCard($item));
 
-        // Log kegiatan — paginasi 5 per halaman
+        // Log kegiatan - paginasi 5 per halaman
         $logs = ActivityLog::with('user:id,full_name,profile_image')
             ->latest()
             ->paginate(5, ['*'], 'logs_page')

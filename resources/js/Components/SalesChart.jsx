@@ -43,7 +43,7 @@ export default function SalesChart({ data = [], height = 260, unitLabel = "" }) 
 
     return (
         <div className="flex w-full select-none">
-            {/* Sumbu Y — label kuantitas */}
+            {/* Sumbu Y - label kuantitas */}
             <div className="relative shrink-0" style={{ width: 34, height }}>
                 {gridLines.map((g, i) => (
                     <span

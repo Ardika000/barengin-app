@@ -6,7 +6,7 @@ import {
 } from "react-icons/fa";
 
 /**
- * Tautan media sosial Barengin — sumber tunggal yang dipakai bersama oleh
+ * Tautan media sosial Barengin - sumber tunggal yang dipakai bersama oleh
  * Footer dan bagian Kontak di halaman utama. Ubah URL di sini saja jika akun
  * resmi sudah tersedia; untuk saat ini mengarah ke halaman utama tiap platform.
  * Semua tautan dibuka di tab baru (lihat pemakaian: target="_blank").

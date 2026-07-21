@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
-            // Aktor — boleh null (mis. percobaan login gagal / sistem)
+            // Aktor - boleh null (mis. percobaan login gagal / sistem)
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('actor_name')->nullable(); // snapshot nama aktor (jika user dihapus)
             $table->string('action');

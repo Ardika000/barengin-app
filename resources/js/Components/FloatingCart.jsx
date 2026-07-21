@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react";
 import { useTranslation } from "@/lib/useTranslation";
 import { FaBagShopping } from "react-icons/fa6";
 
-// Indikator keranjang jastip melayang — muncul hanya bila ada item di keranjang.
+// Indikator keranjang jastip melayang - muncul hanya bila ada item di keranjang.
 // Disembunyikan di halaman checkout (sudah menampilkan isi keranjang).
 export default function FloatingCart() {
     const { t } = useTranslation();

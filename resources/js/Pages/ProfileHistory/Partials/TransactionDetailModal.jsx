@@ -22,7 +22,7 @@ const STATUS_TONE = {
     refunded: "bg-neutral-100 text-neutral-600",
 };
 
-/** Judul seksi: kecil & kalem, jadi isinya yang menonjol — bukan labelnya. */
+/** Judul seksi: kecil & kalem, jadi isinya yang menonjol - bukan labelnya. */
 function SectionTitle({ children }) {
     return (
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
@@ -32,7 +32,7 @@ function SectionTitle({ children }) {
 }
 
 /**
- * Bungkus tautan opsional. Sengaja tanpa efek hover — tautan di modal ini hanya
+ * Bungkus tautan opsional. Sengaja tanpa efek hover - tautan di modal ini hanya
  * perlu bisa diklik, bukan menarik perhatian dari isi transaksinya.
  */
 function MaybeLink({ href, className, children }) {
@@ -181,7 +181,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                     className="flex items-center gap-4"
                                 >
                                     {/* Gambar membuka lightbox; namanya menuju
-                                        halaman detail — dua aksi yang berbeda. */}
+                                        halaman detail - dua aksi yang berbeda. */}
                                     <button
                                         type="button"
                                         onClick={() =>

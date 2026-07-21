@@ -21,7 +21,7 @@ export default function ProfileSidebar({ profile, wallet, onEdit, onTopUp }) {
     const streak = auth?.user?.streak_count ?? 0;
     const streakBest = auth?.user?.streak_best ?? 0;
 
-    // Daftar pengikut / mengikuti — modal yang sama dengan profil Forum.
+    // Daftar pengikut / mengikuti - modal yang sama dengan profil Forum.
     const [userListMode, setUserListMode] = useState(null); // null | "followers" | "following"
 
     // Rating per kategori; tampilkan hanya yang punya ulasan.

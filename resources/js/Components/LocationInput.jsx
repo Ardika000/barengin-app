@@ -13,7 +13,7 @@ export default function LocationInput({
     placeholder,
     className = "",
     prioritizeIndonesia = true,
-    countryCodes = "", // kode ISO alpha-2 (mis. "id") — batasi hasil hanya pada negara ini
+    countryCodes = "", // kode ISO alpha-2 (mis. "id") - batasi hasil hanya pada negara ini
 }) {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);

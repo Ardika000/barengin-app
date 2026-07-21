@@ -10,7 +10,7 @@ class JastipCategorySeeder extends Seeder
 {
     public function run(): void
     {
-        // Kategori barang jastip — hanya nama + slug (identifier unik), tanpa ikon/emoji.
+        // Kategori barang jastip - hanya nama + slug (identifier unik), tanpa ikon/emoji.
         $names = [
             'Fashion',
             'Sepatu',

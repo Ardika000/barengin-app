@@ -9,7 +9,7 @@ const rupiah = (n) =>
 /**
  * Pemilih metode pembayaran: saldo dompet atau Midtrans.
  *
- * Opsi dompet dikunci saat saldo kurang dari total — server tetap memvalidasi
+ * Opsi dompet dikunci saat saldo kurang dari total - server tetap memvalidasi
  * ulang, ini hanya agar pengguna tahu sebabnya sebelum menekan bayar.
  */
 export default function PaymentMethodSelector({

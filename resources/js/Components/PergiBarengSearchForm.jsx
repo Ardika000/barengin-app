@@ -13,7 +13,7 @@ import {
 import { FaLocationCrosshairs } from "react-icons/fa6";
 import { useTranslation } from "@/lib/useTranslation";
 
-// Jenis kendaraan — harus PERSIS sama dengan enum `transportation` di migrasi
+// Jenis kendaraan - harus PERSIS sama dengan enum `transportation` di migrasi
 // pergi_barengs agar filter (where transportation = ...) cocok.
 const VEHICLE_TYPES = [
     "Mobil Pribadi",

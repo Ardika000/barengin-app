@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 // Permintaan isi saldo. Berdiri sendiri (bukan sekadar transactions) karena
 // wallet_transactions.source_id bertipe bigint, sedangkan transactions.id adalah
-// UUID — baris ini menyediakan id bigint yang dipakai sebagai sumber kredit,
+// UUID - baris ini menyediakan id bigint yang dipakai sebagai sumber kredit,
 // sekaligus menyimpan riwayat isi saldo. Pola ini mengikuti trip_orders /
 // jastip_orders yang juga menggantung pada satu transaksi.
 return new class extends Migration

@@ -6,7 +6,7 @@ import { useTranslation } from "@/lib/useTranslation";
 
 const INITIAL_REVIEWS = 3;
 
-// Satu bintang dengan isian sebagian (fill 0..1) — overlay emas dipotong sesuai fill.
+// Satu bintang dengan isian sebagian (fill 0..1) - overlay emas dipotong sesuai fill.
 function Star({ fill = 0, size = 18 }) {
     const clamped = Math.max(0, Math.min(1, fill));
     return (
@@ -61,7 +61,7 @@ function RatingRing({ value = 0, hasReviews = true }) {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-bold text-neutral-800">
-                    {hasReviews ? value.toFixed(1) : "—"}
+                    {hasReviews ? value.toFixed(1) : "-"}
                 </span>
                 <span className="text-[11px] font-medium text-neutral-400">/ 5.0</span>
             </div>

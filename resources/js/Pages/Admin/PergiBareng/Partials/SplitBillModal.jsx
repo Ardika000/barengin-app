@@ -12,8 +12,8 @@ const rupiah = (n) =>
 /**
  * Modal "Bagi Tagihan" untuk penyelenggara pergi bareng yang sudah selesai.
  *
- * Alur: penyelenggara memasukkan total → nominal dibagi rata per kepala
- * (mengikuti `quantity` tiap anggota) → tiap baris masih bisa diubah manual.
+ * Alur: penyelenggara memasukkan total -> nominal dibagi rata per kepala
+ * (mengikuti `quantity` tiap anggota) -> tiap baris masih bisa diubah manual.
  * Penyelenggara ikut dihitung saat membagi tetapi tidak ditagih, karena dialah
  * yang menalangi biayanya.
  */
@@ -173,7 +173,7 @@ export default function SplitBillModal({ trip, open, onClose }) {
                                     value={total}
                                     onChange={(e) => {
                                         setTotal(e.target.value);
-                                        // Total baru → kembalikan semua baris ke
+                                        // Total baru -> kembalikan semua baris ke
                                         // pembagian rata, jangan pertahankan
                                         // nominal manual dari total sebelumnya.
                                         setOverrides({});

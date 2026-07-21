@@ -33,7 +33,7 @@ class ForumFollowController extends Controller
             ]);
 
             // Kabari pengguna yang diikuti. Dedupe per baris follow: unfollow lalu
-            // follow lagi menghasilkan baris baru (id baru) → notifikasi baru,
+            // follow lagi menghasilkan baris baru (id baru) -> notifikasi baru,
             // tapi klik follow berulang pada relasi yang sama tidak menggandakan.
             \App\Models\UserNotification::send(
                 (int) $target->id,

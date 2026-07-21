@@ -381,7 +381,7 @@ export default function Profile({
         const url = window.location.origin + profileUrl;
 
         // Yang disalin bukan sekadar tautan telanjang, melainkan ajakan singkat
-        // beserta nama pemilik profil — agar langsung enak ditempel ke chat.
+        // beserta nama pemilik profil - agar langsung enak ditempel ke chat.
         const message = t("forum.share_text")
             .replace(":name", profileUser.full_name)
             .replace(":username", profileUser.username)

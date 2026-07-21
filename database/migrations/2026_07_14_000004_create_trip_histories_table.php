@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Arsip "run" trip sebelumnya — dibuat saat pemandu membuka ulang
+        // Arsip "run" trip sebelumnya - dibuat saat pemandu membuka ulang
         // (re-trip) trip yang sudah selesai. Satu baris = satu periode selesai.
         Schema::create('trip_histories', function (Blueprint $table) {
             $table->id();

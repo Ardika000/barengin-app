@@ -16,7 +16,7 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
     const user = props.auth?.user;
     const greeting = subtitle ?? `${t("admin.navbar.welcome")}, ${user?.full_name || t("admin.navbar.welcome_fallback")}!`;
 
-    // Lencana chat belum dibaca — sumber & perilakunya sama dengan navbar depan.
+    // Lencana chat belum dibaca - sumber & perilakunya sama dengan navbar depan.
     const { count: unreadChats, label: unreadLabel } = useUnreadChats();
 
     // State untuk toggle dropdown profil
@@ -36,7 +36,7 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
 
     return (
         <header className="h-[72px] bg-white border-b border-neutral-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
-            {/* Bagian Kiri Navbar — min-w-0 + truncate supaya sapaan yang panjang
+            {/* Bagian Kiri Navbar - min-w-0 + truncate supaya sapaan yang panjang
                 terpotong rapi, bukan membungkus jadi dua baris (header tingginya
                 tetap 72px) atau mendesak tombol-tombol di kanan. */}
             <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
@@ -61,17 +61,17 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
 
             {/* Bagian Kanan Navbar (Notifikasi, Chat, User Profile). Lencana
                 streak sengaja tidak di sini: ia bikin baris ini sesak padahal
-                bukan sesuatu yang perlu dipantau tiap saat — tempatnya di
+                bukan sesuatu yang perlu dipantau tiap saat - tempatnya di
                 Riwayat Profil dan Peringkat. Di bawah sm, Chat pun pindah ke
                 menu profil; lonceng tetap di luar karena lencana belum-dibaca
                 perlu langsung terlihat. */}
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                {/* Pemilih bahasa tidak di sini — hidup di tab Pengaturan (Riwayat
+                {/* Pemilih bahasa tidak di sini - hidup di tab Pengaturan (Riwayat
                     Profil), jadi lonceng notifikasi menggantikannya seperti di
                     navbar halaman depan. */}
                 <NotificationBell />
 
-                {/* Lencana belum-dibaca sama persis dengan navbar depan — dulu
+                {/* Lencana belum-dibaca sama persis dengan navbar depan - dulu
                     hanya ada di sana, jadi angkanya seolah hilang begitu masuk
                     dasbor. */}
                 <div className="relative hidden sm:block">
@@ -115,7 +115,7 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                     {/* --- DROPDOWN MENU PROFILE --- */}
                     {isProfileOpen && (
                         <div className="absolute right-0 top-full mt-3 w-56 bg-white rounded-xl shadow-lg border border-neutral-100 z-50 overflow-hidden animate-fade-in-up">
-                            {/* Chat hanya muncul di layar kecil — di sm+ tombolnya
+                            {/* Chat hanya muncul di layar kecil - di sm+ tombolnya
                                 sudah berdiri sendiri di header. */}
                             <Link
                                 href="/chat"

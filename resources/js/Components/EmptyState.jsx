@@ -2,7 +2,7 @@ import React from "react";
 import { FiInbox } from "react-icons/fi";
 
 // Tampilan "kosong / tidak ditemukan" yang konsisten di semua halaman dashboard.
-// icon: ReactNode (opsional) — default ikon inbox. title & description string.
+// icon: ReactNode (opsional) - default ikon inbox. title & description string.
 export default function EmptyState({
     icon = <FiInbox size={32} />,
     title,

@@ -1,10 +1,3 @@
-// Perakit kalimat notifikasi.
-//
-// Backend sengaja hanya menyimpan `type` + `data` (parameter), bukan kalimat
-// jadi — kalimatnya dirakit di sini lewat t() supaya notifikasi lama ikut
-// berubah bahasa saat pengguna mengganti bahasa.
-//
-// Interpolasi memakai idiom yang sudah dipakai di codebase: t(...).replace(":x", ...)
 
 const rupiah = (n) =>
     "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
@@ -12,8 +5,7 @@ const rupiah = (n) =>
 function interpolate(template, params) {
     let out = String(template ?? "");
 
-    // Urut dari nama terpanjang: tanpa ini ":more" akan ikut termakan saat
-    // menambal ":m", dan pola serupa pada parameter lain.
+    // Urut dari nama terpanjang, kalau tidak ":more" ikut termakan saat nambal ":m".
     const names = Object.keys(params ?? {}).sort((a, b) => b.length - a.length);
 
     for (const name of names) {
@@ -23,17 +15,12 @@ function interpolate(template, params) {
     return out;
 }
 
-/**
- * @returns {{title: string, body: string}}
- */
 export function formatNotification(t, notification) {
     const type = notification?.type ?? "";
     const data = notification?.data ?? {};
 
     const title = t(`notif.${type}.title`);
 
-    // Nama produk jastip: keranjang bisa berisi banyak item, backend mengirim
-    // item pertama + jumlah sisanya agar kalimatnya bisa dirakit per bahasa.
     const more = Number(data.more ?? 0);
     const name =
         more > 0
@@ -48,12 +35,9 @@ export function formatNotification(t, notification) {
         follower: data.follower,
         quantity: data.quantity,
         amount: data.amount != null ? rupiah(data.amount) : "",
-        // Saldo dompet setelah mutasi (notifikasi wallet.*)
         balance: data.balance != null ? rupiah(data.balance) : "",
     };
 
-    // Beberapa tipe punya kalimat berbeda per jenis (kind): pesanan dibuat &
-    // dikeluarkan dari grup (trip vs pergi bareng).
     const perKind = type === "order.created" || type === "group.removed";
     const bodyKey = perKind
         ? `notif.${type}.body.${data.kind ?? "trip"}`
@@ -62,7 +46,6 @@ export function formatNotification(t, notification) {
     return { title, body: interpolate(t(bodyKey), params) };
 }
 
-/** Kunci ikon per tipe — dipetakan ke komponen ikon di sisi pemakai. */
 export function notificationIconKey(type) {
     if (type?.startsWith("pergi_bareng.")) return "pergi_bareng";
     if (type?.startsWith("group.")) return "group";

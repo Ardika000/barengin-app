@@ -12,25 +12,21 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class AdminTripController extends Controller
 {
-    /** Status badge styling key sudah ditangani di frontend. */
 
     public function index(Request $request)
     {
-        // Selaraskan status (terjadwal/berlangsung/selesai) sesuai tanggal terkini
         Trip::refreshStatuses();
 
         $search = trim((string) $request->query('search', ''));
         $sort   = (string) $request->query('sort', 'latest');
 
-        // Kursi terisi (paid) sebagai subquery agar bisa di-sort & dipaginasi di
-        // server — hanya pesanan pada run aktif (setelah re-trip terakhir). Yang
-        // dihitung adalah TOTAL kursi (SUM quantity), bukan jumlah akun, agar
-        // konsisten dengan kapasitas trip (people_amount = jumlah kursi).
+        // Subquery kursi terisi biar bisa di-sort & dipaginasi di server; hanya run aktif.
         $joinedSub = DB::table('trip_orders')
             ->join('trips as jt', 'jt.id', '=', 'trip_orders.trip_id')
             ->where('trip_orders.order_status', 'paid')
@@ -38,9 +34,7 @@ class AdminTripController extends Controller
             ->groupBy('trip_orders.trip_id')
             ->select('trip_orders.trip_id', DB::raw('SUM(trip_orders.quantity) as joined'));
 
-        // withAvg/withCount HARUS setelah select(): select() mengganti seluruh
-        // daftar kolom, jadi bila dipanggil lebih dulu, kolom rating_avg &
-        // rating_count ikut terhapus dan selalu NULL.
+        // Harus setelah select(): select() mengganti daftar kolom, avg/count jadi NULL.
         $query = Trip::query()
             ->with(['detail_trips', 'histories'])
             ->leftJoinSub($joinedSub, 'j', 'j.trip_id', '=', 'trips.id')
@@ -75,7 +69,7 @@ class AdminTripController extends Controller
                 'status_label' => $trip->statusLabel(),
                 'is_draft' => $trip->status === Trip::STATUS_DRAFT,
                 'is_done' => $trip->status === Trip::STATUS_DONE,
-                // Riwayat run sebelumnya (hasil re-trip) — baris anak di tabel
+                // Riwayat run sebelumnya (hasil re-trip)
                 'histories' => $trip->histories->map(fn ($h) => [
                     'id' => $h->id,
                     'period_label' => Carbon::parse($h->start_date)->translatedFormat('d M Y')
@@ -93,10 +87,6 @@ class AdminTripController extends Controller
         ]);
     }
 
-    /**
-     * Trip yang sedang berlangsung milik pemandu — seksi tersendiri di atas
-     * tabel agar tombol "Selesaikan" mudah dijangkau.
-     */
     private function ongoingTrips()
     {
         return Trip::query()
@@ -117,10 +107,6 @@ class AdminTripController extends Controller
             ->values();
     }
 
-    /**
-     * Selesaikan trip lebih cepat dari `end_date`. Hanya pemandu pemilik trip,
-     * dan hanya saat trip sedang berlangsung.
-     */
     public function finish($id)
     {
         $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
@@ -138,8 +124,7 @@ class AdminTripController extends Controller
 
         $trip->update([
             'status' => Trip::STATUS_DONE,
-            // Menahan Trip::refreshStatuses() agar tidak mengembalikan status ke
-            // 'ongoing' selama end_date belum lewat.
+            // Tahan Trip::refreshStatuses() agar tidak balik ke ongoing sebelum end_date.
             'finished_at' => now(),
         ]);
 
@@ -151,19 +136,12 @@ class AdminTripController extends Controller
         ]);
     }
 
-    /**
-     * Daftar peserta trip (pembeli berbayar pada run aktif) — bisa dikeluarkan
-     * pemandu dengan pengembalian dana. Setara halaman "Permintaan Bergabung"
-     * milik pergi bareng, tetapi trip tidak punya alur persetujuan.
-     */
     public function participants($id)
     {
         $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
         $runStart = $trip->current_run_started_at;
 
-        // Ambil pesanan mentah (tidak di-agregat) agar detail tiap kursi dari
-        // kolom JSON `participants` bisa dirinci di bawah tiap pembeli. Diurutkan
-        // menaik sehingga pengelompokan di bawah mempertahankan urutan bergabung.
+        // Sengaja tidak di-agregat & urut menaik, biar rincian per kursi bisa dikelompokkan.
         $orders = DB::table('trip_orders')
             ->join('users', 'trip_orders.user_id', '=', 'users.id')
             ->where('trip_orders.trip_id', $trip->id)
@@ -182,8 +160,6 @@ class AdminTripController extends Controller
             ->orderBy('trip_orders.created_at')
             ->get();
 
-        // Satu baris per pembeli (jumlahkan kursi & total dari semua pesanannya),
-        // lengkap dengan rincian identitas tiap kursi.
         $participants = $orders->groupBy('user_id')->map(function ($rows) {
             $first = $rows->first();
 
@@ -215,7 +191,6 @@ class AdminTripController extends Controller
             ];
         })->values();
 
-        // Kursi terisi = TOTAL kursi (bukan jumlah orang), selaras dengan kapasitas.
         $seatsFilled = (int) $participants->sum('seats');
 
         return Inertia::render('Admin/Trip/Participants', [
@@ -231,10 +206,6 @@ class AdminTripController extends Controller
         ]);
     }
 
-    /**
-     * Keluarkan peserta trip: kembalikan dana ke dompetnya, bebaskan kursi, lepas
-     * dari grup chat. Hanya pemandu pemilik trip.
-     */
     public function kickParticipant($id, $userId)
     {
         $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
@@ -281,7 +252,6 @@ class AdminTripController extends Controller
 
         \App\Models\ActivityLog::record('Membuat draft trip: ' . $trip->name);
 
-        // Buat grup chat trip langsung saat dibuat (pemandu jadi anggota pertama).
         (new \App\Services\Chat\GroupConversationService())->ensureTripGroup($trip->id, $trip->guider_id);
 
         return redirect()->route('admin.trip.index')
@@ -294,7 +264,6 @@ class AdminTripController extends Controller
             ->where('guider_id', Auth::id())
             ->findOrFail($id);
 
-        // Hanya draft yang boleh diedit
         if ($trip->status !== Trip::STATUS_DRAFT) {
             return redirect()->route('admin.trip.index')
                 ->with('flash', ['type' => 'error', 'message' => 'Trip yang sudah dipublish tidak bisa diedit.']);
@@ -356,7 +325,6 @@ class AdminTripController extends Controller
 
             $this->syncFacilities($trip, $validated['facilities'] ?? []);
 
-            // Ganti seluruh aktivitas (paling sederhana & konsisten)
             $trip->detail_trips()->delete();
             $this->syncActivities($request, $trip, $validated['activities'] ?? []);
         });
@@ -391,7 +359,6 @@ class AdminTripController extends Controller
             return back()->with('flash', ['type' => 'info', 'message' => 'Trip ini sudah dipublish.']);
         }
 
-        // Minimal harus punya 1 aktivitas agar layak dipublish
         if ($trip->detail_trips()->count() < 1) {
             return back()->with('flash', ['type' => 'error', 'message' => 'Tambahkan minimal 1 aktivitas sebelum publish.']);
         }
@@ -405,16 +372,7 @@ class AdminTripController extends Controller
         return back()->with('flash', ['type' => 'success', 'message' => 'Trip berhasil dipublish dan tampil di halaman Trip Bareng.']);
     }
 
-    /**
-     * Re-trip: buka ulang trip yang sudah selesai TANPA membuat data baru —
-     * run yang selesai diarsipkan ke trip_histories, lalu tanggal & status
-     * baris trip yang sama diperbarui. Kursi terisi di-reset lewat
-     * current_run_started_at (pesanan lama tidak dihitung lagi).
-     */
-    /**
-     * Halaman "buka ulang" — memakai form create/edit penuh (bukan modal) agar
-     * jastiper bisa mengubah data trip. Nama & lokasi dikunci di frontend.
-     */
+    // Pakai form create/edit penuh, bukan modal, biar data trip bisa diubah.
     public function reopen($id)
     {
         $trip = Trip::with('detail_trips.image_activities', 'facilities')
@@ -460,15 +418,12 @@ class AdminTripController extends Controller
             return back()->with('flash', ['type' => 'error', 'message' => 'Hanya trip yang sudah selesai yang bisa dibuka ulang.']);
         }
 
-        // Validasi form penuh (gambar opsional). Nama & lokasi dikunci → nilai lama dipakai.
         $validated = $this->validateTrip($request, true);
 
         DB::transaction(function () use ($request, $trip, $validated) {
             $runStart = $trip->current_run_started_at ?? '1970-01-01 00:00:00';
 
-            // Arsipkan run yang baru saja selesai (peserta & pendapatan run itu).
-            // Pendapatan = harga trip saja (total − biaya Rp10.000/kursi milik
-            // platform), konsisten dengan analitik & kredit dompet pemandu.
+            // Arsipkan run yang baru selesai. Pendapatan = total − Rp10.000/kursi milik platform.
             $stats = DB::table('trip_orders')
                 ->where('trip_id', $trip->id)
                 ->where('order_status', 'paid')
@@ -485,7 +440,6 @@ class AdminTripController extends Controller
                 'completed_at' => now(),
             ]);
 
-            // Nama & lokasi TIDAK diubah (dikunci saat buka ulang).
             $trip->update([
                 'description'   => $validated['description'],
                 'people_amount' => $validated['people_amount'],
@@ -497,20 +451,16 @@ class AdminTripController extends Controller
                     : $trip->image,
                 'status'        => Trip::statusFromDates($validated['start_date'], $validated['end_date']),
                 'current_run_started_at' => now(),
-                // Run baru: lepaskan tanda "selesai manual" milik run sebelumnya,
-                // agar status kembali mengikuti tanggal.
+                // Lepas tanda "selesai manual" run sebelumnya biar status ikut tanggal lagi.
                 'finished_at'   => null,
             ]);
 
             $this->syncFacilities($trip, $validated['facilities'] ?? []);
 
-            // Ganti seluruh aktivitas dengan jadwal baru
             $trip->detail_trips()->delete();
             $this->syncActivities($request, $trip, $validated['activities'] ?? []);
 
-            // Grup chat dipakai ulang, tetapi peserta run lama dikeluarkan —
-            // hanya pemandu yang tersisa, menunggu peserta baru. Membership run
-            // baru ditambahkan lagi lewat openOrCreateTripGroup (paid + run aktif).
+            // Grup dipakai ulang, peserta run lama dikeluarkan; yang baru masuk lewat openOrCreateTripGroup.
             (new \App\Services\Chat\GroupConversationService())
                 ->resetTripGroupToOwner($trip->id, (int) $trip->guider_id);
         });
@@ -532,9 +482,7 @@ class AdminTripController extends Controller
             ->where('trips.guider_id', Auth::id())
             ->where('trip_orders.order_status', 'paid');
 
-        // Pendapatan = harga trip saja (total dibayar dikurangi biaya layanan +
-        // asuransi Rp10.000/kursi milik platform) — konsisten dengan nominal yang
-        // dikreditkan ke dompet pemandu di MidtransController::fulfillPaidTripOrders.
+        // Pendapatan = total − Rp10.000/kursi platform, sama dengan yang dikredit ke dompet.
         $revenueAgg = (clone $paidOrders)
             ->selectRaw('COALESCE(SUM(trip_orders.total), 0) as total, COALESCE(SUM(trip_orders.quantity), 0) as seats')
             ->first();
@@ -556,10 +504,9 @@ class AdminTripController extends Controller
 
     private function validateTrip(Request $request, bool $isUpdate = false): array
     {
-        // Saat update draft, gambar utama boleh dikosongkan (memakai gambar lama)
         $imageRule = $isUpdate ? 'nullable|image|max:4096' : 'required|image|max:4096';
 
-        return $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'location' => 'required|string|max:255',
             'description' => 'required|string',
@@ -593,6 +540,41 @@ class AdminTripController extends Controller
             'activities.*.start_time.required' => 'Jam mulai wajib diisi.',
             'activities.*.end_time.required' => 'Jam selesai wajib diisi.',
         ]);
+
+        // Aktivitas harus berurutan & tidak tumpang tindih: mulai aktivitas ke-i
+        // tidak boleh sebelum aktivitas sebelumnya selesai (kembaran aturan
+        // min tanggal/jam di TripForm, ditegakkan lagi di server).
+        $validator->after(function ($v) use ($request) {
+            $prevEnd = null;
+
+            foreach ((array) $request->input('activities', []) as $i => $act) {
+                if (empty($act['date']) || empty($act['start_time']) || empty($act['end_time'])) {
+                    continue; // biar aturan required yang menangani yang kosong
+                }
+
+                try {
+                    $start = Carbon::parse($act['date'] . ' ' . $act['start_time']);
+                    $end = Carbon::parse($act['date'] . ' ' . $act['end_time']);
+                } catch (\Exception $e) {
+                    continue;
+                }
+
+                if ($end->lte($start)) {
+                    $v->errors()->add("activities.$i.end_time", 'Jam selesai harus setelah jam mulai.');
+                }
+
+                if ($prevEnd && $start->lt($prevEnd)) {
+                    $v->errors()->add(
+                        "activities.$i.start_time",
+                        'Aktivitas harus dimulai setelah aktivitas sebelumnya selesai (' . $prevEnd->format('d M H:i') . ').',
+                    );
+                }
+
+                $prevEnd = $end->gt($start) ? $end : $start;
+            }
+        });
+
+        return $validator->validate();
     }
 
     private function syncFacilities(Trip $trip, array $names): void
@@ -618,7 +600,6 @@ class AdminTripController extends Controller
             $date = $activity['date'];
             $start = Carbon::parse($date . ' ' . $activity['start_time']);
             $end = Carbon::parse($date . ' ' . $activity['end_time']);
-            // Jika jam selesai lebih awal, anggap berakhir di hari yang sama setelah mulai
             if ($end->lt($start)) {
                 $end = $start->copy();
             }
@@ -632,7 +613,6 @@ class AdminTripController extends Controller
                 'activity_description' => $activity['description'] ?? null,
             ]);
 
-            // File gambar aktivitas (nested di FormData: activities.{i}.images.*)
             $files = $request->file("activities.$i.images", []);
             foreach ($files as $file) {
                 ImageActivity::create([

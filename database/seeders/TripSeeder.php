@@ -11,11 +11,7 @@ use Illuminate\Support\Facades\Hash;
 
 class TripSeeder extends Seeder
 {
-    /**
-     * Destinasi nyata + gambar yang relevan (diunduh ke public/assets/trips/{slug}-{1..3}.jpg
-     * oleh skrip download_trip_images). `-1` = gambar kartu, `-2`/`-3` = gambar aktivitas.
-     * `phase`: past (Selesai), ongoing (Berlangsung), future (Akan Mulai).
-     */
+    // Gambar per destinasi: {slug}-1 kartu, -2/-3 aktivitas (lihat download_trip_images).
     private function destinations(): array
     {
         return [
@@ -36,17 +32,11 @@ class TripSeeder extends Seeder
     {
         $faker = Faker::create('id_ID');
 
-        // Admin juga guider. Trip yang dipegangnya sengaja menyebar ke tiga fase
-        // agar profil guider-nya lengkap: yang 'past' memberi rating & ulasan
-        // trip_bareng, sementara 'ongoing' dan 'future' membuatnya benar-benar
-        // tampil di etalase trip (listing menyembunyikan trip yang sudah lewat).
         $adminId = DB::table('users')->where('email', 'admin@barengin.com')->value('id');
 
-        // Indeks destinasi yang dipandu admin → bromo (past), bandung (ongoing),
-        // bali (future). Selaras dengan urutan destinations().
+        // Trip admin sengaja menyebar ke tiga fase biar profil guider-nya lengkap.
         $adminTripIndexes = [0, 3, 5];
 
-        // 1. Buat 5 User Guider
         $guiderIds = [];
         for ($i = 0; $i < 5; $i++) {
             $guiderIds[] = DB::table('users')->insertGetId([
@@ -62,7 +52,6 @@ class TripSeeder extends Seeder
             ]);
         }
 
-        // Buat 10 User Customer
         $customerIds = [];
         for ($i = 0; $i < 10; $i++) {
             $customerIds[] = DB::table('users')->insertGetId([
@@ -77,7 +66,6 @@ class TripSeeder extends Seeder
             ]);
         }
 
-        // 2. Buat Data Fasilitas Master
         $facilityIds = [
             DB::table('facilities')->insertGetId(['name' => 'Transportasi AC', 'slug' => 'transportasi-ac', 'created_at' => now()]),
             DB::table('facilities')->insertGetId(['name' => 'Penginapan Hotel', 'slug' => 'penginapan-hotel', 'created_at' => now()]),
@@ -85,7 +73,6 @@ class TripSeeder extends Seeder
             DB::table('facilities')->insertGetId(['name' => 'Dokumentasi & Fotografer', 'slug' => 'dokumentasi', 'created_at' => now()]),
         ];
 
-        // 3. Looping trip berdasarkan destinasi nyata (status tersebar: lampau / berlangsung / akan datang)
         foreach ($this->destinations() as $i => $dest) {
             [$startDate, $endDate] = $this->datesFor($dest['phase'], $faker);
             $status = Trip::statusFromDates($startDate, $endDate);
@@ -98,7 +85,6 @@ class TripSeeder extends Seeder
                 $guiderId = $adminId;
             }
 
-            // Gambar per destinasi: kartu (-1) & aktivitas (-1..-3)
             $cardImage = "/assets/trips/{$dest['slug']}-1.jpg";
             $actImages = [
                 "/assets/trips/{$dest['slug']}-1.jpg",
@@ -124,7 +110,6 @@ class TripSeeder extends Seeder
                 'updated_at'   => now(),
             ]);
 
-            // B. Pivot Trip_Facilities (2 sampai 4 fasilitas acak)
             $randomFacilities = $faker->randomElements($facilityIds, $faker->numberBetween(2, 4));
             foreach ($randomFacilities as $facId) {
                 DB::table('trip_facilities')->insert([
@@ -134,7 +119,6 @@ class TripSeeder extends Seeder
                 ]);
             }
 
-            // C. Trip Activities (3 sampai 8) — gambar relevan dengan destinasi
             $totalActivities = $faker->numberBetween(3, 8);
             for ($act = 1; $act <= $totalActivities; $act++) {
                 if ($act === 1) {
@@ -161,18 +145,15 @@ class TripSeeder extends Seeder
                     'created_at' => now(),
                 ]);
 
-                // Dua gambar per aktivitas dari kolam gambar destinasi
                 DB::table('image_activities')->insert([
                     ['trip_activity_id' => $activityId, 'activity_img_name' => $actImages[($act) % 3]],
                     ['trip_activity_id' => $activityId, 'activity_img_name' => $actImages[($act + 1) % 3]],
                 ]);
             }
 
-            // D. Ulasan pemandu (hanya trip yang sudah selesai yang wajar diulas)
-            //    2-4 ulasan dari customer berbeda agar rata-rata terasa nyata.
+            // cuma trip yang sudah selesai yang wajar diulas
             if ($status === Trip::STATUS_DONE) {
-                // Admin diberi ulasan lebih banyak agar rating guider di kartu
-                // detail trip berdiri di atas sampel yang layak, bukan 1-2 suara.
+                // admin dikasih lebih banyak biar sampel ratingnya layak
                 $raterCount = (int) $guiderId === (int) $adminId
                     ? $faker->numberBetween(5, 8)
                     : $faker->numberBetween(2, 4);
@@ -192,7 +173,7 @@ class TripSeeder extends Seeder
         }
     }
 
-    /** Rentang tanggal [start, end] sesuai fase status yang diinginkan. */
+    // [start, end] sesuai fase.
     private function datesFor(string $phase, $faker): array
     {
         if ($phase === 'past') {

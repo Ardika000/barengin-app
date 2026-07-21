@@ -27,7 +27,7 @@ class PostController extends Controller
             'tag_names' => ['nullable', 'array', 'max:10'],
             'tag_names.*' => ['string', 'max:50'],
         ], [
-            // Pesan cadangan — klien sudah menahan konten kosong lebih dulu.
+            // Pesan cadangan - klien sudah menahan konten kosong lebih dulu.
             // Tanpa ini, pesan otomatis ("content html wajib diisi") bocor ke UI.
             'content_html.required' => 'Isi konten postingan terlebih dahulu. Gambar bersifat opsional.',
             'images.max' => 'Maksimal 10 gambar yang bisa dilampirkan.',

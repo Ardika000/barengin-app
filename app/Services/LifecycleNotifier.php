@@ -11,61 +11,34 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Kabari pengguna tentang perkembangan perjalanan/jastip yang MEREKA IKUTI:
- *  - Trip Bareng   : mulai berlangsung / selesai
- *  - Pergi Bareng  : mulai berlangsung / selesai
- *  - Jastip        : masa pengambilan (waktu ambil) dibuka / selesai
- *
- * Bisa dipakai DUA cara:
- *  1. Terjadwal (cron)  : jalankan run() untuk semua pengguna — command
- *                         `notifications:lifecycle`.
- *  2. Tanpa cron        : freshenForUser() dipanggil saat pengguna membuka /
- *                         polling notifikasi, dibatasi throttle agar tidak jalan
- *                         tiap request. Sepola dengan MidtransController::syncPendingForUser.
- *
- * Aman dijalankan berulang: tiap notifikasi memakai dedupe_key sehingga hanya
- * terkirim sekali per (entitas × event × pengguna). Jendela waktu (beberapa hari
- * terakhir) mencegah "banjir mundur" saat pertama kali dijalankan.
- */
+// Notifikasi mulai/selesai trip, pergi bareng dan jastip. Jalannya lewat cron
+// (notifications:lifecycle) atau freshenForUser() saat polling.
+// Aman diulang karena tiap notifikasi punya dedupe_key.
 class LifecycleNotifier
 {
-    /** Hanya transisi dalam rentang ini yang dikabarkan (hindari backfill lama). */
     private const WINDOW_DAYS = 2;
 
-    /** Jarak minimal antar-pemeriksaan per pengguna pada jalur tanpa-cron. */
     private const THROTTLE_MINUTES = 5;
 
-    /**
-     * Jalur TANPA CRON: segarkan notifikasi lifecycle milik satu pengguna,
-     * dibatasi agar tak jalan tiap request. Cache::add() bersifat atomik —
-     * hanya request pertama dalam jendela throttle yang mengembalikan true.
-     */
     public static function freshenForUser(int $userId): void
     {
         if (! $userId) {
             return;
         }
 
+        // Cache::add() atomik: cuma request pertama dalam jendela throttle yang lolos.
         if (! Cache::add("lifecycle:user:{$userId}", 1, now()->addMinutes(self::THROTTLE_MINUTES))) {
-            return; // sudah diperiksa baru-baru ini
+            return;
         }
 
         try {
             (new self())->run($userId);
         } catch (\Throwable $e) {
-            // Tidak boleh menggagalkan request notifikasi hanya karena penyegaran ini.
             Log::warning('[LIFECYCLE] Gagal menyegarkan untuk user ' . $userId . ': ' . $e->getMessage());
         }
     }
 
-    /**
-     * Pindai entitas & kirim notifikasi lifecycle.
-     *
-     * @param int|null $onlyUserId Bila diisi, hanya kirim ke pengguna itu (jalur
-     *                             tanpa-cron); bila null, ke semua peserta (cron).
-     * @return int Jumlah notifikasi yang benar-benar terkirim.
-     */
+    // $onlyUserId null = semua peserta (dipakai cron).
     public function run(?int $onlyUserId = null): int
     {
         return $this->tripBareng($onlyUserId)
@@ -73,13 +46,11 @@ class LifecycleNotifier
             + $this->jastip($onlyUserId);
     }
 
-    // ── Trip Bareng ──────────────────────────────────────────────────────
     private function tripBareng(?int $onlyUserId): int
     {
         $sent = 0;
         $since = Carbon::today()->subDays(self::WINDOW_DAYS);
 
-        // Berlangsung: baru saja memasuki tanggal mulai.
         Trip::where('status', Trip::STATUS_ONGOING)
             ->whereDate('start_date', '>=', $since)
             ->get()
@@ -87,7 +58,6 @@ class LifecycleNotifier
                 $sent += $this->notifyTripBuyers($trip, 'activity.trip_ongoing', $onlyUserId);
             });
 
-        // Selesai: status done karena tanggal lewat, atau diselesaikan manual.
         Trip::where('status', Trip::STATUS_DONE)
             ->where(function ($q) use ($since) {
                 $q->whereDate('end_date', '>=', $since)
@@ -101,7 +71,6 @@ class LifecycleNotifier
         return $sent;
     }
 
-    /** Kirim ke pembeli (order lunas) pada run trip yang sedang berjalan. */
     private function notifyTripBuyers(Trip $trip, string $type, ?int $onlyUserId): int
     {
         $runKey = optional($trip->current_run_started_at)->timestamp ?? 0;
@@ -125,13 +94,11 @@ class LifecycleNotifier
         );
     }
 
-    // ── Pergi Bareng ─────────────────────────────────────────────────────
     private function pergiBareng(?int $onlyUserId): int
     {
         $sent = 0;
         $since = Carbon::now()->subDays(self::WINDOW_DAYS);
 
-        // Berlangsung: jam janji sudah lewat (baru-baru ini) & belum diselesaikan.
         PergiBareng::with('pergi_bareng_participants')
             ->whereNull('finished_at')
             ->where('time_appointment', '<=', Carbon::now())
@@ -141,7 +108,6 @@ class LifecycleNotifier
                 $sent += $this->notifyPergiParticipants($pb, 'activity.pergi_bareng_ongoing', $onlyUserId);
             });
 
-        // Selesai: penyelenggara menandai selesai baru-baru ini.
         PergiBareng::with('pergi_bareng_participants')
             ->whereNotNull('finished_at')
             ->where('finished_at', '>=', $since)
@@ -166,13 +132,11 @@ class LifecycleNotifier
         );
     }
 
-    // ── Jastip ───────────────────────────────────────────────────────────
     private function jastip(?int $onlyUserId): int
     {
         $sent = 0;
         $since = Carbon::today()->subDays(self::WINDOW_DAYS);
 
-        // Produk yang jendela pengambilannya baru dibuka atau baru berakhir.
         JastipItem::where('status', JastipItem::STATUS_PUBLISHED)
             ->where(function ($q) use ($since) {
                 $q->whereDate('pickup_start_date', '>=', $since)
@@ -211,9 +175,7 @@ class LifecycleNotifier
         );
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
 
-    /** Pada jalur tanpa-cron, saring penerima ke satu pengguna saja. */
     private function filterRecipients($userIds, ?int $onlyUserId)
     {
         $ids = collect($userIds)->map(fn ($id) => (int) $id)->filter()->unique();

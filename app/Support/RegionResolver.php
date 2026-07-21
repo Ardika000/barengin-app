@@ -5,17 +5,7 @@ namespace App\Support;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
-/**
- * Menerjemahkan teks lokasi bebas (provinsi, kabupaten/kota, atau nama tempat
- * spesifik seperti "Rumah Talenta BCA Sentul") menjadi { province, city } pada
- * granularitas kabupaten/kota. Dipakai pencarian jastip agar:
- *   - ketik provinsi  → cocok semua kabupaten/kota provinsi itu,
- *   - ketik kab/kota  → cocok kabupaten/kota tsb,
- *   - ketik tempat    → di-geocode (Nominatim) → kabupaten/kota tempat itu berada.
- *
- * Nama provinsi kanonik selaras dengan yang tersimpan di jastip_items.pickup_province
- * (lihat resources/js/lib/indonesiaProvinces.js).
- */
+// Teks lokasi bebas jadi { province, city }. Yang bukan nama provinsi di-geocode lewat Nominatim.
 class RegionResolver
 {
     private const PROVINCES = [
@@ -31,7 +21,7 @@ class RegionResolver
         'Papua Pegunungan', 'Papua Barat Daya',
     ];
 
-    /** Alias bahasa Inggris / umum (dari Nominatim) → nama kanonik. */
+    // Nama versi Nominatim ke nama kanonik.
     private const PROVINCE_ALIASES = [
         'west java' => 'Jawa Barat',
         'central java' => 'Jawa Tengah',
@@ -69,24 +59,15 @@ class RegionResolver
             return ['province' => null, 'city' => null];
         }
 
-        // 1) Cocokkan langsung ke provinsi kanonik / alias.
         $prov = $this->matchProvince($q);
         if ($prov) {
             return ['province' => $prov, 'city' => null];
         }
 
-        // 2) Geocode (Nominatim, dibatasi Indonesia) → provinsi + kabupaten/kota.
         return $this->geocode($q);
     }
 
-    /**
-     * Kata kunci LIKE untuk sebuah provinsi pada kolom lokasi berteks bebas.
-     *
-     * Kolom bebas sering menulis "Blok M, Jakarta" — bukan "DKI Jakarta" — maka
-     * varian tanpa prefix "DKI"/"DI" ikut disertakan agar tetap tertangkap.
-     *
-     * @return array<int, string>
-     */
+    // Kolom bebas sering menulis "Blok M, Jakarta", jadi varian tanpa "DKI"/"DI" ikut.
     public static function provinceNeedles(string $province): array
     {
         $core     = self::core($province);
@@ -100,16 +81,7 @@ class RegionResolver
         return array_values(array_unique(array_filter($needles, fn ($n) => $n !== '')));
     }
 
-    /**
-     * Kata kunci LIKE untuk sebuah kabupaten/kota pada kolom berteks bebas.
-     *
-     * Selain inti namanya, varian tanpa arah administratif ikut disertakan
-     * ("Jakarta Pusat" → "jakarta") supaya pencarian sebuah titik spesifik
-     * (mis. "Monas") tetap menemukan listing yang lokasinya ditulis lebih
-     * longgar sebagai "Blok M, Jakarta".
-     *
-     * @return array<int, string>
-     */
+    // Varian tanpa arah ("Jakarta Pusat" jadi "jakarta") ikut, biar listing yang ditulis longgar tetap ketemu.
     public static function cityNeedles(string $city): array
     {
         $core = self::core($city);
@@ -126,11 +98,6 @@ class RegionResolver
         return array_values(array_unique($needles));
     }
 
-    /**
-     * Kode negara ISO alpha-2 dari sebuah teks lokasi, atau null bila tak
-     * terpetakan. Berbeda dari resolve(), geocode di sini TIDAK dibatasi
-     * Indonesia — justru dipakai untuk mengenali lokasi luar negeri.
-     */
     public function countryCode(string $q): ?string
     {
         $q = trim($q);
@@ -143,11 +110,7 @@ class RegionResolver
         return $address['country_code'] ?? null;
     }
 
-    /**
-     * True hanya bila lokasi TERBUKTI berada di luar Indonesia. Teks yang gagal
-     * di-geocode (typo, Nominatim mati) sengaja dianggap "belum tentu asing"
-     * agar pencarian tidak ikut mati saat layanan geocode bermasalah.
-     */
+    // Gagal geocode sengaja dianggap bukan asing, biar pencarian tak ikut mati.
     public function isForeign(string $q): bool
     {
         $code = $this->countryCode($q);
@@ -155,7 +118,6 @@ class RegionResolver
         return $code !== null && $code !== 'id';
     }
 
-    /** Inti nama untuk pencocokan LIKE (buang prefix administratif). */
     public static function core(string $s): string
     {
         $s = mb_strtolower(trim($s));
@@ -181,12 +143,7 @@ class RegionResolver
         return self::PROVINCE_ALIASES[$n] ?? null;
     }
 
-    /**
-     * Ambil bagian `address` hasil geocode Nominatim (di-cache 24 jam).
-     *
-     * @param  ?string  $countryCodes  batasi ke negara tertentu, null = seluruh dunia
-     * @return ?array<string, mixed>
-     */
+    // $countryCodes null = seluruh dunia.
     private function geocodeAddress(string $q, ?string $countryCodes, string $cachePrefix): ?array
     {
         $base = config('services.nominatim.base_url');
@@ -242,8 +199,7 @@ class RegionResolver
         $cityRaw = $address['city'] ?? $address['town'] ?? $address['municipality'] ?? $address['village'] ?? null;
 
         $province = $stateRaw ? ($this->matchProvince($stateRaw) ?? $stateRaw) : null;
-        // Kabupaten/kota: utamakan county (kabupaten), fallback kota/kecamatan.
-        $city = $countyRaw ?: $cityRaw;
+        $city = $countyRaw ?: $cityRaw; // utamakan kabupaten, fallback kota/kecamatan
 
         return ['province' => $province, 'city' => $city];
     }

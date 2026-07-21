@@ -28,7 +28,7 @@ export default function Segment({ value, onChange, personalUnread = 0, groupUnre
                     >
                         {it.label}
                         {/* Lencana jumlah chat yang punya pesan belum dibaca di tab
-                            ini — supaya terlihat tab mana yang ada chat masuk tanpa
+                            ini - supaya terlihat tab mana yang ada chat masuk tanpa
                             harus berpindah tab. */}
                         {it.count > 0 ? (
                             <span

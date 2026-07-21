@@ -22,7 +22,7 @@ export default function NavbarAuth() {
     const user = props?.auth?.user;
     const { t } = useTranslation();
 
-    // Lencana chat belum dibaca — logikanya dipakai bareng navbar dasbor.
+    // Lencana chat belum dibaca - logikanya dipakai bareng navbar dasbor.
     const { count: unreadChats, label: unreadLabel } = useUnreadChats();
 
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
@@ -43,7 +43,7 @@ export default function NavbarAuth() {
         isNavActive(url, item.href),
     );
 
-    // Kelas item menu mobile — versi aktif menyala seperti dropdown desktop.
+    // Kelas item menu mobile - versi aktif menyala seperti dropdown desktop.
     const mobileItemClass = (active) =>
         "block px-3 py-3 rounded-md text-base font-medium transition-colors flex items-center " +
         (active
@@ -116,7 +116,7 @@ export default function NavbarAuth() {
 
                 <div className="flex-1 flex items-center justify-end">
                 <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-                    {/* Pemilih bahasa tidak lagi di sini — pindah ke tab
+                    {/* Pemilih bahasa tidak lagi di sini - pindah ke tab
                         Pengaturan di Profile History agar navbar longgar dan
                         lonceng notifikasi kebagian tempat. */}
                     <NotificationBell onNavigate={closeAll} />

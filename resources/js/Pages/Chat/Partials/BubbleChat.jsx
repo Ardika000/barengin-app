@@ -21,7 +21,7 @@ function replyPreviewText(reply, t) {
 const isImageType = (t) =>
     t && ["image/jpeg", "image/png", "image/webp"].includes(t);
 
-// Grid gambar: 1 → penuh, 2 → 2 kolom, 3+ → 3 kolom.
+// Grid gambar: 1 -> penuh, 2 -> 2 kolom, 3+ -> 3 kolom.
 function imageGridCols(n) {
     if (n <= 1) return "grid-cols-1";
     if (n === 2) return "grid-cols-2";
@@ -101,7 +101,7 @@ export default function Bubble({
                         </div>
                     ) : null}
 
-                    {/* Kutipan balasan — desain baru: dapat diklik untuk menuju pesan asal */}
+                    {/* Kutipan balasan - desain baru: dapat diklik untuk menuju pesan asal */}
                     {reply ? (
                         <button
                             type="button"
@@ -130,10 +130,16 @@ export default function Bubble({
                                     state={splitBillState}
                                     clientKey={midtransClientKey}
                                 />
-                            ) : reference.type === "pergi_track" ? (
+                            ) : reference.type === "pergi_track" ||
+                              reference.type === "jastip_track" ? (
                                 <TrackJourneyCard
                                     reference={reference}
                                     state={trackState}
+                                    variant={
+                                        reference.type === "jastip_track"
+                                            ? "jastip"
+                                            : "pergi"
+                                    }
                                 />
                             ) : (
                                 <ReferenceCard reference={reference} />
@@ -150,7 +156,7 @@ export default function Bubble({
                         </div>
                     ) : null}
 
-                    {/* Gambar (bisa banyak) — klik untuk buka modal besar */}
+                    {/* Gambar (bisa banyak) - klik untuk buka modal besar */}
                     {images.length > 0 ? (
                         <div
                             className={cn(

@@ -13,7 +13,7 @@ Artisan::command('inspire', function () {
 Schedule::command('trips:refresh-statuses')->hourly();
 
 // Bagikan kartu pantau perjalanan ke grup pergi bareng begitu perjalanan
-// memasuki jam keberangkatan — tiap menit agar kartu muncul nyaris seketika.
+// memasuki jam keberangkatan - tiap menit agar kartu muncul nyaris seketika.
 Schedule::command('pergi-bareng:share-track')->everyMinute()->withoutOverlapping();
 
 // Kabari peserta soal perkembangan trip/pergi bareng/jastip yang mereka ikuti

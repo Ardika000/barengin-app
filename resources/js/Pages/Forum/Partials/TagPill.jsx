@@ -2,7 +2,7 @@ import React from "react";
 import { FiX } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
-// `active`     : tag ini sedang menjadi filter aktif → di-highlight.
+// `active`     : tag ini sedang menjadi filter aktif -> di-highlight.
 // `isClearAll` : pil khusus "semua" yang berfungsi sebagai penghapus filter.
 export default function TagPill({
     tag,

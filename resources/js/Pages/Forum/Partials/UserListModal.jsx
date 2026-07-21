@@ -114,7 +114,7 @@ export default function UserListModal({
 
     // Dirender lewat portal ke <body>, BUKAN di tempatnya berada di pohon React.
     // Alasannya: pemakai bisa menaruh modal ini di dalam elemen yang membentuk
-    // stacking context — mis. ProfileSidebar berada di dalam <aside class="lg:sticky">,
+    // stacking context - mis. ProfileSidebar berada di dalam <aside class="lg:sticky">,
     // dan `position: sticky` SELALU membentuk stacking context. Akibatnya z-[9999]
     // di bawah ini hanya berlaku di dalam konteks si aside (yang sendirinya
     // z-index:auto), sehingga modal kalah dari <header class="relative z-50">

@@ -9,23 +9,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Katalog jastip: ~100 produk dengan gambar produk asli & konsisten
- * (satu foto per produk), kategori dari tabel jastip_categories, serta
- * varian datar (satu tingkat) yang masing-masing punya stok sendiri.
- *
- * Produk tanpa varian tetap memiliki satu varian tersembunyi "Original"
- * (has_variants = false) agar order_item selalu punya variant_id.
- *
- * Jalankan otomatis lewat DatabaseSeeder, atau:
- *   php artisan db:seed --class=JastipCatalogSeeder
- */
+// Katalog jastip ~100 produk. Produk tanpa varian tetap dapat satu varian
+// tersembunyi "Original" supaya order_item selalu punya variant_id.
 class JastipCatalogSeeder extends Seeder
 {
     public function run(): void
     {
-        // Katalog jastip dibagi rata ke seluruh user (bukan hanya admin) sehingga
-        // marketplace punya banyak jastiper berbeda. Kepemilikan diputar per produk.
         $sellers = User::orderBy('id')->get();
         if ($sellers->isEmpty()) {
             $this->command?->warn('JastipCatalogSeeder: tidak ada user, dilewati.');
@@ -38,20 +27,14 @@ class JastipCatalogSeeder extends Seeder
         $allUserIds = $sellers->pluck('id')->all();
         $catId      = JastipCategory::pluck('id', 'name');
 
-        // Gambar hasil unduhan yang relevan judul (item-<i>.jpg). Bila unduhan gagal,
-        // jatuh ke kolam gambar lama per kategori agar seeding tetap aman.
+        // Kalau unduhan gambar gagal, jatuh ke kolam $pools di bawah.
         $catalogImg = fn ($i) => file_exists(public_path("assets/jastip/catalog/item-{$i}.jpg"))
             ? "/assets/jastip/catalog/item-{$i}.jpg" : null;
-        // Gambar per varian (hanya untuk warna/rasa/shade — bukan ukuran).
         $variantImg = fn ($i, $j) => file_exists(public_path("assets/jastip/catalog/item-{$i}-v{$j}.jpg"))
             ? "/assets/jastip/catalog/item-{$i}-v{$j}.jpg" : null;
 
         $img = fn ($n) => '/assets/jastip/products/p' . str_pad($n, 2, '0', STR_PAD_LEFT) . '.jpg';
-        // Kolam gambar cadangan per kategori (indeks p01..p50).
-        // Pemetaan diverifikasi manual per isi foto (bukan sekadar nama file):
-        // p02/p04/p09/p32/p43 sepatu · p03/p10 jam · p07/p08 tas · p11/p12/p34 parfum ·
-        // p13-p19/p38/p39/p48 skincare · p20-p24/p37/p42/p46 makanan-minuman ·
-        // p25-p28/p31/p35/p47 fashion · p01/p05/p29/p30/p41 elektronik · p33/p50 konsol/game.
+        // Pemetaan p01..p50 dicek manual per isi foto, bukan dari nama file.
         $pools = [
             'Sepatu'                => array_map($img, [2, 4, 9, 32, 43]),
             'Olahraga'              => array_map($img, [2, 9, 43, 32]),
@@ -70,7 +53,7 @@ class JastipCatalogSeeder extends Seeder
             'Ibu & Bayi'            => array_map($img, [36, 17, 13]),
         ];
 
-        // Lokasi pembelian (asal barang) — [wilayah/negara, kota, alamat]
+        // [wilayah/negara, kota, alamat]
         $purchaseLocs = [
             ['Malaysia', 'Kuala Lumpur', 'Suria KLCC'], ['Malaysia', 'Johor Bahru', 'Johor Premium Outlets'],
             ['Singapura', 'Singapore', 'ION Orchard'], ['Singapura', 'Singapore', 'Changi Airport DFS'],
@@ -81,13 +64,13 @@ class JastipCatalogSeeder extends Seeder
             ['Inggris', 'London', 'Selfridges'], ['Prancis', 'Paris', 'Galeries Lafayette'],
             ['Australia', 'Sydney', 'Queen Victoria Building'],
         ];
-        // Lokasi pembelian khusus produk lokal (agar makanan Indonesia masuk akal)
+        // buat makanan Indonesia biar asal barangnya masuk akal
         $localLocs = [
             ['Bali', 'Denpasar', 'Pasar Sukawati'], ['DI Yogyakarta', 'Yogyakarta', 'Jl. Malioboro'],
             ['Kalimantan Barat', 'Pontianak', 'Jl. Gajah Mada'], ['Sumatera Barat', 'Padang', 'Pasar Raya Padang'],
             ['Jawa Tengah', 'Pekalongan', 'Kampung Batik Kauman'], ['Jawa Timur', 'Surabaya', 'Pasar Atom'],
         ];
-        // Lokasi ambil (domestik) — [provinsi, kota, alamat]
+        // [provinsi, kota, alamat]
         $pickupLocs = [
             ['DKI Jakarta', 'Jakarta Pusat', 'Stasiun Gambir'], ['DKI Jakarta', 'Jakarta Selatan', 'Stasiun MRT Blok M'],
             ['DKI Jakarta', 'Jakarta Barat', 'Bandara Soekarno Hatta Terminal 2'], ['DKI Jakarta', 'Jakarta Timur', 'Terminal Kampung Rambutan'],
@@ -99,7 +82,6 @@ class JastipCatalogSeeder extends Seeder
             ['Kepulauan Riau', 'Batam', 'Ferry Terminal Batam Center'], ['Banten', 'Tangerang Selatan', 'AEON Mall BSD'],
         ];
 
-        // Template varian: value + tambahan harga (stok diisi acak per varian)
         $variantSets = [
             'shoe'    => ['Ukuran', [['39', 0], ['40', 0], ['41', 0], ['42', 0], ['43', 0]]],
             'cloth'   => ['Ukuran', [['S', 0], ['M', 0], ['L', 0], ['XL', 20000]]],
@@ -117,7 +99,6 @@ class JastipCatalogSeeder extends Seeder
         $created = 0;
 
         foreach ($catalog as [$name, $catName, $base, $fee, $vKey]) {
-            // Pemilik produk diputar antar user; pembeli = user lain selain pemilik.
             $owner    = $sellers[$i % $sellers->count()];
             $buyerIds = array_values(array_filter($allUserIds, fn ($uid) => $uid !== $owner->id)) ?: [$owner->id];
 
@@ -130,17 +111,14 @@ class JastipCatalogSeeder extends Seeder
             $pool  = $pools[$catName] ?? $pools['Fashion'];
             $image = $catalogImg($i) ?? $pool[$i % count($pool)];
 
-            // Siklus hidup tersebar agar tiap status jastip muncul (lihat JastipItem::lifecycleStatus):
-            //  in_order (masa pesan) · in_process (dibelikan) · pickup (masa ambil) · finish (selesai, bisa diulas) · upcoming
+            // disebar biar tiap status lifecycleStatus() kepakai
             $phase = ['in_order', 'in_order', 'in_order', 'in_process', 'pickup', 'finish', 'upcoming'][$i % 7];
             [$startDate, $endDate, $pickupStart, $pickupEnd] = $this->jastipDates($phase, $now);
             $upcoming = $phase === 'upcoming';
 
             $hasVariants = $vKey !== 'single';
-            // Hanya varian warna/rasa/shade yang punya gambar (bukan ukuran sepatu/baju/ml).
             $variantHasImage = in_array($vKey, ['color', 'flavor', 'shade'], true);
 
-            // Bangun daftar varian + stok
             if ($hasVariants) {
                 [$vName, $vOptions] = $variantSets[$vKey];
                 $variants = [];
@@ -165,7 +143,7 @@ class JastipCatalogSeeder extends Seeder
                 'jastip_id'          => null,
                 'jastip_category_id' => $catId[$catName] ?? null,
                 'name'               => $name,
-                'description'        => "{$name} — dibeli langsung di {$purchase[1]} ({$purchase[0]}) oleh jastiper terpercaya. "
+                'description'        => "{$name} - dibeli langsung di {$purchase[1]} ({$purchase[0]}) oleh jastiper terpercaya. "
                     . "Barang 100% original beserta bukti pembelian. Titik ambil di {$pickup[2]}, {$pickup[1]}.",
                 'pickup_province'    => $pickup[0],
                 'pickup_city'        => $pickup[1],
@@ -188,12 +166,10 @@ class JastipCatalogSeeder extends Seeder
                 'updated_at'         => $now,
             ]);
 
-            // Satu gambar konsisten per produk
             DB::table('jastip_item_images')->insert([
                 'jastip_item_id' => $itemId, 'image_name' => $image,
             ]);
 
-            // Simpan varian (image_name null di seed — jastiper bisa unggah via form)
             $variantMeta = [];
             foreach ($variants as $v) {
                 $vid = DB::table('jastip_item_variants')->insertGetId([
@@ -210,7 +186,6 @@ class JastipCatalogSeeder extends Seeder
                 $variantMeta[] = ['id' => $vid, 'stock' => $v['stock'], 'add' => $v['additional_price']];
             }
 
-            // Pesanan berbayar per varian (tidak melebihi stok varian)
             if (! $upcoming) {
                 foreach ($variantMeta as $vm) {
                     $soldTarget = rand(0, min(8, $vm['stock']));
@@ -248,7 +223,6 @@ class JastipCatalogSeeder extends Seeder
             $i++;
         }
 
-        // Rating jastiper — tiap penjual mendapat ulasan dari user lain.
         $comments = [
             'Jastipnya amanah, barang sesuai & cepat!',
             'Ori dan packing rapi, recommended seller.',
@@ -274,10 +248,7 @@ class JastipCatalogSeeder extends Seeder
         $this->command?->info("JastipCatalogSeeder: {$created} produk jastip dibagi ke {$sellers->count()} user.");
     }
 
-    /**
-     * Tanggal [start, end, pickupStart, pickupEnd] sesuai fase siklus hidup
-     * jastip agar JastipItem::lifecycleStatus() menghasilkan status yang diminta.
-     */
+    // [start, end, pickupStart, pickupEnd] yang bikin lifecycleStatus() = $phase.
     private function jastipDates(string $phase, Carbon $now): array
     {
         switch ($phase) {
@@ -293,7 +264,7 @@ class JastipCatalogSeeder extends Seeder
                 $ps    = $now->copy()->subDays(rand(1, 4));
                 $pe    = $now->copy()->addDays(rand(3, 8));
                 break;
-            case 'finish': // sudah lewat pengambilan → selesai, bisa diulas
+            case 'finish': // sudah lewat pengambilan -> selesai, bisa diulas
                 $start = $now->copy()->subDays(rand(55, 75));
                 $end   = $now->copy()->subDays(rand(35, 45));
                 $ps    = $now->copy()->subDays(rand(20, 28));
@@ -305,7 +276,7 @@ class JastipCatalogSeeder extends Seeder
                 $ps    = $end->copy()->addDays(rand(3, 7));
                 $pe    = $ps->copy()->addDays(rand(7, 14));
                 break;
-            default: // in_order — masa pemesanan sedang berlangsung
+            default: // in_order - masa pemesanan sedang berlangsung
                 $start = $now->copy()->subDays(rand(3, 20));
                 $end   = $now->copy()->addDays(rand(5, 20));
                 $ps    = $end->copy()->addDays(rand(3, 7));
@@ -327,7 +298,7 @@ class JastipCatalogSeeder extends Seeder
         return false;
     }
 
-    /** ~100 produk: [name, categoryName, base, fee, variantType]. */
+    // [name, categoryName, base, fee, variantType]
     private function catalog(): array
     {
         return [

@@ -10,7 +10,7 @@ return new class extends Migration
     /**
      * Alihkan request titipan agar terikat langsung ke jastip_item (model
      * "per item + allow_requests"), bukan ke entitas destinasi (jastips).
-     * Fitur belum rilis → data uji lama dibersihkan agar swap FK aman.
+     * Fitur belum rilis -> data uji lama dibersihkan agar swap FK aman.
      */
     public function up(): void
     {

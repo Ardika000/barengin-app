@@ -56,7 +56,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                 <p className="text-neutral-500 text-sm">{translate("admin.trip.index_subtitle")}</p>
             </div>
 
-            {/* Sedang berlangsung — pemandu bisa menyelesaikan lebih cepat */}
+            {/* Sedang berlangsung - pemandu bisa menyelesaikan lebih cepat */}
             <OngoingSection
                 items={ongoing.map((o) => ({
                     id: o.id,
@@ -167,7 +167,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 className="text-sm"
                                             />
                                         ) : (
-                                            <span className="text-xs text-neutral-400">—</span>
+                                            <span className="text-xs text-neutral-400">-</span>
                                         )}
                                     </td>
                                     <td className="py-3.5 px-5">
@@ -203,7 +203,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                     <FiRefreshCw size={16} />
                                                 </Link>
                                             )}
-                                            {/* Daftar peserta (pembeli berbayar run aktif) — bisa dikeluarkan */}
+                                            {/* Daftar peserta (pembeli berbayar run aktif) - bisa dikeluarkan */}
                                             {!t.is_draft && (
                                                 <Link href={`/admin/trip/${t.id}/participants`} title={translate("admin.trip.action_participants")}
                                                     className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors">

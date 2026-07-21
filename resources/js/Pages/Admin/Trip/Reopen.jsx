@@ -6,7 +6,7 @@ import { FiChevronLeft } from "react-icons/fi";
 import TripForm, { emptyActivity } from "./Partials/TripForm";
 
 // "Buka ulang" trip yang sudah selesai: memakai form create/edit penuh sehingga
-// jastiper bisa mengubah data (deskripsi, kuota, harga, aktivitas, gambar) — KECUALI
+// jastiper bisa mengubah data (deskripsi, kuota, harga, aktivitas, gambar) - KECUALI
 // nama & lokasi perjalanan yang dikunci. Tanggal sengaja dikosongkan agar diisi baru.
 export default function Reopen({ trip, facilities = [] }) {
     const { t } = useTranslation();
