@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FaCamera, FaTimes, FaRedo } from "react-icons/fa";
 import Button from "@/Components/Button";
 
-/**
- * Modal kamera berbasis getUserMedia.
- * Mengambil foto dari webcam lalu mengembalikannya sebagai File lewat onCapture.
- */
+// Ambil foto dari webcam, dikembalikan sebagai File lewat onCapture.
 export default function CameraCaptureModal({ onCapture, onClose }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -101,8 +99,8 @@ export default function CameraCaptureModal({ onCapture, onClose }) {
         onClose();
     }
 
-    return (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 p-4">
+    const overlay = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
             <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
                 <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
                     <h3 className="flex items-center gap-2 text-base font-semibold text-neutral-900">
@@ -188,4 +186,8 @@ export default function CameraCaptureModal({ onCapture, onClose }) {
             </div>
         </div>
     );
+
+    // Di-portal ke <body>: dipakai di dalam sidebar sticky, dan sticky selalu
+    // bikin stacking context baru - z-index setinggi apa pun tetap terkurung.
+    return createPortal(overlay, document.body);
 }
